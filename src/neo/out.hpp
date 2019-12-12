@@ -1,6 +1,7 @@
 #pragma once
 
 #include <neo/fwd.hpp>
+#include <neo/opt_ref.hpp>
 
 #include <functional>
 
@@ -42,6 +43,10 @@ public:
     constexpr optional_output() = default;
     constexpr optional_output(nullopt_t) {}
 
+    template <typename U>
+    constexpr optional_output(output<U> o)
+        : _dest(o.get()) {}
+
     constexpr explicit optional_output(T& out)
         : _dest(out) {}
 
@@ -51,6 +56,8 @@ public:
             *_dest = NEO_FWD(value);
         }
     }
+
+    constexpr opt_ref<T> get() const noexcept { return _dest; }
 
     constexpr T& operator*() const noexcept { return *_dest; }
     constexpr T* operator->() const noexcept { return _dest.operator->(); }
