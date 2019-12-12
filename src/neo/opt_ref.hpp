@@ -19,6 +19,9 @@ template <typename T>
 struct is_opt_ref<opt_ref<T>> : std::true_type {};
 
 template <typename T>
+constexpr bool is_opt_ref_v = is_opt_ref<T>::value;
+
+template <typename T>
 class opt_ref {
     T* _ptr = nullptr;
 
@@ -59,7 +62,7 @@ public:
     constexpr friend bool operator<=(nullopt_t, opt_ref) noexcept { return true; }
     constexpr friend bool operator>(opt_ref lhs, nullopt_t) noexcept { return bool(lhs); }
     constexpr friend bool operator>(nullopt_t, opt_ref) noexcept { return false; }
-    constexpr friend bool operator>=(opt_ref lhs, nullopt_t) noexcept { return true; }
+    constexpr friend bool operator>=(opt_ref, nullopt_t) noexcept { return true; }
     constexpr friend bool operator>=(nullopt_t, opt_ref rhs) noexcept { return !rhs; }
 
 #define DECL_OPT(Op)                                                                               \
@@ -103,7 +106,7 @@ public:
     static_assert(true)
 
     DECL_OPT(==, false, false);
-    DECL_OPT(!=, false, false);
+    DECL_OPT(!=, true, true);
     DECL_OPT(<, true, false);
     DECL_OPT(<=, true, false);
     DECL_OPT(>, false, true);
