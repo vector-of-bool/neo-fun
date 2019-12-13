@@ -29,6 +29,8 @@ public:
     constexpr opt_ref() = default;
     constexpr opt_ref(T& reference)
         : _ptr(std::addressof(reference)) {}
+    constexpr opt_ref(T* ptr)
+        : _ptr(ptr) {}
     constexpr opt_ref(std::nullopt_t)
         : _ptr(nullptr) {}
 
@@ -113,5 +115,8 @@ public:
     DECL_OPT(>=, false, true);
 #undef DECL_OPT
 };
+
+template <typename T>
+opt_ref(T what) -> opt_ref<T>;
 
 }  // namespace neo
