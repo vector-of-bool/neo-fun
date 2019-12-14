@@ -1,0 +1,45 @@
+# Refer: https://aka.ms/yaml
+
+jobs:
+
+  - job: Windows_MSVC_VS2019
+    pool:
+      vmImage: windows-2019
+    steps:
+      - script: |
+          echo Loading VS environment
+          call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\vsdevcmd" -arch=x64 || exit 1
+          echo Downloading DDS executable
+          pwsh -noni -c iwr https://github.com/vector-of-bool/dds/releases/download/0.0.1/dds-win-x64.exe -OutFile dds.exe || exit 1
+          echo Build
+          .\dds.exe build -t msvc.dds
+        displayName: Build and Run Unit Tests
+
+  - job: Linux_GCC9
+    pool:
+      vmImage: ubuntu-18.04
+    steps:
+      - script: |
+          set -eu
+          sudo apt update -y
+          sudo apt install -y g++-9
+          echo Downloading DDS executable
+          curl -L https://github.com/vector-of-bool/dds/releases/download/0.0.1/dds-linux-x64 -o dds
+          chmod +x dds
+        displayName: Prepare System
+      - script: ./dds build -t :c++17:gcc-9
+        displayName: Build and Run Unit Tests
+
+  - job: macOS_GCC9
+    pool:
+      vmImage: macOS-10.14
+    steps:
+      - script: |
+          set -eu
+          brew install gcc@9
+          echo Downloading DDS executable
+          curl -L https://github.com/vector-of-bool/dds/releases/download/0.0.1/dds-macos-x64 -o dds
+          chmod +x dds
+        displayName: Prepare System
+      - script: ./dds build -t :c++17:gcc-9
+        displayName: Build and Run Unit Tests
