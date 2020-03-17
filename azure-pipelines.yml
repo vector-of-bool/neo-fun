@@ -10,9 +10,9 @@ jobs:
           echo Loading VS environment
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\vsdevcmd" -arch=x64 || exit 1
           echo Downloading DDS executable
-          pwsh -noni -c iwr https://github.com/vector-of-bool/dds/releases/download/0.0.1/dds-win-x64.exe -OutFile dds.exe || exit 1
+          pwsh -noni -c iwr https://github.com/vector-of-bool/dds/releases/download/0.1.0-alpha.3/dds-win-x64.exe -OutFile dds.exe || exit 1
           echo Build
-          .\dds.exe build -t msvc.dds
+          .\dds.exe build -t msvc.jsonc
         displayName: Build and Run Unit Tests
 
   - job: Linux_GCC9
@@ -24,7 +24,7 @@ jobs:
           sudo apt update -y
           sudo apt install -y g++-9
           echo Downloading DDS executable
-          curl -L https://github.com/vector-of-bool/dds/releases/download/0.0.1/dds-linux-x64 -o dds
+          curl -L https://github.com/vector-of-bool/dds/releases/download/0.1.0-alpha.3/dds-linux-x64 -o dds
           chmod +x dds
         displayName: Prepare System
       - script: ./dds build -t :c++17:gcc-9
@@ -38,7 +38,7 @@ jobs:
           set -eu
           brew install gcc@9
           echo Downloading DDS executable
-          curl -L https://github.com/vector-of-bool/dds/releases/download/0.0.1/dds-macos-x64 -o dds
+          curl -L https://github.com/vector-of-bool/dds/releases/download/0.1.0-alpha.3/dds-macos-x64 -o dds
           chmod +x dds
         displayName: Prepare System
       - script: ./dds build -t :c++17:gcc-9
