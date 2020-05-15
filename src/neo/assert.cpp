@@ -26,11 +26,11 @@ void _neo_default_assertion_handler(neo::assertion_info            info,
     std::cerr << "   Message: " << info.message << '\n';
     if (exprs.begin() != exprs.end()) {
         auto expr_it = exprs.begin();
-        std::cerr << "  Context: " << expr_it->spelling() << " := ";
+        std::cerr << "   Context: " << expr_it->spelling() << " := ";
         expr_it->write_into(std::cerr);
         ++expr_it;
         while (expr_it != exprs.end()) {
-            std::cerr << "\n           " << expr_it->spelling() << " := ";
+            std::cerr << "\n            " << expr_it->spelling() << " := ";
             expr_it->write_into(std::cerr);
             ++expr_it;
         }
@@ -52,7 +52,6 @@ void neo::fire_assertion(neo::assertion_info            info,
 void neo::set_assertion_handler(neo::assertion_handler_fn_ptr fn) noexcept {
     neo_assert_always(expects,
                       fn != nullptr,
-                      "A null function pointer was given to neo::set_assertion_handler",
-                      12);
+                      "A null function pointer was given to neo::set_assertion_handler");
     _assertion_handler_fn = fn;
 }
