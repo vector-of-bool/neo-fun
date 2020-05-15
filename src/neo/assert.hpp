@@ -281,7 +281,7 @@ fire_assertion(assertion_info info,
             neo::fire_assertion(::neo::assertion_info::make(::neo::assertion_kind::kind,           \
                                                             NEO_STR(expr),                         \
                                                             (msg),                                 \
-                                                            __func__,                              \
+                                                            NEO_PRETTY_FUNC,                       \
                                                             __FILE__,                              \
                                                             __LINE__)                              \
                                     NEO_MAP(NEO_REPR_ASSERT_EXPR, ignore, __VA_ARGS__));           \
@@ -313,7 +313,7 @@ fire_assertion(assertion_info info,
             neo::fire_assertion(::neo::assertion_info::make(::neo::assertion_kind::kind,           \
                                                             NEO_STR(expr),                         \
                                                             (msg),                                 \
-                                                            __func__,                              \
+                                                            NEO_PRETTY_FUNC,                       \
                                                             __FILE__,                              \
                                                             __LINE__)                              \
                                     NEO_MAP(NEO_REPR_ASSERT_EXPR, ignore, __VA_ARGS__));           \

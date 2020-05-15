@@ -22,7 +22,7 @@ void _neo_default_assertion_handler(neo::assertion_info            info,
     }
     std::cerr << "  Expected: " << info.expression_spelling << "\n";
     std::cerr << "  Location: File \"" << info.filepath << "\", line " << info.file_line
-              << ",\n            in " << info.func_name << '\n';
+              << ",\n            in [" << info.func_name << "]\n";
     std::cerr << "   Message: " << info.message << '\n';
     if (exprs.begin() != exprs.end()) {
         auto expr_it = exprs.begin();
