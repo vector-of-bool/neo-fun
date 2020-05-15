@@ -3,8 +3,8 @@
 #define NEO_CONCAT_1(a, ...) a##__VA_ARGS__
 #define NEO_CONCAT(a, ...) NEO_CONCAT_1(a, __VA_ARGS__)
 
-#define NEO_STR_1(arg) #arg
-#define NEO_STR(arg) NEO_STR_1(arg)
+#define NEO_STR_1(...) #__VA_ARGS__
+#define NEO_STR(...) NEO_STR_1(__VA_ARGS__)
 
 #define NEO_EMPTY
 
