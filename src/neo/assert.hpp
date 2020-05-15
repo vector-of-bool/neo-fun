@@ -36,7 +36,7 @@
  */
 #define NEO_ASSUME(...) NEO_ASSUME_1(__VA_ARGS__)
 
-#if NEO_COMPILER_MSVC || NEO_COMPILER_IS_CLANG
+#if NEO_COMPILER_IS_MSVC || NEO_COMPILER_IS_CLANG
 // On _MSC_VER and __clang__, we have an `assume` intrinsic that does not evaluate its argument.
 #define NEO_UNEVAL_ASSUME_1(...) (NEO_ASSUME(__VA_ARGS__), true)
 #else
@@ -46,7 +46,7 @@
 
 /**
  * NEO_UNEVAL_ASSUME(<expr>) is an optimization hint that the given expression will
- * be true at the point. The expression is guaranteed to never be evaluated at
+ * be true at the point of usage. The expression is guaranteed to never be evaluated at
  * runtime.
  */
 #define NEO_UNEVAL_ASSUME(...) NEO_UNEVAL_ASSUME_1(__VA_ARGS__)
@@ -57,7 +57,7 @@ namespace neo {
  * Mark the given code path as unreachable. Calling this function, by
  * definition, is undefined behavior. Use this an optimization hint.
  */
-[[noreturn]] NEO_ALWAYS_INLINE inline void unreachable() noexcept {
+[[noreturn]] NEO_ALWAYS_INLINE void unreachable() noexcept {
 #if NEO_COMPILER_IS_GNU_LIKE
     __builtin_unreachable();
 #elif NEO_COMPILER_IS_MSVC
@@ -88,11 +88,38 @@ namespace neo {
  * For an assume() that is guaranteed to *never* evaluate its argument, use the
  * NEO_UNEVAL_ASSUME() macro.
  */
-NEO_ALWAYS_INLINE inline void assume(bool b) noexcept {
+NEO_ALWAYS_INLINE void assume(bool b) noexcept {
     if (!b) {
         unreachable();
     }
 }
+
+enum class assertion_kind {
+    expects = 1,
+    invariant,
+    ensures,
+};
+
+/**
+ * Class that encapsulates an assertion statement
+ */
+struct assertion_info {
+    assertion_kind   kind;
+    std::string_view expression_spelling;
+    std::string_view message;
+    std::string_view func_name;
+    std::string_view filepath;
+    int              file_line = 0;
+
+    static assertion_info make(assertion_kind   k,
+                               std::string_view spell,
+                               std::string_view msg,
+                               std::string_view func,
+                               std::string_view fname,
+                               int              line) {
+        return {k, spell, msg, func, fname, line};
+    }
+};
 
 /**
  * Class that encapsulates a captured expression from a failing assertion.
@@ -177,8 +204,7 @@ public:
 };
 
 /// Type of function that handles assertion failures.
-using assertion_handler_fn_ptr
-    = void (*)(std::string_view, std::string_view, assertion_expression_list);
+using assertion_handler_fn_ptr = void (*)(assertion_info, assertion_expression_list);
 
 /**
  * Set the function which handles assertions. The given function pointer may not be nullptr.
@@ -203,8 +229,7 @@ void set_assertion_handler(assertion_handler_fn_ptr) noexcept;
  *
  * This function will never return normally.
  */
-[[noreturn]] void fire_assertion(std::string_view          cond_expr,
-                                 std::string_view          msg,
+[[noreturn]] void fire_assertion(assertion_info,
                                  assertion_expression_list exprs) NEO_NOEXCEPT_ASSERTS;
 
 /**
@@ -213,14 +238,12 @@ void set_assertion_handler(assertion_handler_fn_ptr) noexcept;
  */
 template <typename... Ts>
 [[noreturn]] void
-fire_assertion(std::string_view cond,
-               std::string_view msg,
+fire_assertion(assertion_info info,
                detail::assertion_expression_impl<Ts>... exprs) NEO_NOEXCEPT_ASSERTS {
     // Create an array of pointers on the stack
     std::array<const assertion_expression*, sizeof...(Ts)> expressions = {(&exprs)...};
     // Fire!
-    fire_assertion(cond,
-                   msg,
+    fire_assertion(info,
                    assertion_expression_list(expressions.data(),
                                              expressions.data() + sizeof...(exprs)));
 }
@@ -238,7 +261,7 @@ fire_assertion(std::string_view cond,
 #if NEO_ENABLE_CHECKS || (!defined(NEO_ENABLE_CHECKS) && !defined(NDEBUG))
 #define NEO_ASSERT_1(...) neo_assert_always(__VA_ARGS__)
 #else
-#define NEO_ASSERT_1(...) neo_assert_assume(__VA_ARGS__)
+#define NEO_ASSERT_1(...) NEO_ASSERT_AS_ASSUMPTION(__VA_ARGS__)
 #endif
 
 /**
@@ -248,25 +271,52 @@ fire_assertion(std::string_view cond,
 #if NEO_ENABLE_AUDITS
 #define NEO_ASSERT_AUDIT_1(...) neo_assert_audit(__VA_ARGS__)
 #else
-#define NEO_ASSERT_AUDIT_1(...) neo_assert_assume(__VA_ARGS__)
+#define NEO_ASSERT_AUDIT_1(...) NEO_ASSERT_AS_ASSUMPTION(__VA_ARGS__)
 #endif
+
+#define NEO_ASSERT_AS_ASSUMPTION(kind, expr, msg, ...)                                             \
+    do {                                                                                           \
+        const bool _neo_expr_cond_ = NEO_UNEVAL_ASSUME(expr);                                      \
+        if (!(_neo_expr_cond_)) {                                                                  \
+            neo::fire_assertion(::neo::assertion_info::make(::neo::assertion_kind::kind,           \
+                                                            NEO_STR(expr),                         \
+                                                            (msg),                                 \
+                                                            __func__,                              \
+                                                            __FILE__,                              \
+                                                            __LINE__)                              \
+                                    NEO_MAP(NEO_REPR_ASSERT_EXPR, ignore, __VA_ARGS__));           \
+        }                                                                                          \
+    } while (0)
 
 #define NEO_CAPTURE_EXPR(Expression)                                                               \
     ::neo::detail::assertion_expression_impl<decltype(Expression)> {                               \
-        NEO_STR(Expression), Expression                                                            \
+        NEO_STR(Expression), (Expression)                                                          \
     }
 
 #define NEO_REPR_ASSERT_EXPR(_dummy, _counter, Expression) , NEO_CAPTURE_EXPR(Expression)
+
+#if _MSVC_TRADITIONAL
+#pragma message(                                                                                   \
+    "warning: NOTE from neo-fun: Using the <neo/assert.hpp> macros with MSVC "                     \
+    "requires a C++20 conformant preprocessor. Compile with "                                      \
+    "/experimental:preprocessor")
+#endif
 
 /**
  * Define an assertion that is unconditionally checked. This should be used for
  * safety-critical situations and situations where speed is not important.
  */
-#define neo_assert_always(expr, msg, ...)                                                          \
+#define neo_assert_always(kind, expr, msg, ...)                                                    \
     do {                                                                                           \
-        if (!(expr)) {                                                                             \
-            neo::fire_assertion(NEO_STR(expr),                                                     \
-                                (msg)NEO_MAP(NEO_REPR_ASSERT_EXPR, ~__VA_OPT__(, ) __VA_ARGS__));  \
+        const bool _neo_expr_cond_ = (expr);                                                       \
+        if (!(_neo_expr_cond_)) {                                                                  \
+            neo::fire_assertion(::neo::assertion_info::make(::neo::assertion_kind::kind,           \
+                                                            NEO_STR(expr),                         \
+                                                            (msg),                                 \
+                                                            __func__,                              \
+                                                            __FILE__,                              \
+                                                            __LINE__)                              \
+                                    NEO_MAP(NEO_REPR_ASSERT_EXPR, ignore, __VA_ARGS__));           \
         }                                                                                          \
     } while (0)
 
@@ -279,13 +329,7 @@ fire_assertion(std::string_view cond,
  *
  * Even though unevaluated, all arguments must be semantically valid.
  */
-#define neo_assert_assume(expr, msg, ...)                                                          \
-    do {                                                                                           \
-        if (!NEO_ASSUME(expr)) {                                                                   \
-            neo::fire_assertion(NEO_STR(expr),                                                     \
-                                (msg)NEO_MAP(NEO_REPR_ASSERT_EXPR, ~__VA_OPT__(, ) __VA_ARGS__));  \
-        }                                                                                          \
-    } while (0)
+#define neo_assert_assume(expr) NEO_ASSERT_AS_ASSUMPTION(invariant, (expr), "")
 
 /**
  * neo_assert is the traditional assertion that should be used for regular debugging. It is toggled
