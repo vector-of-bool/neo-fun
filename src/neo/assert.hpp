@@ -77,8 +77,8 @@ namespace neo {
  * It is unspecified whether the condition that generates `b` will be evaluated.
  *
  * NOTE: If the compiler CANNOT PROVE that the expression which generates `b`
- * will return normally, the compiler will be unable to elide evaluation of
- * that expression.
+ * will return normally and has no side effects, the compiler will be unable to
+ * elide evaluation of that expression.
  *
  * In general, an opaque function call or call graph that fails to inline must
  * prevent a compiler from eliding that function call, as it must assume that
@@ -94,22 +94,37 @@ NEO_ALWAYS_INLINE void assume(bool b) noexcept {
     }
 }
 
+/**
+ * The "kind" of an assertion. This is used as inline documentation and tweaks
+ * the diagnostic message printed by the assertion handler.
+ */
 enum class assertion_kind {
+    /// An "expectation" or "precondition" of an API. This represents the expectations an API places
+    /// on its caller to be well-behaved.
     expects = 1,
+    /// An invariant of an API. Regular user action should not cause invariants to break.
     invariant,
+    /// A guarantee of the result of an API. This should check that the result of a transition in
+    /// program state matches the expectations of the author.
     ensures,
 };
 
 /**
- * Class that encapsulates an assertion statement
+ * Class that encapsulates information about an assertion statement
  */
 struct assertion_info {
-    assertion_kind   kind;
+    /// The kind of assertion (expects, invariant, or ensures)
+    assertion_kind kind;
+    /// The spelling of the condition expression
     std::string_view expression_spelling;
+    /// The message associated with the assertion.
     std::string_view message;
+    /// The prettified spelling of the function containing the assertion
     std::string_view func_name;
+    /// The path to the file that contains the assertion
     std::string_view filepath;
-    int              file_line = 0;
+    /// The line number on which the assertion appears
+    int file_line = 0;
 
     static assertion_info make(assertion_kind   k,
                                std::string_view spell,
@@ -134,7 +149,7 @@ struct assertion_expression {
 namespace detail {
 
 /**
- * Implementaiton of assertion_expression for each particular type
+ * Implementaiton of assertion_expression for any particular type
  */
 template <typename T>
 class assertion_expression_impl : public assertion_expression {
@@ -152,6 +167,9 @@ public:
 
     void write_into(std::ostream& out) const noexcept override { out << _value; }
 };
+
+template <typename T>
+assertion_expression_impl(const char*, const T&) -> assertion_expression_impl<T>;
 
 }  // namespace detail
 
@@ -240,7 +258,7 @@ template <typename... Ts>
 [[noreturn]] void
 fire_assertion(assertion_info info,
                detail::assertion_expression_impl<Ts>... exprs) NEO_NOEXCEPT_ASSERTS {
-    // Create an array of pointers on the stack
+    // Create an array of pointers on the stack, each referring to one of the captured expressions.
     std::array<const assertion_expression*, sizeof...(Ts)> expressions = {(&exprs)...};
     // Fire!
     fire_assertion(info,
@@ -252,8 +270,8 @@ fire_assertion(assertion_info info,
  * Check-level assertions are enabled if *either*:
  *   - NEO_ENABLE_CHECKS is defined true a truthy value
  *   - *or* NEO_ENABLE_CHECKS *and* NDEBUG are both not defined
- * This has the effect that neo_assert_check (and neo_assert) are both enabled in the same situation
- * as the standard assert() macro.
+ * This has the effect that neo_assert are both enabled in the same situation as the standard
+ * assert() macro.
  *
  * NOTE: When check-assertions are disabled, it is unspecified whether the condition
  * will be evaluated.
@@ -274,6 +292,16 @@ fire_assertion(assertion_info info,
 #define NEO_ASSERT_AUDIT_1(...) NEO_ASSERT_AS_ASSUMPTION(__VA_ARGS__)
 #endif
 
+/**
+ * Emulates a neo_assert that assumes its conditional expression.
+ *
+ * Despite never actually firing an assertion, this macro expands the full body *as if* it could
+ * fire the assertion. This ensures that the arguments to the macro are still semantically valid,
+ * and prevents unused-variable warnings that would be seen if the macro simply discarded its
+ * arguments (as you see with <cassert>).
+ *
+ * The expression is guaranteed to never be evaluated at runtime.
+ */
 #define NEO_ASSERT_AS_ASSUMPTION(kind, expr, msg, ...)                                             \
     do {                                                                                           \
         const bool _neo_expr_cond_ = NEO_UNEVAL_ASSUME(expr);                                      \
@@ -284,17 +312,17 @@ fire_assertion(assertion_info info,
                                                             NEO_PRETTY_FUNC,                       \
                                                             __FILE__,                              \
                                                             __LINE__)                              \
-                                    NEO_MAP(NEO_REPR_ASSERT_EXPR, ignore, __VA_ARGS__));           \
+                                    NEO_MAP(NEO_REPR_ASSERT_EXPR, ~, __VA_ARGS__));                \
         }                                                                                          \
     } while (0)
 
 #define NEO_CAPTURE_EXPR(Expression)                                                               \
-    ::neo::detail::assertion_expression_impl<decltype(Expression)> {                               \
-        NEO_STR(Expression), (Expression)                                                          \
-    }
+    ::neo::detail::assertion_expression_impl { NEO_STR(Expression), (Expression) }
 
 #define NEO_REPR_ASSERT_EXPR(_dummy, _counter, Expression) , NEO_CAPTURE_EXPR(Expression)
 
+// neo_assert macros require a conforming C++20 preprocessor. MSVC has support thereof toggled by a
+// compile flag. Check that we have it ready.
 #if _MSVC_TRADITIONAL
 #pragma message(                                                                                   \
     "warning: NOTE from neo-fun: Using the <neo/assert.hpp> macros with MSVC "                     \
@@ -304,7 +332,7 @@ fire_assertion(assertion_info info,
 
 /**
  * Define an assertion that is unconditionally checked. This should be used for
- * safety-critical situations and situations where speed is not important.
+ * safety-critical situations and situations where performance is not important.
  */
 #define neo_assert_always(kind, expr, msg, ...)                                                    \
     do {                                                                                           \
@@ -316,7 +344,7 @@ fire_assertion(assertion_info info,
                                                             NEO_PRETTY_FUNC,                       \
                                                             __FILE__,                              \
                                                             __LINE__)                              \
-                                    NEO_MAP(NEO_REPR_ASSERT_EXPR, ignore, __VA_ARGS__));           \
+                                    NEO_MAP(NEO_REPR_ASSERT_EXPR, ~, __VA_ARGS__));                \
         }                                                                                          \
     } while (0)
 
@@ -332,13 +360,13 @@ fire_assertion(assertion_info info,
 #define neo_assert_assume(expr) NEO_ASSERT_AS_ASSUMPTION(invariant, (expr), "")
 
 /**
- * neo_assert is the traditional assertion that should be used for regular debugging. It is toggled
- * by NDEBUG, or can be explicitly enabled with NEO_ENABLE_CHECKS.
+ * neo_assert is the traditional assertion that should be used for regular debugging. It is disabled
+ * by NDEBUG, and can be explicitly enabled with NEO_ENABLE_CHECKS.
  */
 #define neo_assert NEO_ASSERT_1
 
 /**
- * neo_assert_audit is for checks that are extremely expensive but can offer useful insight to buggy
+ * neo_assert_audit is for checks that are expensive but can offer useful insight to buggy
  * behavior in a pinch. These must be explicitly enabled via NEO_ENABLE_AUDITS.
  */
 #define neo_assert_audit NEO_ASSERT_AUDIT_1

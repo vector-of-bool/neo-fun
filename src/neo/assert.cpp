@@ -4,6 +4,9 @@
 
 namespace {
 
+/**
+ * The default handler prints some (hopefully useful) diagnostic information.
+ */
 void _neo_default_assertion_handler(neo::assertion_info            info,
                                     neo::assertion_expression_list exprs) {
     std::cerr << "\n      HALT: CONTRACT VIOLATION"
@@ -21,8 +24,8 @@ void _neo_default_assertion_handler(neo::assertion_info            info,
         break;
     }
     std::cerr << "  Expected: " << info.expression_spelling << "\n";
-    std::cerr << "  Location: File \"" << info.filepath << "\", line " << info.file_line
-              << ",\n            in [" << info.func_name << "]\n";
+    std::cerr << "  Location: File \"" << info.filepath << "\", line " << info.file_line << ",\n"
+              << "            in [" << info.func_name << "]\n";
     std::cerr << "   Message: " << info.message << '\n';
     if (exprs.begin() != exprs.end()) {
         auto expr_it = exprs.begin();
