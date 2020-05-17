@@ -17,7 +17,7 @@ static_assert(!NEO_HAS_ARGS());
     constexpr int X = (Counter);                                                                   \
     }
 
-NEO_MAP(DECL_INTEGER, ~, foo, bar, baz);
+NEO_MAP(DECL_INTEGER, ~, foo, bar, baz)
 
 static_assert(foo == 0);
 static_assert(bar == 1);
