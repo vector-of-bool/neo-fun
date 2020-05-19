@@ -220,7 +220,7 @@ public:
             // return an old copy.
             ++*this;
         } else {
-            auto cp = *_self();
+            auto cp = _self();
             ++*this;
             return cp;
         }
@@ -235,23 +235,28 @@ public:
         return _self();
     }
 
-    constexpr auto operator--(int) noexcept requires detail::iter_is_bidirectional<self_type> {
-        auto cp = *this;
+    constexpr self_type operator--(int) noexcept requires detail::iter_is_bidirectional<self_type> {
+        auto cp = _self();
         --*this;
         return cp;
     }
 
-    constexpr friend self_type operator+(const self_type& left, std::ptrdiff_t off) noexcept
+    constexpr friend self_type operator+(const self_type& self, std::ptrdiff_t off) noexcept
         requires detail::iter_is_random_access<self_type> {
-        auto copy = left;
+        auto copy = self;
         copy.advance(off);
         return copy;
     }
 
-    NEO_ALWAYS_INLINE constexpr friend self_type operator-(const self_type& left,
+    constexpr friend self_type operator+(std::ptrdiff_t off, const self_type& self) noexcept
+        requires detail::iter_is_random_access<self_type> {
+        return self + off;
+    }
+
+    NEO_ALWAYS_INLINE constexpr friend self_type operator-(const self_type& self,
                                                            std::ptrdiff_t   off) noexcept
         requires detail::iter_is_random_access<self_type> {
-        return left + -off;
+        return self + -off;
     }
 
     template <detail::iter_sentinel<self_type> T>

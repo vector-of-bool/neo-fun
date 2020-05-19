@@ -113,11 +113,24 @@ TEST_CASE("Transforming iterator") {
     ++it;
     CHECK(*it == "2");
     CHECK_FALSE(it == as_string_iterator(values.begin()));
+    // Post-increment returns a copy of the iterator
+    auto copy = it++;
+    CHECK(*copy == "2");
 
     static_assert(std::is_same_v<decltype(it.operator->()), neo::arrow_proxy<std::string>>);
     // Even though we are acting on a temporary, the append() will return a new string
     auto twenty_four = it->append("4");
-    CHECK(twenty_four == "24");
+    CHECK(twenty_four == "34");
+
+    copy = copy - 1;
+    CHECK(*copy == "1");
+    CHECK(*(copy + 3) == "4");
+    CHECK(*(3 + copy) == "4");
+
+    ++copy;
+    auto copy2 = copy--;
+    CHECK(*copy == "1");
+    CHECK(*copy2 == "2");
 }
 
 TEST_CASE("Sentinel support") {
