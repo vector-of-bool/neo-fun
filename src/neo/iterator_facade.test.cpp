@@ -25,17 +25,17 @@ TEST_CASE("Create an iterator facade") {}
 namespace {
 
 class iota_iterator : public neo::iterator_facade<iota_iterator> {
-    std::ptrdiff_t _value = 0;
+    int _value = 0;
 
 public:
     iota_iterator() = default;
-    explicit iota_iterator(std::ptrdiff_t i)
+    explicit iota_iterator(int i)
         : _value(i) {}
 
-    std::ptrdiff_t dereference() const noexcept { return _value; }
+    int dereference() const noexcept { return _value; }
 
-    void advance(std::ptrdiff_t off) noexcept { _value += off; }
-    auto distance_to(iota_iterator o) const noexcept { return *o - **this; }
+    void advance(int off) noexcept { _value += off; }
+    int  distance_to(iota_iterator o) const noexcept { return *o - **this; }
 
     bool equal_to(iota_iterator o) const { return *o == **this; }
 };
@@ -142,6 +142,8 @@ TEST_CASE("Sentinel support") {
         auto increment() noexcept { ++value; }
 
         bool at_end() const noexcept { return value == 7; }
+
+        auto distance_to(sentinel_type) const noexcept { return 7 - value; }
     };
 
     struct seven_range {
@@ -155,4 +157,8 @@ TEST_CASE("Sentinel support") {
         CHECK(i < 7);
     }
     CHECK(sum == (1 + 2 + 3 + 4 + 5 + 6));
+
+    auto it = seven_range().begin();
+
+    CHECK((until_7_iter::sentinel_type() - it) == 7);
 }
