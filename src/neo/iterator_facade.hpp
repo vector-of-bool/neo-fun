@@ -12,6 +12,47 @@ namespace detail {
 
 // clang-format off
 template <typename T>
+concept iter_has_distance_to_method =
+    requires(const T t) {
+        t.distance_to(t);
+    };
+
+template <typename>
+struct infer_difference_type {
+    using type = std::ptrdiff_t;
+};
+
+template <iter_has_distance_to_method T>
+struct infer_difference_type<T> {
+    static const T& _it;
+    using type = decltype(_it.distance_to(_it));
+};
+
+template <typename T>
+using infer_difference_type_t = typename infer_difference_type<T>::type;
+
+template <typename T>
+struct infer_value_type {
+    static const T& _it;
+    using type = std::remove_const_t<std::remove_reference_t<decltype(*_it)>>;
+};
+
+template <typename T>
+    requires requires { typename T::value_type; }
+struct infer_value_type<T> {
+    using type = typename T::value_type;
+};
+
+template <typename T>
+using infer_value_type_t = typename infer_value_type<T>::type;
+
+template <typename T>
+concept iter_has_equal_to_method =
+    requires (const T it) {
+        it.equal_to(it);
+    };
+
+template <typename T>
 concept iter_has_increment_method =
     requires(T t) {
         t.increment();
@@ -25,14 +66,8 @@ concept iter_has_decrement_method =
 
 template <typename T>
 concept iter_has_advance_method =
-    requires(T t, const std::ptrdiff_t d) {
+    requires(T t, const infer_difference_type_t<T> d) {
         t.advance(d);
-    };
-
-template <typename T>
-concept iter_has_distance_to_method =
-    requires(T t, const T other) {
-        t.distance_to(other);
     };
 
 template <typename T>
@@ -48,22 +83,41 @@ concept iter_is_bidirectional =
 template <typename T>
 concept iter_is_single_pass = bool(T::single_pass_iterator);
 
+template <typename T>
+concept iter_uses_sentinel = requires { typename T::sentinel_type; };
+
+template <typename T>
+using infer_sentinel_type_t = typename T::sentinel_type;
+
 template <typename T, typename Iter>
-concept iter_sentinel = std::is_same_v<T, typename Iter::sentinel_type>;
+concept iter_sentinel =
+    iter_uses_sentinel<Iter> &&
+    std::is_same_v<T, infer_sentinel_type_t<Iter>>;
+
+template <typename T>
+concept iter_supports_dist_to_sentinel =
+    requires(const T it, const typename T::sentinel_type s) {
+        it.distance_to(s);
+    };
 // clang-format on
+
+template <typename T, typename Iter>
+concept iter_diff = std::is_convertible_v<T, infer_difference_type_t<Iter>>;
+
+struct iterator_facade_base {};
 
 }  // namespace detail
 
 template <typename T>
-class arrow_proxy {
+class arrow_proxy : detail::iterator_facade_base {
     T _value;
 
 public:
     explicit arrow_proxy(T&& t)
         : _value(t) {}
 
-    NEO_ALWAYS_INLINE auto operator->() noexcept { return std::addressof(_value); }
-    NEO_ALWAYS_INLINE auto operator->() const noexcept { return std::addressof(_value); }
+    auto operator->() noexcept { return std::addressof(_value); }
+    auto operator->() const noexcept { return std::addressof(_value); }
 };
 
 template <typename T>
@@ -151,8 +205,8 @@ public:
     using self_type = Derived;
 
 private:
-    NEO_ALWAYS_INLINE self_type& _self() noexcept { return static_cast<self_type&>(*this); }
-    NEO_ALWAYS_INLINE const self_type& _self() const noexcept {
+    constexpr self_type&       _self() noexcept { return static_cast<self_type&>(*this); }
+    constexpr const self_type& _self() const noexcept {
         return static_cast<const self_type&>(*this);
     }
 
@@ -160,7 +214,7 @@ public:
     /**
      * Implement operator* in terms of `.dereference()`
      */
-    NEO_ALWAYS_INLINE constexpr decltype(auto) operator*() const noexcept {
+    [[nodiscard]] constexpr decltype(auto) operator*() const noexcept {
         return _self().dereference();
     }
 
@@ -173,7 +227,7 @@ public:
      * If the return type is a reference type, returns a pointer to the returned
      * object.
      */
-    NEO_ALWAYS_INLINE constexpr decltype(auto) operator->() const noexcept {
+    constexpr decltype(auto) operator->() const noexcept {
         decltype(auto) deref = **this;
         if constexpr (std::is_reference_v<decltype(deref)>) {
             // If operator*() returns a reference, just return that address
@@ -188,8 +242,8 @@ public:
      * If this is a random_access_iterator, returns the distance from the right
      * to the left, i.e. how many times to apply ++right to reach `left`.
      */
-    NEO_ALWAYS_INLINE constexpr friend auto operator-(const self_type& left,
-                                                      const self_type& right) noexcept
+    [[nodiscard]] constexpr friend auto operator-(const self_type& left,
+                                                  const self_type& right) noexcept
         requires detail::iter_is_random_access<self_type> {
         return right.distance_to(left);
     }
@@ -198,7 +252,7 @@ public:
      * Advance the iterator one position forward. Implemented as a call to
      * `.increment()`, if present, otherwise `*this += 1`
      */
-    NEO_ALWAYS_INLINE constexpr self_type& operator++() noexcept {
+    constexpr self_type& operator++() noexcept {
         if constexpr (detail::iter_has_increment_method<self_type>) {
             // If there is an increment(), assume it is the most efficient way to
             // advance, even if we have an advance()
@@ -241,43 +295,46 @@ public:
         return cp;
     }
 
-    constexpr friend self_type operator+(const self_type& self, std::ptrdiff_t off) noexcept
+    template <detail::iter_diff<self_type> Diff>
+    [[nodiscard]] constexpr friend self_type operator+(self_type left, Diff off) noexcept
         requires detail::iter_is_random_access<self_type> {
-        auto copy = self;
-        copy.advance(off);
-        return copy;
+        return left += off;
     }
 
-    constexpr friend self_type operator+(std::ptrdiff_t off, const self_type& self) noexcept
+    template <detail::iter_diff<self_type> D>
+    [[nodiscard]] constexpr friend self_type operator+(D off, const self_type& self) noexcept
         requires detail::iter_is_random_access<self_type> {
         return self + off;
     }
 
-    NEO_ALWAYS_INLINE constexpr friend self_type operator-(const self_type& self,
-                                                           std::ptrdiff_t   off) noexcept
+    template <detail::iter_diff<self_type> D>
+    [[nodiscard]] constexpr friend self_type operator-(const self_type& self, D off) noexcept
         requires detail::iter_is_random_access<self_type> {
-        return self + -off;
+        using diff_type        = detail::infer_difference_type_t<self_type>;
+        using signed_diff_type = std::make_signed_t<diff_type>;
+        return self + -static_cast<signed_diff_type>(off);
     }
 
-    template <detail::iter_sentinel<self_type> T>
-    NEO_ALWAYS_INLINE constexpr friend std::ptrdiff_t operator-(T                s,
-                                                                const self_type& self) noexcept {
+    template <detail::iter_sentinel<self_type> S>
+    [[nodiscard]] constexpr friend auto operator-(S s, const self_type& self) noexcept {
         return self.distance_to(s);
     }
 
-    NEO_ALWAYS_INLINE constexpr friend self_type& operator+=(self_type&     left,
-                                                             std::ptrdiff_t off) noexcept
+    template <detail::iter_diff<self_type> D>
+    constexpr friend self_type& operator+=(self_type& self, D off) noexcept
         requires detail::iter_is_random_access<self_type> {
-        return left = left + off;
+        self.advance(off);
+        return self;
     }
 
-    NEO_ALWAYS_INLINE constexpr friend self_type& operator-=(self_type&     left,
-                                                             std::ptrdiff_t off) noexcept
+    template <detail::iter_diff<self_type> D>
+    constexpr friend self_type& operator-=(self_type& self, D off) noexcept
         requires detail::iter_is_random_access<self_type> {
-        return left = left - off;
+        return self = self - off;
     }
 
-    NEO_ALWAYS_INLINE constexpr decltype(auto) operator[](std::ptrdiff_t pos) const noexcept
+    template <detail::iter_diff<self_type> D>
+    [[nodiscard]] constexpr decltype(auto) operator[](D pos) const noexcept
         requires detail::iter_is_random_access<self_type> {
         return *(_self() + pos);
     }
@@ -285,57 +342,81 @@ public:
     /**
      * Equality
      */
-    NEO_ALWAYS_INLINE friend constexpr bool operator==(const self_type& me,
-                                                       const self_type& right) noexcept {
-        return me._self().equal_to(right._self());
+    [[nodiscard]] friend constexpr bool operator==(const self_type& me,
+                                                   const self_type& right) noexcept {
+        if constexpr (detail::iter_has_equal_to_method<self_type>) {
+            return me.equal_to(right);
+        } else if constexpr (detail::iter_has_distance_to_method<self_type>) {
+            return me.distance_to(right) == 0;
+        } else {
+            static_assert(detail::iter_has_distance_to_method<self_type>,
+                          "Iterator must provide either `distance_to(other)` or `equal_to(other)`");
+        }
     }
 
     template <detail::iter_sentinel<self_type> S>
-    NEO_ALWAYS_INLINE friend constexpr bool operator==(const self_type& self, S s) noexcept {
+    [[nodiscard]] friend constexpr bool operator==(const self_type& self, S) noexcept {
+        return self.at_end();
+    }
+
+    /// XXX: GCC9 has a bug with the combination of features that are being used
+    /// in this free hidden friend operator function when the sentinel is the
+    /// left-hand argument and we are constrained through constraint syntax.
+    /// However: It still works with the good-ol' enable_if trick.
+    template <detail::iter_sentinel<self_type> S,
+              typename = std::enable_if_t<detail::iter_sentinel<S, self_type>>>
+    [[nodiscard]] friend constexpr bool operator==(S, const self_type& self) noexcept {
         return self.at_end();
     }
 
     /**
      * Inequality
      */
-    NEO_ALWAYS_INLINE friend constexpr bool operator!=(const self_type& left,
-                                                       const self_type& right) noexcept {
+    [[nodiscard]] friend constexpr bool operator!=(const self_type& left,
+                                                   const self_type& right) noexcept {
         return !(left == right);
     }
 
+    /// See comment above regarding GCC9
     template <detail::iter_sentinel<self_type> S>
-    NEO_ALWAYS_INLINE friend constexpr bool operator!=(const self_type& self, S) noexcept {
+    [[nodiscard]] friend constexpr bool operator!=(const self_type& self, S) noexcept {
+        return !self.at_end();
+    }
+
+    template <detail::iter_sentinel<self_type> S,
+              typename = std::enable_if_t<detail::iter_sentinel<S, self_type>>>
+    [[nodiscard]] friend constexpr bool operator!=(S, const self_type& self) noexcept {
         return !self.at_end();
     }
 
     /**
      * Less-than
      */
-    NEO_ALWAYS_INLINE friend constexpr bool operator<(const self_type& left,
-                                                      const self_type& right) noexcept
+    [[nodiscard]] friend constexpr bool operator<(const self_type& left,
+                                                  const self_type& right) noexcept
         requires detail::iter_is_random_access<self_type> {
-        return (right - left) > 0;
+        return (left - right) < 0;
     }
 
-    NEO_ALWAYS_INLINE friend constexpr bool operator<=(const self_type& left,
-                                                       const self_type& right) noexcept
+    [[nodiscard]] friend constexpr bool operator<=(const self_type& left,
+                                                   const self_type& right) noexcept
         requires detail::iter_is_random_access<self_type> {
-        return (right - left) >= 0;
+        return (left - right) <= 0;
     }
 
     /**
      * Greater-than
      */
-    NEO_ALWAYS_INLINE friend constexpr bool operator>(const self_type& left,
-                                                      const self_type& right) noexcept
+    [[nodiscard]] friend constexpr bool operator>(const self_type& left,
+                                                  const self_type& right) noexcept
         requires detail::iter_is_random_access<self_type> {
-        return (right - left) < 0;
+        return (left - right) > 0;
     }
 
-    NEO_ALWAYS_INLINE friend constexpr bool operator>=(const self_type& left,
-                                                       const self_type& right) noexcept
+    [[nodiscard]] friend constexpr bool operator>=(const self_type& left,
+                                                   const self_type& right) noexcept
         requires detail::iter_is_random_access<self_type> {
-        return (right - left) <= 0;
+        return (left - right) >= 0;
     }
 };  // namespace neo
 
@@ -352,10 +433,13 @@ public:
     explicit iterator_wrapper_facade(InnerIterator it)
         : wrapped_iterator(it) {}
 
-    constexpr void advance(std::ptrdiff_t off) noexcept { std::advance(wrapped_iterator, off); }
+    template <detail::iter_diff<self_type> D>
+    constexpr void advance(D off) noexcept {
+        std::advance(wrapped_iterator, off);
+    }
 
     // clang-format off
-    constexpr void distance_to(const self_type& other) const noexcept
+    constexpr auto distance_to(const self_type& other) const noexcept
         requires std::is_base_of_v<
             typename std::iterator_traits<InnerIterator>::iterator_category,
             std::random_access_iterator_tag> {
@@ -374,10 +458,11 @@ namespace std {
 
 template <typename Derived>
 requires std::is_base_of_v<neo::iterator_facade<Derived>, Derived> struct iterator_traits<Derived> {
-    using reference       = decltype(*neo::cref_v<Derived>);
-    using value_type      = std::remove_const_t<std::remove_reference_t<reference>>;
-    using pointer         = decltype(neo::cref_v<Derived>.operator->());
-    using difference_type = std::ptrdiff_t;
+    static const Derived& _const_it;
+    using reference       = decltype(*_const_it);
+    using pointer         = decltype(_const_it.operator->());
+    using value_type      = neo::detail::infer_value_type_t<Derived>;
+    using difference_type = neo::detail::infer_difference_type_t<Derived>;
 
     // Pick the iterator category based on the interfaces that it provides
     using iterator_category = std::conditional_t<

@@ -25,17 +25,17 @@ TEST_CASE("Create an iterator facade") {}
 namespace {
 
 class iota_iterator : public neo::iterator_facade<iota_iterator> {
-    std::ptrdiff_t _value = 0;
+    int _value = 0;
 
 public:
     iota_iterator() = default;
-    explicit iota_iterator(std::ptrdiff_t i)
+    explicit iota_iterator(int i)
         : _value(i) {}
 
-    std::ptrdiff_t dereference() const noexcept { return _value; }
+    int dereference() const noexcept { return _value; }
 
-    void advance(std::ptrdiff_t off) noexcept { _value += off; }
-    auto distance_to(iota_iterator o) const noexcept { return *o - **this; }
+    void advance(int off) noexcept { _value += off; }
+    int  distance_to(iota_iterator o) const noexcept { return *o - **this; }
 
     bool equal_to(iota_iterator o) const { return *o == **this; }
 };
@@ -56,6 +56,9 @@ TEST_CASE("Create an iota_iterator") {
     CHECK(it[-9] == -9);
     CHECK(stop[2] == 46);
     CHECK(stop[-44] == 0);
+
+    CHECK((stop - it) == 44);
+    CHECK((it - stop) == -44);
 
     CHECK(it != stop);
     CHECK((it + 44) == stop);
@@ -119,8 +122,8 @@ TEST_CASE("Transforming iterator") {
 
     static_assert(std::is_same_v<decltype(it.operator->()), neo::arrow_proxy<std::string>>);
     // Even though we are acting on a temporary, the append() will return a new string
-    auto twenty_four = it->append("4");
-    CHECK(twenty_four == "34");
+    auto thirty_four = it->append("4");
+    CHECK(thirty_four == "34");
 
     copy = copy - 1;
     CHECK(*copy == "1");
@@ -131,6 +134,12 @@ TEST_CASE("Transforming iterator") {
     auto copy2 = copy--;
     CHECK(*copy == "1");
     CHECK(*copy2 == "2");
+
+    // Advance by a negative number created from an unsigned
+    CHECK(*copy == "1");
+    ++copy;
+    copy -= 1u;
+    CHECK(*copy == "1");
 }
 
 TEST_CASE("Sentinel support") {
@@ -142,6 +151,8 @@ TEST_CASE("Sentinel support") {
         auto increment() noexcept { ++value; }
 
         bool at_end() const noexcept { return value == 7; }
+
+        auto distance_to(sentinel_type) const noexcept { return 7 - value; }
     };
 
     struct seven_range {
@@ -155,4 +166,13 @@ TEST_CASE("Sentinel support") {
         CHECK(i < 7);
     }
     CHECK(sum == (1 + 2 + 3 + 4 + 5 + 6));
+
+    auto it = seven_range().begin();
+
+#if !_MSC_VER
+    /// XXX: Last checked, MSVC has an issue finding the correct operator-() via ADL.
+    /// If you're using MSVC and reading this comment in the future, revive this
+    /// snippet and try again.
+    CHECK((until_7_iter::sentinel_type() - it) == 7);
+#endif
 }
