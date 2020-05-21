@@ -57,6 +57,9 @@ TEST_CASE("Create an iota_iterator") {
     CHECK(stop[2] == 46);
     CHECK(stop[-44] == 0);
 
+    CHECK((stop - it) == 44);
+    CHECK((it - stop) == -44);
+
     CHECK(it != stop);
     CHECK((it + 44) == stop);
     CHECK(it == (stop - 44));
