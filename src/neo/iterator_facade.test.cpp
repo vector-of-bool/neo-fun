@@ -134,6 +134,12 @@ TEST_CASE("Transforming iterator") {
     auto copy2 = copy--;
     CHECK(*copy == "1");
     CHECK(*copy2 == "2");
+
+    // Advance by a negative number created from an unsigned
+    CHECK(*copy == "1");
+    ++copy;
+    copy -= 1u;
+    CHECK(*copy == "1");
 }
 
 TEST_CASE("Sentinel support") {
