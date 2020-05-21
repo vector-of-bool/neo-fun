@@ -86,10 +86,13 @@ concept iter_is_single_pass = bool(T::single_pass_iterator);
 template <typename T>
 concept iter_uses_sentinel = requires { typename T::sentinel_type; };
 
+template <typename T>
+using infer_sentinel_type_t = typename T::sentinel_type;
+
 template <typename T, typename Iter>
 concept iter_sentinel =
     iter_uses_sentinel<Iter> &&
-    std::is_same_v<T, typename Iter::sentinel_type>;
+    std::is_same_v<T, infer_sentinel_type_t<Iter>>;
 
 template <typename T>
 concept iter_supports_dist_to_sentinel =
@@ -356,6 +359,16 @@ public:
         return self.at_end();
     }
 
+    /// XXX: GCC9 has a bug with the combination of features that are being used
+    /// in this free hidden friend operator function when the sentinel is the
+    /// left-hand argument and we are constrained through constraint syntax.
+    /// However: It still works with the good-ol' enable_if trick.
+    template <detail::iter_sentinel<self_type> S,
+              typename = std::enable_if_t<detail::iter_sentinel<S, self_type>>>
+    [[nodiscard]] friend constexpr bool operator==(S, const self_type& self) noexcept {
+        return self.at_end();
+    }
+
     /**
      * Inequality
      */
@@ -364,8 +377,15 @@ public:
         return !(left == right);
     }
 
+    /// See comment above regarding GCC9
     template <detail::iter_sentinel<self_type> S>
     [[nodiscard]] friend constexpr bool operator!=(const self_type& self, S) noexcept {
+        return !self.at_end();
+    }
+
+    template <detail::iter_sentinel<self_type> S,
+              typename = std::enable_if_t<detail::iter_sentinel<S, self_type>>>
+    [[nodiscard]] friend constexpr bool operator!=(S, const self_type& self) noexcept {
         return !self.at_end();
     }
 
