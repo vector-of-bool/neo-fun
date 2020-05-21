@@ -163,5 +163,10 @@ TEST_CASE("Sentinel support") {
 
     auto it = seven_range().begin();
 
+#if !_MSC_VER
+    /// XXX: Last checked, MSVC has an issue finding the correct operator-() via ADL.
+    /// If you're using MSVC and reading this comment in the future, revive this
+    /// snippet and try again.
     CHECK((until_7_iter::sentinel_type() - it) == 7);
+#endif
 }
