@@ -211,7 +211,9 @@ public:
     /**
      * Implement operator* in terms of `.dereference()`
      */
-    constexpr decltype(auto) operator*() const noexcept { return _self().dereference(); }
+    [[nodiscard]] constexpr decltype(auto) operator*() const noexcept {
+        return _self().dereference();
+    }
 
     /**
      * Implement arrow in terms of `operator*`, but:
@@ -237,7 +239,8 @@ public:
      * If this is a random_access_iterator, returns the distance from the right
      * to the left, i.e. how many times to apply ++right to reach `left`.
      */
-    constexpr friend auto operator-(const self_type& left, const self_type& right) noexcept
+    [[nodiscard]] constexpr friend auto operator-(const self_type& left,
+                                                  const self_type& right) noexcept
         requires detail::iter_is_random_access<self_type> {
         return right.distance_to(left);
     }
@@ -290,19 +293,19 @@ public:
     }
 
     template <detail::iter_diff<self_type> Diff>
-    constexpr friend self_type operator+(self_type left, Diff off) noexcept
+    [[nodiscard]] constexpr friend self_type operator+(self_type left, Diff off) noexcept
         requires detail::iter_is_random_access<self_type> {
         return left += off;
     }
 
     template <detail::iter_diff<self_type> D>
-    constexpr friend self_type operator+(D off, const self_type& self) noexcept
+    [[nodiscard]] constexpr friend self_type operator+(D off, const self_type& self) noexcept
         requires detail::iter_is_random_access<self_type> {
         return self + off;
     }
 
     template <detail::iter_diff<self_type> D>
-    constexpr friend self_type operator-(const self_type& self, D off) noexcept
+    [[nodiscard]] constexpr friend self_type operator-(const self_type& self, D off) noexcept
         requires detail::iter_is_random_access<self_type> {
         using diff_type        = detail::infer_difference_type_t<self_type>;
         using signed_diff_type = std::make_signed_t<diff_type>;
@@ -310,7 +313,7 @@ public:
     }
 
     template <detail::iter_sentinel<self_type> S>
-    constexpr friend auto operator-(S s, const self_type& self) noexcept {
+    [[nodiscard]] constexpr friend auto operator-(S s, const self_type& self) noexcept {
         return self.distance_to(s);
     }
 
@@ -328,7 +331,7 @@ public:
     }
 
     template <detail::iter_diff<self_type> D>
-    constexpr decltype(auto) operator[](D pos) const noexcept
+    [[nodiscard]] constexpr decltype(auto) operator[](D pos) const noexcept
         requires detail::iter_is_random_access<self_type> {
         return *(_self() + pos);
     }
@@ -336,7 +339,8 @@ public:
     /**
      * Equality
      */
-    friend constexpr bool operator==(const self_type& me, const self_type& right) noexcept {
+    [[nodiscard]] friend constexpr bool operator==(const self_type& me,
+                                                   const self_type& right) noexcept {
         if constexpr (detail::iter_has_equal_to_method<self_type>) {
             return me.equal_to(right);
         } else if constexpr (detail::iter_has_distance_to_method<self_type>) {
@@ -348,31 +352,34 @@ public:
     }
 
     template <detail::iter_sentinel<self_type> S>
-    friend constexpr bool operator==(const self_type& self, S) noexcept {
+    [[nodiscard]] friend constexpr bool operator==(const self_type& self, S) noexcept {
         return self.at_end();
     }
 
     /**
      * Inequality
      */
-    friend constexpr bool operator!=(const self_type& left, const self_type& right) noexcept {
+    [[nodiscard]] friend constexpr bool operator!=(const self_type& left,
+                                                   const self_type& right) noexcept {
         return !(left == right);
     }
 
     template <detail::iter_sentinel<self_type> S>
-    friend constexpr bool operator!=(const self_type& self, S) noexcept {
+    [[nodiscard]] friend constexpr bool operator!=(const self_type& self, S) noexcept {
         return !self.at_end();
     }
 
     /**
      * Less-than
      */
-    friend constexpr bool operator<(const self_type& left, const self_type& right) noexcept
+    [[nodiscard]] friend constexpr bool operator<(const self_type& left,
+                                                  const self_type& right) noexcept
         requires detail::iter_is_random_access<self_type> {
         return (left - right) < 0;
     }
 
-    friend constexpr bool operator<=(const self_type& left, const self_type& right) noexcept
+    [[nodiscard]] friend constexpr bool operator<=(const self_type& left,
+                                                   const self_type& right) noexcept
         requires detail::iter_is_random_access<self_type> {
         return (left - right) <= 0;
     }
@@ -380,12 +387,14 @@ public:
     /**
      * Greater-than
      */
-    friend constexpr bool operator>(const self_type& left, const self_type& right) noexcept
+    [[nodiscard]] friend constexpr bool operator>(const self_type& left,
+                                                  const self_type& right) noexcept
         requires detail::iter_is_random_access<self_type> {
         return (left - right) > 0;
     }
 
-    friend constexpr bool operator>=(const self_type& left, const self_type& right) noexcept
+    [[nodiscard]] friend constexpr bool operator>=(const self_type& left,
+                                                   const self_type& right) noexcept
         requires detail::iter_is_random_access<self_type> {
         return (left - right) >= 0;
     }
