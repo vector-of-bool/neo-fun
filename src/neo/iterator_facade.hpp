@@ -304,7 +304,9 @@ public:
     template <detail::iter_diff<self_type> D>
     constexpr friend self_type operator-(const self_type& self, D off) noexcept
         requires detail::iter_is_random_access<self_type> {
-        return self + -off;
+        using diff_type        = detail::infer_difference_type_t<self_type>;
+        using signed_diff_type = std::make_signed_t<diff_type>;
+        return self + -static_cast<signed_diff_type>(off);
     }
 
     template <detail::iter_sentinel<self_type> S>
