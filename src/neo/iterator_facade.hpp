@@ -83,22 +83,9 @@ concept iter_is_bidirectional =
 template <typename T>
 concept iter_is_single_pass = bool(T::single_pass_iterator);
 
-template <typename T>
-concept iter_uses_sentinel = requires { typename T::sentinel_type; };
-
-template <typename T>
-using infer_sentinel_type_t = typename T::sentinel_type;
-
 template <typename T, typename Iter>
-concept iter_sentinel =
-    iter_uses_sentinel<Iter> &&
-    std::is_same_v<T, infer_sentinel_type_t<Iter>>;
+concept iter_sentinel = std::is_same_v<T, typename T::sentinel_type>;
 
-template <typename T>
-concept iter_supports_dist_to_sentinel =
-    requires(const T it, const typename T::sentinel_type s) {
-        it.distance_to(s);
-    };
 // clang-format on
 
 template <typename T, typename Iter>
@@ -109,7 +96,7 @@ struct iterator_facade_base {};
 }  // namespace detail
 
 template <typename T>
-class arrow_proxy : detail::iterator_facade_base {
+class arrow_proxy {
     T _value;
 
 public:
@@ -200,7 +187,7 @@ arrow_proxy(T &&) -> arrow_proxy<T>;
  * `iterator_traits<Derived>::value_type`.
  */
 template <typename Derived>
-class iterator_facade {
+class iterator_facade : detail::iterator_facade_base {
 public:
     using self_type = Derived;
 
@@ -457,7 +444,9 @@ public:
 namespace std {
 
 template <typename Derived>
-requires std::is_base_of_v<neo::iterator_facade<Derived>, Derived> struct iterator_traits<Derived> {
+requires std::is_base_of_v<neo::detail::iterator_facade_base,
+                           Derived>  //
+    struct iterator_traits<Derived> {
     static const Derived& _const_it;
     using reference       = decltype(*_const_it);
     using pointer         = decltype(_const_it.operator->());
