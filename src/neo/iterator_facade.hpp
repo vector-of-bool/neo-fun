@@ -84,7 +84,7 @@ template <typename T>
 concept iter_is_single_pass = bool(T::single_pass_iterator);
 
 template <typename T, typename Iter>
-concept iter_sentinel = std::is_same_v<T, typename T::sentinel_type>;
+concept iter_sentinel = std::is_same_v<T, typename Iter::sentinel_type>;
 
 // clang-format on
 
