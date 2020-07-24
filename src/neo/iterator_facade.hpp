@@ -1,8 +1,7 @@
 #pragma once
 
-#include <neo/attrib.hpp>
+#include <neo/arrow_proxy.hpp>
 #include <neo/ref.hpp>
-#include <neo/returns.hpp>
 
 #include <iterator>
 
@@ -94,21 +93,6 @@ concept iter_diff = std::is_convertible_v<T, infer_difference_type_t<Iter>>;
 struct iterator_facade_base {};
 
 }  // namespace detail
-
-template <typename T>
-class arrow_proxy {
-    T _value;
-
-public:
-    explicit arrow_proxy(T&& t)
-        : _value(t) {}
-
-    auto operator->() noexcept { return std::addressof(_value); }
-    auto operator->() const noexcept { return std::addressof(_value); }
-};
-
-template <typename T>
-arrow_proxy(T &&) -> arrow_proxy<T>;
 
 /**
  * An iterator_facade fills-out the interface of an iterator based on just a few methods be present
