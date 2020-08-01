@@ -268,7 +268,7 @@ fire_assertion(assertion_info info,
 
 /**
  * Check-level assertions are enabled if *either*:
- *   - NEO_ENABLE_CHECKS is defined true a truthy value
+ *   - NEO_ENABLE_CHECKS is defined to a truthy value
  *   - *or* NEO_ENABLE_CHECKS *and* NDEBUG are both not defined
  * This has the effect that neo_assert are both enabled in the same situation as the standard
  * assert() macro.
@@ -303,18 +303,18 @@ fire_assertion(assertion_info info,
  * The expression is guaranteed to never be evaluated at runtime.
  */
 #define NEO_ASSERT_AS_ASSUMPTION(kind, expr, msg, ...)                                             \
-    do {                                                                                           \
-        const bool _neo_expr_cond_ = NEO_UNEVAL_ASSUME(expr);                                      \
-        if (!(_neo_expr_cond_)) {                                                                  \
-            neo::fire_assertion(::neo::assertion_info::make(::neo::assertion_kind::kind,           \
-                                                            NEO_STR(expr),                         \
-                                                            (msg),                                 \
-                                                            NEO_PRETTY_FUNC,                       \
-                                                            __FILE__,                              \
-                                                            __LINE__)                              \
-                                    NEO_MAP(NEO_REPR_ASSERT_EXPR, ~, __VA_ARGS__));                \
-        }                                                                                          \
-    } while (0)
+    NEO_FN_MACRO_BEGIN                                                                             \
+    const bool _neo_expr_cond_ = NEO_UNEVAL_ASSUME(expr);                                          \
+    if (!(_neo_expr_cond_)) {                                                                      \
+        neo::fire_assertion(::neo::assertion_info::make(::neo::assertion_kind::kind,               \
+                                                        NEO_STR(expr),                             \
+                                                        (msg),                                     \
+                                                        NEO_PRETTY_FUNC,                           \
+                                                        __FILE__,                                  \
+                                                        __LINE__)                                  \
+                                NEO_MAP(NEO_REPR_ASSERT_EXPR, ~, __VA_ARGS__));                    \
+    }                                                                                              \
+    NEO_FN_MACRO_END
 
 #define NEO_CAPTURE_EXPR(Expression)                                                               \
     ::neo::detail::assertion_expression_impl { NEO_STR(Expression), (Expression) }
@@ -335,18 +335,18 @@ fire_assertion(assertion_info info,
  * safety-critical situations and situations where performance is not important.
  */
 #define neo_assert_always(kind, expr, msg, ...)                                                    \
-    do {                                                                                           \
-        const bool _neo_expr_cond_ = (expr);                                                       \
-        if (!(_neo_expr_cond_)) {                                                                  \
-            neo::fire_assertion(::neo::assertion_info::make(::neo::assertion_kind::kind,           \
-                                                            NEO_STR(expr),                         \
-                                                            (msg),                                 \
-                                                            NEO_PRETTY_FUNC,                       \
-                                                            __FILE__,                              \
-                                                            __LINE__)                              \
-                                    NEO_MAP(NEO_REPR_ASSERT_EXPR, ~, __VA_ARGS__));                \
-        }                                                                                          \
-    } while (0)
+    NEO_FN_MACRO_BEGIN                                                                             \
+    const bool _neo_expr_cond_ = (expr);                                                           \
+    if (!(_neo_expr_cond_)) {                                                                      \
+        neo::fire_assertion(::neo::assertion_info::make(::neo::assertion_kind::kind,               \
+                                                        NEO_STR(expr),                             \
+                                                        (msg),                                     \
+                                                        NEO_PRETTY_FUNC,                           \
+                                                        __FILE__,                                  \
+                                                        __LINE__)                                  \
+                                NEO_MAP(NEO_REPR_ASSERT_EXPR, ~, __VA_ARGS__));                    \
+    }                                                                                              \
+    NEO_FN_MACRO_END
 
 /**
  * Define an assertion that is never checked, but still acts as an optimization
