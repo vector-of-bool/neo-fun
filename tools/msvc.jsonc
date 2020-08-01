@@ -2,6 +2,6 @@
     "compiler_id": "msvc",
     "flags": [
         "/std:c++latest",
-        "/experimental:preprocessor"
+        "/Zc:preprocessor"
     ],
 }
