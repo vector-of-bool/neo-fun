@@ -27,7 +27,7 @@
 #define NEO_ASSUME_1(...) (__builtin_assume(__VA_ARGS__), true)
 #else
 // GCC and others do not have an `assume` built-in (AFAIK)
-#define NEO_ASSUME_1(...) (true || (__VA_ARGS__) || (::neo::unreachable(), true))
+#define NEO_ASSUME_1(...) ((__VA_ARGS__) || (::neo::unreachable(), true))
 #endif
 
 /**
