@@ -51,4 +51,43 @@ extern T&& ref_v;
 template <typename T>
 extern make_cref_t<T&&> cref_v;
 
+/**
+ * If `T` is a reference type, the `type` member names a
+ * std::reference_wrapper<U>, where `U` is the referred-to type of `T`
+ * (including cv-qualifierd). For all other types, the `type` member is `T`
+ * unmodified.
+ */
+template <typename T>
+struct wrap_if_reference {
+    using type = T;
+};
+
+template <typename T>
+requires std::is_reference_v<T>  //
+    struct wrap_if_reference<T> {
+    using type = std::reference_wrapper<std::remove_reference_t<T>>;
+};
+
+/**
+ * If the given `T` is a reference, becomes a `std::reference_wrapper<U>` where
+ * `U` is the referred-to type. Otherwise, becomes `T` unmodified.
+ */
+template <typename T>
+using wrap_if_reference_t = typename wrap_if_reference<T>::type;
+
+/**
+ * Un-wraps a reference_wrapper<T>. Returns a reference to the referred-to
+ * object. If the given object is not a reference_wrapper, returns a reference
+ * to the argument.
+ */
+template <typename T>
+constexpr T&& unref(T&& t) noexcept {
+    return std::forward<T>(t);
+}
+
+template <typename T>
+constexpr T& unref(std::reference_wrapper<T> t) noexcept {
+    return t;
+}
+
 }  // namespace neo
