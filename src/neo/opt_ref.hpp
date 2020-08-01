@@ -117,6 +117,6 @@ public:
 };
 
 template <typename T>
-opt_ref(T what) -> opt_ref<T>;
+opt_ref(T&& what) -> opt_ref<std::remove_reference_t<T>>;
 
 }  // namespace neo
