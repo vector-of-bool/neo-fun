@@ -3,6 +3,8 @@
 #include <functional>
 #include <type_traits>
 
+#include "./attrib.hpp"
+
 namespace neo {
 
 /**
@@ -58,13 +60,13 @@ extern make_cref_t<T&&> cref_v;
  * unmodified.
  */
 template <typename T>
-struct wrap_if_reference {
+struct wrap_refs {
     using type = T;
 };
 
 template <typename T>
 requires std::is_reference_v<T>  //
-    struct wrap_if_reference<T> {
+    struct wrap_refs<T> {
     using type = std::reference_wrapper<std::remove_reference_t<T>>;
 };
 
@@ -73,7 +75,10 @@ requires std::is_reference_v<T>  //
  * `U` is the referred-to type. Otherwise, becomes `T` unmodified.
  */
 template <typename T>
-using wrap_if_reference_t = typename wrap_if_reference<T>::type;
+using wrap_refs_t = typename wrap_refs<T>::type;
+
+template <typename T>
+using wrap_if_reference_t [[deprecated("Use wrap_refs_t")]] = wrap_refs_t<T>;
 
 /**
  * Un-wraps a reference_wrapper<T>. Returns a reference to the referred-to
@@ -81,13 +86,25 @@ using wrap_if_reference_t = typename wrap_if_reference<T>::type;
  * to the argument.
  */
 template <typename T>
-constexpr T&& unref(T&& t) noexcept {
-    return std::forward<T>(t);
+NEO_ALWAYS_INLINE constexpr T&& unref(T&& t) noexcept {
+    return static_cast<T&&>(t);
 }
 
 template <typename T>
-constexpr T& unref(std::reference_wrapper<T> t) noexcept {
+NEO_ALWAYS_INLINE constexpr T& unref(std::reference_wrapper<T> t) noexcept {
     return t;
 }
+
+/**
+ * Declare a set of getter-methods that return a member variable after passing it through
+ * neo::unref(). This is meant to be used in conjunction with wrap_refs_t
+ */
+#define NEO_DECL_UNREF_GETTER(FuncName, MemName)                                                   \
+    constexpr auto&& FuncName()& noexcept { return ::neo::unref(this->MemName); }                  \
+    constexpr auto&& FuncName() const& noexcept { return ::neo::unref(this->MemName); }            \
+    constexpr auto&& FuncName()&& noexcept {                                                       \
+        return ::neo::unref(static_cast<decltype(this->MemName)&&>(this->MemName));                \
+    }                                                                                              \
+    static_assert(true)
 
 }  // namespace neo
