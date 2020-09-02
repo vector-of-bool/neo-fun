@@ -14,7 +14,7 @@ namespace neo {
  */
 template <typename T>
 class arrow_proxy {
-    wrap_if_reference_t<T> _value;
+    wrap_refs_t<T> _value;
 
 public:
     explicit constexpr arrow_proxy(T&& t) noexcept
