@@ -6,8 +6,8 @@
 
 #include <array>
 #include <initializer_list>
-#include <iosfwd>
 #include <iterator>
+#include <ostream>
 #include <string_view>
 
 #if !defined(NEO_ASSERT_THROWS)
@@ -148,6 +148,24 @@ struct assertion_expression {
 
 namespace detail {
 
+template <typename T>
+concept can_write_to_ostream = requires(std::ostream& out, const T item) {
+    out << item;
+};
+
+template <typename T>
+constexpr void check_one_representable(T&&) noexcept {
+    static_assert(
+        can_write_to_ostream<T>,
+        "All assertion capture expressions should be representable by writing them to an ostream. "
+        "One or more capture expressions has a type that cannot be written to a std::ostream.");
+}
+
+template <typename... Args>
+constexpr void check_all_representable(Args&&... a) noexcept {
+    (check_one_representable(a), ...);
+}
+
 /**
  * Implementaiton of assertion_expression for any particular type
  */
@@ -165,7 +183,13 @@ public:
 
     const char* spelling() const noexcept override { return _spelling; }
 
-    void write_into(std::ostream& out) const noexcept override { out << _value; }
+    void write_into(std::ostream& out) const noexcept override {
+        if constexpr (detail::can_write_to_ostream<T>) {
+            out << _value;
+        } else {
+            out << "[Unrepresentable type]";
+        }
+    }
 };
 
 template <typename T>
@@ -306,6 +330,7 @@ fire_assertion(assertion_info info,
     NEO_FN_MACRO_BEGIN                                                                             \
     const bool _neo_expr_cond_ = NEO_UNEVAL_ASSUME(expr);                                          \
     if (!(_neo_expr_cond_)) {                                                                      \
+        ::neo::detail::check_all_representable(__VA_ARGS__);                                       \
         neo::fire_assertion(::neo::assertion_info::make(::neo::assertion_kind::kind,               \
                                                         NEO_STR(expr),                             \
                                                         (msg),                                     \
@@ -338,13 +363,14 @@ fire_assertion(assertion_info info,
     NEO_FN_MACRO_BEGIN                                                                             \
     const bool _neo_expr_cond_ = (expr);                                                           \
     if (!(_neo_expr_cond_)) {                                                                      \
-        neo::fire_assertion(::neo::assertion_info::make(::neo::assertion_kind::kind,               \
-                                                        NEO_STR(expr),                             \
-                                                        (msg),                                     \
-                                                        NEO_PRETTY_FUNC,                           \
-                                                        __FILE__,                                  \
-                                                        __LINE__)                                  \
-                                NEO_MAP(NEO_REPR_ASSERT_EXPR, ~, __VA_ARGS__));                    \
+        ::neo::detail::check_all_representable(__VA_ARGS__);                                       \
+        ::neo::fire_assertion(::neo::assertion_info::make(::neo::assertion_kind::kind,             \
+                                                          NEO_STR(expr),                           \
+                                                          (msg),                                   \
+                                                          NEO_PRETTY_FUNC,                         \
+                                                          __FILE__,                                \
+                                                          __LINE__)                                \
+                                  NEO_MAP(NEO_REPR_ASSERT_EXPR, ~, __VA_ARGS__));                  \
     }                                                                                              \
     NEO_FN_MACRO_END
 
