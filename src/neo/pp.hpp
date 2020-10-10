@@ -1,7 +1,10 @@
 #pragma once
 
-#define NEO_CONCAT_1(a, ...) a##__VA_ARGS__
-#define NEO_CONCAT(a, ...) NEO_CONCAT_1(a, __VA_ARGS__)
+#define NEO_CONCAT_IMPL(a, ...) a##__VA_ARGS__
+#define NEO_CONCAT(a, ...) NEO_CONCAT_IMPL(a, __VA_ARGS__)
+
+#define NEO_CONCAT_3(a, b, c) NEO_CONCAT(a, NEO_CONCAT(b, c))
+#define NEO_CONCAT_4(a, b, c, d) NEO_CONCAT(a, NEO_CONCAT(b, NEO_CONCAT(c, d)))
 
 #define NEO_STR_1(...) #__VA_ARGS__
 #define NEO_STR(...) NEO_STR_1(__VA_ARGS__)
