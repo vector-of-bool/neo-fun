@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstdlib>
+#include <cstddef>
 
 namespace neo {
 
@@ -25,4 +25,4 @@ constexpr std::size_t tag_size_v;
 template <typename... Ts>
 constexpr std::size_t tag_size_v<tag<Ts...>> = sizeof...(Ts);
 
-} // namespace neo
+}  // namespace neo
