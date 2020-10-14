@@ -33,3 +33,6 @@
 #if !NEO_SettingValueEqual(foo, Color, Red)
 #error "Fail2"
 #endif
+
+// Workaround warning about empty translation unit
+void foo() {}
