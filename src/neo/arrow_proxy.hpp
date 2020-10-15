@@ -1,9 +1,9 @@
 #pragma once
 
+#include <neo/fwd.hpp>
 #include <neo/ref.hpp>
 
 #include <memory>
-#include <utility>
 
 namespace neo {
 
@@ -18,7 +18,7 @@ class arrow_proxy {
 
 public:
     explicit constexpr arrow_proxy(T&& t) noexcept
-        : _value(std::forward<T>(t)) {}
+        : _value(NEO_FWD(t)) {}
 
     constexpr auto& operator*() noexcept { return unref(_value); }
     constexpr auto& operator*() const noexcept { return unref(_value); }

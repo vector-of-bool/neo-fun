@@ -107,4 +107,21 @@ NEO_ALWAYS_INLINE constexpr T& unref(std::reference_wrapper<T> t) noexcept {
     }                                                                                              \
     static_assert(true)
 
+struct lref_fn {
+    template <typename T>
+    constexpr T& operator()(T&& t) const noexcept {
+        return t;
+    }
+
+    template <typename Left>
+    constexpr friend Left& operator|(Left&& l, lref_fn) noexcept {
+        return l;
+    }
+};
+
+/**
+ * @brief Function-like and pipelinable type that converts its operand to an lvalue
+ */
+inline constexpr lref_fn lref;
+
 }  // namespace neo

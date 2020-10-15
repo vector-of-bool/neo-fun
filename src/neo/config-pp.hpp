@@ -9,7 +9,6 @@
 
 /**
  * @brief Macro corresponding to a setting being disabled
- *
  */
 #define NEO_Disabled -
 
@@ -30,7 +29,7 @@
  * @param Feature The identifier of the feature.
  */
 #define NEO_FeatureIsEnabled(Namespace, Feature)                                                   \
-    NEO_IsEnabled(NEO_CONCAT(Namespace, NEO_CONCAT(_ToggleFeature_, Feature)))
+    NEO_IsEnabled(NEO_CONCAT_3(Namespace, _ToggleFeature_, Feature))
 
 /**
  * @brief Check if the given library feature is DISABLED.
