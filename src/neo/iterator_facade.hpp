@@ -85,6 +85,11 @@ concept iter_is_single_pass = bool(T::single_pass_iterator);
 template <typename T, typename Iter>
 concept iter_sentinel = std::is_same_v<T, typename Iter::sentinel_type>;
 
+template <typename Iter>
+concept equal_compare_check =
+    iter_has_equal_to_method<Iter>
+    || iter_has_distance_to_method<Iter>;
+
 // clang-format on
 
 template <typename T, typename Iter>
@@ -314,7 +319,8 @@ public:
      * Equality
      */
     [[nodiscard]] friend constexpr bool operator==(const self_type& me,
-                                                   const self_type& right) noexcept {
+                                                   const self_type& right) noexcept
+        requires detail::equal_compare_check<self_type> {
         if constexpr (detail::iter_has_equal_to_method<self_type>) {
             return me.equal_to(right);
         } else if constexpr (detail::iter_has_distance_to_method<self_type>) {
@@ -344,7 +350,8 @@ public:
      * Inequality
      */
     [[nodiscard]] friend constexpr bool operator!=(const self_type& left,
-                                                   const self_type& right) noexcept {
+                                                   const self_type& right) noexcept
+        requires detail::equal_compare_check<self_type> {
         return !(left == right);
     }
 
