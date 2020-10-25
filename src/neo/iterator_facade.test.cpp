@@ -18,12 +18,6 @@ public:
 template <typename It>
 as_string_iterator(It) -> as_string_iterator<It>;
 
-}  // namespace
-
-TEST_CASE("Create an iterator facade") {}
-
-namespace {
-
 class iota_iterator : public neo::iterator_facade<iota_iterator> {
     int _value = 0;
 
@@ -167,7 +161,12 @@ TEST_CASE("Sentinel support") {
     }
     CHECK(sum == (1 + 2 + 3 + 4 + 5 + 6));
 
-    auto it = seven_range().begin();
+    auto it   = seven_range().begin();
+    auto stop = seven_range().end();
+    CHECK(it != stop);
+    CHECK(stop != it);
+    CHECK_FALSE(it == stop);
+    CHECK_FALSE(stop == it);
 
 #if !_MSC_VER
     /// XXX: Last checked, MSVC has an issue finding the correct operator-() via ADL.

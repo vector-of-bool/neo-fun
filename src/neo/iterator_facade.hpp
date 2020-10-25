@@ -315,6 +315,31 @@ public:
         return *(_self() + pos);
     }
 
+#if __cpp_impl_three_way_comparison
+
+    /**
+     * With three-way comparison, we can get away with much simpler comparison/equality
+     * operators, since we can also rely on synthesized rewrites
+     */
+    constexpr bool operator==(const self_type& other) const noexcept
+        requires detail::equal_compare_check<self_type> {
+        return _self().equal_to(other);
+    }
+
+    template <detail::iter_sentinel<self_type> S>
+    constexpr bool operator==(S) const noexcept {
+        return _self().at_end();
+    }
+
+    [[nodiscard]] constexpr auto operator<=>(const self_type& right) const noexcept
+        requires detail::iter_is_random_access<self_type> {
+        auto dist = _self() - right;
+        auto rel  = dist <=> 0;
+        return rel;
+    }
+
+#else
+
     /**
      * Equality
      */
@@ -355,12 +380,12 @@ public:
         return !(left == right);
     }
 
-    /// See comment above regarding GCC9
     template <detail::iter_sentinel<self_type> S>
     [[nodiscard]] friend constexpr bool operator!=(const self_type& self, S) noexcept {
         return !self.at_end();
     }
 
+    /// See comment above regarding GCC9
     template <detail::iter_sentinel<self_type> S,
               typename = std::enable_if_t<detail::iter_sentinel<S, self_type>>>
     [[nodiscard]] friend constexpr bool operator!=(S, const self_type& self) noexcept {
@@ -396,6 +421,9 @@ public:
         requires detail::iter_is_random_access<self_type> {
         return (left - right) >= 0;
     }
+
+#endif  // __cpp_impl_three_way_comparison
+
 };  // namespace neo
 
 template <typename Derived, typename InnerIterator>
