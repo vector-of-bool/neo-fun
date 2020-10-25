@@ -30,8 +30,6 @@ public:
 
     void advance(int off) noexcept { _value += off; }
     int  distance_to(iota_iterator o) const noexcept { return *o - **this; }
-
-    bool equal_to(iota_iterator o) const { return *o == **this; }
 };
 
 }  // namespace

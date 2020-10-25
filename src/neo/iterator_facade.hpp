@@ -323,7 +323,14 @@ public:
      */
     constexpr bool operator==(const self_type& other) const noexcept
         requires detail::equal_compare_check<self_type> {
-        return _self().equal_to(other);
+        if constexpr (detail::iter_has_equal_to_method<self_type>) {
+            return _self().equal_to(other);
+        } else if constexpr (detail::iter_has_distance_to_method<self_type>) {
+            return _self().distance_to(other) == 0;
+        } else {
+            static_assert(detail::iter_has_distance_to_method<self_type>,
+                          "Iterator must provide either `distance_to(other)` or `equal_to(other)`");
+        }
     }
 
     template <detail::iter_sentinel<self_type> S>
