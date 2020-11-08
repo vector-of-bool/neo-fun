@@ -42,4 +42,14 @@ TEST_CASE("Bit ops") {
     CHECK(val == (test::mine::a | test::mine::b | test::mine::c));
     val = neo::toggle_flags(val, test::mine::b);
     CHECK(val == (test::mine::a | test::mine::c));
+
+    auto tester = neo::test_flags(val_ab);
+    CHECK(tester(test::mine::a));
+    CHECK_FALSE(tester(test::mine::c));
+
+    auto val_copy = val_ab;
+    auto test2    = neo::test_flags(&val_copy);
+    CHECK(test2(test::mine::a));
+    val_copy = neo::unset_flags(val_copy, test::mine::a);
+    CHECK_FALSE(test2(test::mine::a));
 }

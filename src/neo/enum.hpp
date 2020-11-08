@@ -54,6 +54,31 @@ template <typename E>
 }
 
 /**
+ * @brief Create a flag-testing callable object.
+ *
+ * The returned object will be a callable that returns 'true' if passed a
+ * flag that is set in 'flagset'
+ *
+ * @param flagset The set of flags to check against
+ */
+template <typename E>
+[[nodiscard]] constexpr auto test_flags(E flagset) noexcept {
+    return [flagset](E check) noexcept { return test_flags(flagset, check); };
+}
+
+/**
+ * @brief Create a flag-testing callable object from a reference
+ *
+ * @tparam E
+ * @param flagset
+ * @return constexpr auto
+ */
+template <typename E>
+[[nodiscard]] constexpr auto test_flags(E* flagset) noexcept {
+    return [flagset](E check) noexcept { return test_flags(*flagset, check); };
+}
+
+/**
  * @brief Clear the flag(s) in the right-hand side from the left-hand side
  *
  * Equivalent to: `flagset & ~flag`
