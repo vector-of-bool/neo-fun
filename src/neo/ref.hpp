@@ -107,6 +107,24 @@ NEO_ALWAYS_INLINE constexpr T& unref(std::reference_wrapper<T> t) noexcept {
     }                                                                                              \
     static_assert(true)
 
+/**
+ * @brief Declare a method 'FuncName' that rebinds a reference-wrapper member 'MemName'
+ *
+ * 'MemName' should be a datamember declared with wrap_refs_t, and 'Type' should be given
+ * as the same argument that was given to wrap_refs_t. The declared method will only be valid
+ * if 'Type' is a reference type.
+ *
+ * @param FuncName The name of the method to declare
+ * @param Type The type parameters that was passed to wrap_refs_t for MemName
+ * @param MemName The member variable declared with wrap_refs_t to rebind
+ */
+#define NEO_DECL_REF_REBINDER(FuncName, Type, MemName)                                             \
+    constexpr auto&& FuncName(Type& arg) noexcept requires(std::is_reference_v<Type>) {            \
+        MemName = std::ref(arg);                                                                   \
+        return MemName.get();                                                                      \
+    }                                                                                              \
+    static_assert(true)
+
 struct lref_fn {
     template <typename T>
     constexpr T& operator()(T&& t) const noexcept {

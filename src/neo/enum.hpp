@@ -63,7 +63,7 @@ template <typename E>
  */
 template <typename E>
 [[nodiscard]] constexpr auto test_flags(E flagset) noexcept {
-    return [flagset](E check) noexcept { return test_flags(unref(flagset), check); };
+    return [flagset](E check) noexcept { return test_flags(flagset, check); };
 }
 
 /**
