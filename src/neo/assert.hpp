@@ -110,6 +110,15 @@ enum class assertion_kind {
 };
 
 /**
+ * @brief A source file location
+ */
+struct source_location {
+    std::string_view pretty_func;
+    std::string_view filename;
+    int              line = 0;
+};
+
+/**
  * Class that encapsulates information about an assertion statement
  */
 struct assertion_info {
@@ -119,20 +128,12 @@ struct assertion_info {
     std::string_view expression_spelling;
     /// The message associated with the assertion.
     std::string_view message;
-    /// The prettified spelling of the function containing the assertion
-    std::string_view func_name;
-    /// The path to the file that contains the assertion
-    std::string_view filepath;
-    /// The line number on which the assertion appears
-    int file_line = 0;
+    /// The location of the assertion
+    source_location loc;
 
-    static assertion_info make(assertion_kind   k,
-                               std::string_view spell,
-                               std::string_view msg,
-                               std::string_view func,
-                               std::string_view fname,
-                               int              line) {
-        return {k, spell, msg, func, fname, line};
+    static assertion_info
+    make(assertion_kind k, std::string_view spell, std::string_view msg, source_location loc) {
+        return {k, spell, msg, loc};
     }
 };
 
@@ -334,9 +335,7 @@ fire_assertion(assertion_info info,
         neo::fire_assertion(::neo::assertion_info::make(::neo::assertion_kind::kind,               \
                                                         NEO_STR(expr),                             \
                                                         (msg),                                     \
-                                                        NEO_PRETTY_FUNC,                           \
-                                                        __FILE__,                                  \
-                                                        __LINE__)                                  \
+                                                        NEO_SOURCE_LOCATION())                     \
                                 NEO_MAP(NEO_REPR_ASSERT_EXPR, ~, __VA_ARGS__));                    \
     }                                                                                              \
     NEO_FN_MACRO_END
@@ -367,12 +366,13 @@ fire_assertion(assertion_info info,
         ::neo::fire_assertion(::neo::assertion_info::make(::neo::assertion_kind::kind,             \
                                                           NEO_STR(expr),                           \
                                                           (msg),                                   \
-                                                          NEO_PRETTY_FUNC,                         \
-                                                          __FILE__,                                \
-                                                          __LINE__)                                \
+                                                          NEO_SOURCE_LOCATION())                   \
                                   NEO_MAP(NEO_REPR_ASSERT_EXPR, ~, __VA_ARGS__));                  \
     }                                                                                              \
     NEO_FN_MACRO_END
+
+#define NEO_SOURCE_LOCATION()                                                                      \
+    ::neo::source_location { NEO_PRETTY_FUNC, __FILE__, __LINE__ }
 
 /**
  * Define an assertion that is never checked, but still acts as an optimization
@@ -396,5 +396,80 @@ fire_assertion(assertion_info info,
  * behavior in a pinch. These must be explicitly enabled via NEO_ENABLE_AUDITS.
  */
 #define neo_assert_audit NEO_ASSERT_AUDIT_1
+
+namespace detail {
+
+class breadcrumb_base {
+    std::string_view       _msg;
+    source_location        _loc;
+    const breadcrumb_base* _previous;
+
+    static inline thread_local const breadcrumb_base* _top = nullptr;
+
+    virtual void do_render(std::ostream&) const noexcept = 0;
+
+    void _render(std::ostream& out, assertion_expression_list) const noexcept;
+
+public:
+    explicit breadcrumb_base(std::string_view msg, source_location loc) noexcept
+        : _msg(msg)
+        , _loc(loc)
+        , _previous(std::exchange(_top, this)) {}
+
+    ~breadcrumb_base() { _top = _previous; }
+
+    template <typename... Ts>
+    void render_into(std::ostream& out, int, const Ts&... exprs) const noexcept {
+        std::array<const ::neo::assertion_expression*, sizeof...(exprs)> expressions
+            = {(&exprs)...};
+        _render(out,
+                assertion_expression_list(expressions.data(),
+                                          expressions.data() + sizeof...(exprs)));
+    }
+
+    static void render_all(std::ostream& out) noexcept;
+};
+
+template <typename Fn>
+struct breadcrumb_impl : breadcrumb_base {
+    Fn fn;
+
+    breadcrumb_impl(std::string_view msg, source_location loc, Fn f)
+        : breadcrumb_base(msg, loc)
+        , fn(f) {}
+
+    void do_render(std::ostream& out) const noexcept override { fn(*this, out); }
+};
+
+template <typename F>
+breadcrumb_impl(std::string_view, source_location, F) -> breadcrumb_impl<F>;
+
+}  // namespace detail
+
+/**
+ * @brief Render the current thread's breadcrumbs to the given output stream.
+ */
+void render_breadcrumbs(std::ostream& out) noexcept;
+
+/**
+ * @brief Declare a set of breadcrumbs for the current thread in the current scope.
+ *
+ * If an assertion fires in the current thread at any lower scope, the breadcrumb expressions passed
+ * to this macro will be printed as part of the diagnostic output for the assertion. When the
+ * current scope ends, the breadcrumbs in this message will be popped from the stack.
+ */
+#define neo_assertion_breadcrumbs(Message, ...)                                                    \
+    ::neo::detail::breadcrumb_impl                                                                 \
+        NEO_CONCAT_3(_neo_breadcrum_,                                                              \
+                     __LINE__,                                                                     \
+                     _scope)(Message,                                                              \
+                             NEO_SOURCE_LOCATION(),                                                \
+                             [&](const ::neo::detail::breadcrumb_base& self,                       \
+                                 std::ostream&                         out) noexcept {                                     \
+                                 self.render_into(out,                                             \
+                                                  0 NEO_MAP(NEO_REPR_ASSERT_EXPR,                  \
+                                                            ~,                                     \
+                                                            __VA_ARGS__));                         \
+                             })
 
 }  // namespace neo
