@@ -1,6 +1,5 @@
 #pragma once
 
-#include <bit>
 #include <cstddef>
 
 #include "./assert.hpp"
@@ -8,6 +7,19 @@
 #include "./iterator_facade.hpp"
 
 namespace neo {
+
+namespace utf8_detail {
+
+constexpr int countl_one(std::byte b) {
+    int n = 0;
+    while ((b & std::byte(1 << 7)) != std::byte()) {
+        ++n;
+        b <<= 1;
+    }
+    return n;
+}
+
+}  // namespace utf8_detail
 
 /**
  * @brief Types of errors that can appear while decoding UTF-8
@@ -66,7 +78,7 @@ constexpr utf8_codepoint next_utf8_codepoint(Iter it, const Stop stop) noexcept(
     using u8 = std::uint8_t;
 
     // The number of leading one-bits is the length of the number of CUs in the stream
-    const auto n_bytes = std::countl_one(u8(*it));
+    const auto n_bytes = utf8_detail::countl_one(std::byte(*it));
     if (n_bytes == 0) {
         // A zero represents one code unit, which is just one codepoint:
         return {static_cast<char32_t>(*it), 1};
@@ -75,7 +87,7 @@ constexpr utf8_codepoint next_utf8_codepoint(Iter it, const Stop stop) noexcept(
         return utf8_codepoint::make_error(utf8_errc::invalid_start_byte);
     }
 
-    // Pick a mask based on the number  of bytes
+    // Pick a mask based on the number of bytes
     constexpr u8 lead_mask[] = {
         0,            // Zero bytes. Never happens
         0,            // One byte. Never happens here
@@ -91,8 +103,8 @@ constexpr utf8_codepoint next_utf8_codepoint(Iter it, const Stop stop) noexcept(
     // Decode remaining bytes
     auto remain = n_bytes - 1;
     for (; it != stop && remain; ++it, --remain) {
-        const auto c = u8(*it);
-        if (std::countl_one(c) != 1) {
+        const auto c = *it;
+        if (utf8_detail::countl_one(std::byte(c)) != 1) {
             // Each continuation should have a single leading 1 bit
             return utf8_codepoint::make_error(utf8_errc::invalid_continuation_byte,
                                               static_cast<std::size_t>(n_bytes - remain));
@@ -152,7 +164,7 @@ public:
         constexpr void increment() {
             neo_assert(expects, _iter != _stop, "Advanced the past-the-end utf8_range iterator");
 
-            auto n_bytes = std::countl_one(std::uint8_t(*_iter));
+            auto n_bytes = utf8_detail::countl_one(std::byte(*_iter));
             n_bytes      = n_bytes ? n_bytes : 1;
             while (n_bytes && _iter != _stop) {
                 ++_iter;
@@ -163,7 +175,7 @@ public:
         constexpr void decrement() {
             neo_assert(expects, _iter != _begin, "Rewound the begin utf8_range iterator");
             --_iter;
-            while (_iter != _begin && std::countl_one(std::uint8_t(*_iter)) == 1) {
+            while (_iter != _begin && utf8_detail::countl_one(std::byte(*_iter)) == 1) {
                 --_iter;
             }
         }
