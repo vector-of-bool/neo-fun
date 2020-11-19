@@ -25,11 +25,44 @@ struct make_cref<T&&> {
 };
 
 /**
+ * @brief Given a reference type `T`, nested type `::type` is a reference to non-const.
+ * If `T` is not a reference, `::type` is not present.
+ */
+template <typename T>
+struct make_mref {};
+
+template <typename T>
+struct make_mref<const T&> {
+    using type = T&;
+};
+
+template <typename T>
+struct make_mref<const T&&> {
+    using type = T&&;
+};
+
+template <typename T>
+struct make_mref<T&> {
+    using type = T&;
+};
+
+template <typename T>
+struct make_mref<T&&> {
+    using type = T&&;
+};
+
+/**
  * Convert the given reference type into a reference-to-const of the same
  * referenced type.
  */
 template <typename T>
 using make_cref_t = typename make_cref<T>::type;
+
+/**
+ * @brief Convert the given reference type into a mutable reference of the referred type.
+ */
+template <typename T>
+using make_mref_t = typename make_mref<T>::type;
 
 /**
  * Obtain a variable of `T&&`. If given an lvalue-reference, returns an
@@ -52,6 +85,14 @@ extern T&& ref_v;
  */
 template <typename T>
 extern make_cref_t<T&&> cref_v;
+
+/**
+ * @brief Obtain a mutable reference for the given `T`.
+ *
+ * `mref_v` must not be ODR-used. Unevaluated contexts only!
+ */
+template <typename T>
+extern make_mref_t<T&&> mref_v;
 
 /**
  * If `T` is a reference type, the `type` member names a
