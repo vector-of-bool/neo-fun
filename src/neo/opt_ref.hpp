@@ -46,8 +46,9 @@ public:
         return _ptr;
     }
 
-    constexpr operator std::optional<std::remove_cvref_t<T>>() const noexcept
-        requires std::is_convertible_v<T&, std::remove_cvref_t<T>> {
+    template <typename U>
+    constexpr operator U() const noexcept
+        requires(std::is_convertible_v<T&, U>&& std::is_convertible_v<std::nullopt_t, U>) {
         if (*this) {
             return **this;
         }
