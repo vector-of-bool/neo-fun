@@ -168,6 +168,9 @@ requires requires {
 struct invocable_signature<Callable> : detail::callable_object_signature<decltype(
                                            &std::remove_cvref_t<Callable>::operator())>::type {};
 
+/**
+ * @brief A type which has a fixed signature, i.e. an invocable that is not overloaded
+ */
 template <typename T>
 concept fixed_invocable = requires {
     typename invocable_return_type_t<T>;
