@@ -1,0 +1,231 @@
+#pragma once
+
+#include "./assert.hpp"
+#include "./function_traits.hpp"
+#include "./fwd.hpp"
+#include "./opt_ref.hpp"
+#include "./scope.hpp"
+#include "./tag.hpp"
+
+#include <functional>
+#include <string_view>
+#include <tuple>
+
+namespace neo {
+
+/**
+ * @brief Abstract class type that refers to an event subscription for event type T
+ *
+ * @tparam T The event type of the subscription
+ */
+template <typename T>
+class scoped_subscription;
+
+namespace event_detail {
+
+/// The top-most subscriber for events of type T, or `nullptr` if no one is subscribed
+template <typename T>
+thread_local opt_ref<scoped_subscription<T>> tl_subscr;
+
+template <typename T>
+thread_local opt_ref<scoped_subscription<T>> tl_cur_handler;
+
+class subscr_agent {
+public:
+    template <typename S, typename Ev>
+    static void invoke(S&& s, Ev&& e) {
+        s.invoke(e);
+    }
+
+    template <typename S, typename Ev>
+    static void bubble_event(S&& s, Ev&& e) {
+        s.bubble_event(e);
+    }
+};
+
+}  // namespace event_detail
+
+template <typename T>
+opt_ref<scoped_subscription<T>> get_event_subscriber() noexcept {
+    return event_detail::tl_subscr<T>;
+}
+
+/// impl
+template <typename T>
+class scoped_subscription {
+    // Private access to the subscription agent to invoke our private methods
+    friend class event_detail::subscr_agent;
+
+private:
+    /**
+     * @brief Actually execute the event handler
+     */
+    void invoke(const T& v) {
+        // Store the prior executing handler
+        auto prev_handler = event_detail::tl_cur_handler<T>;
+        // Announce that we are the current handler
+        event_detail::tl_cur_handler<T> = *this;
+        // When scope leaves, restore the prior executing handler
+        neo_defer { event_detail::tl_cur_handler<T> = prev_handler; };
+        // Go!
+        neo_assertion_breadcrumbs("Handling event");
+        do_invoke(v);
+    }
+
+    /**
+     * @brief Pass the event event to the parent handler in the stack, if it exists
+     */
+    void bubble_event(const T& v) {
+        if (_prev_ref) {
+            _prev_ref->invoke(v);
+        }
+    }
+
+protected:
+    // Keep a reference to the prior handler in the thread-local stack
+    opt_ref<scoped_subscription<T>> _prev_ref = std::exchange(event_detail::tl_subscr<T>, *this);
+
+    scoped_subscription() = default;
+
+    virtual ~scoped_subscription() {
+        neo_assert(expects,
+                   event_detail::tl_subscr<T>.pointer() == this,
+                   "neo::subscribe() objects are being destructed out-of-order, which is illegal.",
+                   this,
+                   event_detail::tl_subscr<T>.pointer());
+        // Restore the prior event handler
+        event_detail::tl_subscr<T> = _prev_ref;
+    }
+
+    // We are immobile
+    scoped_subscription(const scoped_subscription&) = delete;
+
+private:
+    virtual void do_invoke(const T& value) const = 0;
+};
+
+namespace event_detail {
+
+/// Emit a single instance of the given event
+template <typename Event>
+void emit_one(const Event& ev) {
+    auto& handler = event_detail::tl_subscr<std::remove_cvref_t<Event>>;
+    if (handler) {
+        subscr_agent::invoke(*handler, ev);
+    }
+}
+
+/// Emit a single event, but lazily call a factory function that will produce the event object
+template <typename EventReturner>
+void emit_one(const EventReturner& func) requires(
+    !std::is_void_v<std::invoke_result_t<EventReturner>>) {
+    // The actual event type:
+    using RetType = std::invoke_result_t<EventReturner>;
+    // If we have a handler, invoke the factory and emit the event
+    if (!!event_detail::tl_subscr<std::remove_cvref_t<RetType>>) {
+        emit_one(std::invoke(func));
+    }
+}
+
+// Forward-decl concrete implementation of erased subscriber type
+template <typename T, typename Func>
+struct scoped_subscription_impl;
+
+// Helper to calculate the type of an event handler
+template <typename Func, typename Arg>
+struct subscription_func_result;
+
+template <typename Func, typename Arg>
+struct subscription_func_result<Func, tag<Arg>> {
+    using type = scoped_subscription_impl<std::remove_cvref_t<Arg>, Func>;
+};
+
+template <typename Func>
+using subscription_func_result_t =
+    typename subscription_func_result<Func, invocable_arg_types_t<Func>>::type;
+
+template <typename Func>
+concept subscription_func_check = fixed_invocable<Func>&& invocable_arity_v<Func> == 1;
+
+/// Impl class for event subscriptions
+template <typename T, typename Func>
+class scoped_subscription_impl : scoped_subscription<T> {
+    // Our handler:
+    Func _fn;
+
+    // Pass the event down to our handler function:
+    void do_invoke(const T& value) const override { std::invoke(_fn, value); }
+
+public:
+    // Simple construct:
+    explicit scoped_subscription_impl(Func&& fn)
+        : _fn(NEO_FWD(fn)) {}
+};
+
+}  // namespace event_detail
+
+/**
+ * @brief Subscribe to one or more thread-local events.
+ *
+ * Each argument must be a non-overloaded invocable object that accepts a single
+ * argument of type 'E'. This will generate a thread-local event subscription to
+ * events emitted of type 'E'.
+ *
+ * If 'E' already has a subscription in the current thread, this function will
+ * replace that subscription for the scope of the return object. Once the return
+ * object goes out-of-scope, the prior event handler for 'E' will be restored.
+ *
+ * @param fns Some number of unary-invocable objects
+ * @return [unspecified] An object that keeps the subscriptions alive for its lifetime.
+ */
+template <event_detail::subscription_func_check... Funcs>
+[[nodiscard]] auto subscribe(Funcs&&... fns) noexcept {
+    return std::tuple<event_detail::subscription_func_result_t<Funcs>...>(NEO_FWD(fns)...);
+}
+
+/**
+ * @brief Emit one or more events of the given types.
+ *
+ * This will call the current thread-local registered event handler for the
+ * type of each event. If no handler is registered, this function is a no-op.
+ *
+ * For each argument 'e' of type 'E':
+ *
+ * - if 'e' is invocable with zero arguments and returns non-void, it will be
+ *   treated as an "event factory" function. If there is no event handler
+ *   installed for 'invoke_result_t<E>', then 'e' will be ignored. Otherwise,
+ *   it will be as-if 'emit(invoke(e))'. This permits events to be lazily
+ *   constructed only if there is someone actively listening for those events.
+ * - Otherwise, 'e' will be emitted directly to the subscribing handler for 'E',
+ *   if one is listening.
+ *
+ * @param ev The events or event-factories
+ */
+template <typename... Events>
+void emit(const Events&... ev) {
+    (event_detail::emit_one(ev), ...);
+}
+
+/**
+ * @brief Re-emit the given event to the parent handler in the event-handler
+ * chain.
+ *
+ * There is a thread-local stack of event handlers listening for any type 'E'.
+ * When an 'E' is emitted, only the most-recent handler will be invoked. If a
+ * handler 'H' listening for 'E' calls 'bubble_event' with an 'E', then the
+ * next handler in the chain before 'H' will receive the event.
+ *
+ * @tparam Event The event to emit.
+ * @param ev
+ */
+template <typename Event>
+void bubble_event(const Event& ev) {
+    auto cur_handler = event_detail::tl_cur_handler<Event>;
+    neo_assert(expects,
+               !!cur_handler,
+               "bubble_event() must only be called during the execution of an event handler of the "
+               "same type");
+    event_detail::subscr_agent::bubble_event(*cur_handler, ev);
+}
+
+}  // namespace neo

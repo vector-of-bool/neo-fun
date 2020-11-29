@@ -46,12 +46,16 @@ public:
         return _ptr;
     }
 
-    constexpr operator std::optional<std::remove_const_t<T>>() const noexcept {
+    template <typename U>
+    constexpr operator U() const noexcept
+        requires(std::is_convertible_v<T&, U>&& std::is_convertible_v<std::nullopt_t, U>) {
         if (*this) {
             return **this;
         }
         return nullopt;
     }
+
+    constexpr T* pointer() const noexcept { return _ptr; }
 
     // Compare with nullopt
     constexpr friend bool operator==(opt_ref lhs, nullopt_t) noexcept { return !bool(lhs); }

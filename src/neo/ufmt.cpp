@@ -6,6 +6,7 @@ using namespace neo;
 
 void neo::ufmt_append(std::string& out, std::string_view part) noexcept { out.append(part); }
 void neo::ufmt_append(std::string& out, bool b) noexcept { out.append(b ? "true" : "false"); }
+void neo::ufmt_append(std::string& out, char c) noexcept { out.push_back(c); }
 
 #define INT_FMT(Type)                                                                              \
     void neo::ufmt_append(std::string& out, Type val) noexcept {                                   \
