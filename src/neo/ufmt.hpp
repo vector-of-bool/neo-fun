@@ -8,6 +8,7 @@ namespace neo {
 
 void ufmt_append(std::string& str, std::string_view s) noexcept;
 void ufmt_append(std::string& str, bool b) noexcept;
+void ufmt_append(std::string& str, char c) noexcept;
 
 void ufmt_append(std::string& str, std::uint8_t i) noexcept;
 void ufmt_append(std::string& str, std::int8_t i) noexcept;
