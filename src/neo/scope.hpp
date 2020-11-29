@@ -16,7 +16,12 @@ requires std::is_invocable_v<Func> class scope_exit {
 public:
     constexpr scope_exit(Func&& fn)
         : fn(NEO_FWD(fn)) {}
+
+#if __cpp_constexpr_dynamic_alloc  // Introduced constexpr-destructors
     constexpr ~scope_exit() { fn(); }
+#else
+    ~scope_exit() { fn(); }
+#endif
 };
 
 template <typename Func>
