@@ -140,15 +140,23 @@ requires std::is_member_object_pointer_v<T Owner::*>  //
 
 namespace detail {
 
-template <typename Mem>
-struct callable_object_signature;
+template <typename R, typename Tag, bool NoExcept>
+struct make_obj_signature;
 
-template <typename Ret, typename Owner, typename... Args>
-struct callable_object_signature<Ret (Owner::*)(Args...)> : neo::signature_tag<Ret(Args...)> {};
+template <typename R, typename This, typename... Args>
+struct make_obj_signature<R, tag<This, Args...>, false> : signature_tag<R(Args...)> {};
 
-template <typename Ret, typename Owner, typename... Args>
-struct callable_object_signature<Ret (Owner::*)(Args...) noexcept>
-    : neo::signature_tag<Ret(Args...) noexcept> {};
+template <typename R, typename This, typename... Args>
+struct make_obj_signature<R, tag<This, Args...>, true> : signature_tag<R(Args...) noexcept> {};
+
+template <typename MemPtr>
+struct callable_object_signature {
+    using mem_signature = invocable_signature<MemPtr>;
+
+    using type = make_obj_signature<typename mem_signature::return_type,
+                                    typename mem_signature::arg_types,
+                                    mem_signature::is_noexcept>;
+};
 
 }  // namespace detail
 
@@ -157,7 +165,12 @@ template <typename Callable>
 requires requires {
     &std::remove_cvref_t<Callable>::operator();
 }
-struct invocable_signature<Callable>
-    : detail::callable_object_signature<decltype(&std::remove_cvref_t<Callable>::operator())> {};
+struct invocable_signature<Callable> : detail::callable_object_signature<decltype(
+                                           &std::remove_cvref_t<Callable>::operator())>::type {};
+
+template <typename T>
+concept fixed_invocable = requires {
+    typename invocable_return_type_t<T>;
+};
 
 }  // namespace neo
