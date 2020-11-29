@@ -11,4 +11,5 @@ TEST_CASE("Format a simple string") {
     CHECK(neo::ufmt("Hello, {}!", std::string("user")) == "Hello, user!");
     CHECK(neo::ufmt("2 + 2 = 5 ? {}", false) == "2 + 2 = 5 ? false");
     CHECK(neo::ufmt("2 + 2 = 4 ? {}", true) == "2 + 2 = 4 ? true");
+    CHECK(neo::ufmt("'Y' is {}", 'Y') == "'Y' is Y");
 }
