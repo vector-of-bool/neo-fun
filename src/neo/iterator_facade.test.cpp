@@ -142,7 +142,7 @@ TEST_CASE("Sentinel support") {
         auto dereference() const noexcept { return value; }
         auto increment() noexcept { ++value; }
 
-        bool at_end() const noexcept { return value == 7; }
+        bool equal_to(sentinel_type) const noexcept { return value == 7; }
 
         auto distance_to(sentinel_type) const noexcept { return 7 - value; }
     };
