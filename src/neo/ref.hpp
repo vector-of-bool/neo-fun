@@ -121,6 +121,9 @@ using wrap_refs_t = typename wrap_refs<T>::type;
 template <typename T>
 using wrap_if_reference_t [[deprecated("Use wrap_refs_t")]] = wrap_refs_t<T>;
 
+template <typename T>
+using add_rref_t = T&&;
+
 /**
  * Un-wraps a reference_wrapper<T>. Returns a reference to the referred-to
  * object. If the given object is not a reference_wrapper, returns a reference
@@ -182,5 +185,10 @@ struct lref_fn {
  * @brief Function-like and pipelinable type that converts its operand to an lvalue
  */
 inline constexpr lref_fn lref;
+
+/**
+ * @brief Equivalent of std::declval<T>(), but less compiler overhead
+ */
+#define NEO_DECLVAL(...) (((::neo::add_rref_t<__VA_ARGS__>(*)())(void*)(nullptr))())
 
 }  // namespace neo
