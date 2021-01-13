@@ -129,7 +129,7 @@ void emit_one(const EventReturner& func) requires(
 
 // Forward-decl concrete implementation of erased subscriber type
 template <typename T, typename Func>
-struct scoped_subscription_impl;
+class scoped_subscription_impl;
 
 // Helper to calculate the type of an event handler
 template <typename Func, typename Arg>
