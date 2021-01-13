@@ -95,6 +95,31 @@ template <typename T>
 extern make_mref_t<T&&> mref_v;
 
 /**
+ * @brief A reference type that will bind to an rvalue OR an lvalue reference of
+ * mutable T.
+ *
+ * This is intended as a parameter for functions that will accept either an lvalue
+ * or an rvalue reference. Usage outside of a parameter list should be considered suspect.
+ *
+ * @tparam T The referred-to type
+ */
+template <typename T>
+class mutref {
+    std::reference_wrapper<T> _ref;
+
+public:
+    constexpr mutref(T& t) noexcept
+        : _ref(t) {}
+    constexpr mutref(T&& t) noexcept
+        : _ref(t) {}
+
+    constexpr    operator T&() noexcept { return _ref; }
+    constexpr T& get() noexcept { return _ref; }
+    constexpr T* operator->() noexcept { return std::addressof(get()); }
+    constexpr T& operator*() noexcept { return _ref; }
+};
+
+/**
  * If `T` is a reference type, the `type` member names a
  * std::reference_wrapper<U>, where `U` is the referred-to type of `T`
  * (including cv-qualifierd). For all other types, the `type` member is `T`
