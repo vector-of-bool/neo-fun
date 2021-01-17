@@ -4,6 +4,7 @@
 #include "./function_traits.hpp"
 #include "./fwd.hpp"
 #include "./opt_ref.hpp"
+#include "./optional.hpp"
 #include "./scope.hpp"
 #include "./tag.hpp"
 
@@ -157,12 +158,34 @@ class scoped_subscription_impl : scoped_subscription<T> {
     void do_invoke(const T& value) const override { std::invoke(_fn, value); }
 
 public:
+    scoped_subscription_impl() = default;
     // Simple construct:
     explicit scoped_subscription_impl(Func&& fn)
         : _fn(NEO_FWD(fn)) {}
 };
 
 }  // namespace event_detail
+
+/**
+ * @brief Class template that holds a subscription to an event.
+ *
+ * Should be instantiated as a local object via CTAD
+ */
+template <event_detail::subscription_func_check Func>
+class subscription : event_detail::subscription_func_result_t<Func> {
+public:
+    subscription() = default;
+    subscription(Func&& h)
+        : subscription::scoped_subscription_impl(NEO_FWD(h)) {}
+};
+
+template <event_detail::subscription_func_check Func>
+subscription(Func&& fn) -> subscription<Func>;
+
+/**
+ * @brief Declare an event subscription in the current scope
+ */
+#define NEO_SUBSCRIBE ::neo::subscription NEO_CONCAT(_local_neo_subscr_, __COUNTER__) = [&]
 
 /**
  * @brief Subscribe to one or more thread-local events.
@@ -180,7 +203,7 @@ public:
  */
 template <event_detail::subscription_func_check... Funcs>
 [[nodiscard]] auto subscribe(Funcs&&... fns) noexcept {
-    return std::tuple<event_detail::subscription_func_result_t<Funcs>...>(NEO_FWD(fns)...);
+    return std::tuple<subscription<Funcs>...>(NEO_FWD(fns)...);
 }
 
 /**
@@ -227,5 +250,34 @@ void bubble_event(const Event& ev) {
                "same type");
     event_detail::subscr_agent::bubble_event(*cur_handler, ev);
 }
+
+/**
+ * @brief Emit an event whose type is of the given expression.
+ *
+ * If there is no subscriber for the event in question, the expression will not be evaluated.
+ */
+#define NEO_EMIT(...) ::neo::emit([&] { return (__VA_ARGS__); })
+
+/**
+ * @brief Like a neo::subscription, but does not register the subscription immediately. Call
+ * `.subscribe()` to activate it.
+ *
+ * Should be instantiated via CTAD.
+ */
+template <typename Handler>
+class opt_subscription {
+    Handler _handler;
+
+    nano_opt<subscription<Handler&>> _opt;
+
+public:
+    opt_subscription(Handler&& h)
+        : _handler(h) {}
+
+    void subscribe() noexcept { _opt.emplace(_handler); }
+};
+
+template <typename Handler>
+opt_subscription(Handler &&) -> opt_subscription<Handler>;
 
 }  // namespace neo
