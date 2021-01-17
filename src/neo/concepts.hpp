@@ -274,6 +274,13 @@ concept trivially_movable =
 template <typename T>
 concept trivial_type = trivially_copyable<T> && std::is_trivial_v<T>;
 
+template <typename Func, typename... Args>
+concept nothrow_invocable =
+    invocable<Func, Args...> &&
+    requires(Func fn, Args... args) {
+        { neo::invoke(NEO_FWD(fn), NEO_FWD(args)...) } noexcept;
+    };
+
 #if __cpp_lib_concepts
 template <typename B>
 concept simple_boolean = requires(const B b) {
