@@ -17,4 +17,11 @@
 #  define NEO_PRETTY_FUNC __func__
 
 #endif
-// clang-format off
+
+#if __cpp_constexpr_dynamic_alloc
+# define NEO_CONSTEXPR_DESTRUCTOR constexpr
+#else
+# define NEO_CONSTEXPR_DESTRUCTOR inline
+#endif
+
+// clang-format on
