@@ -6,6 +6,7 @@
 
 #include <forward_list>
 #include <memory>
+#include <vector>
 
 using namespace neo;
 

@@ -1,11 +1,9 @@
 #pragma once
 
 #include "./fwd.hpp"
+#include "./invoke.hpp"
 #include "./ref.hpp"
 #include "./returns.hpp"
-
-#include <functional>
-#include <type_traits>
 
 namespace neo {
 
@@ -20,11 +18,11 @@ public:
         : _func(NEO_FWD(fn)) {}
 
     template <typename... Args>
-    constexpr auto operator()(Args&&... args) NEO_RETURNS(std::invoke(_func, NEO_FWD(args)...));
+    constexpr auto operator()(Args&&... args) NEO_RETURNS(neo::invoke(_func, NEO_FWD(args)...));
 
     template <typename... Args>
     constexpr auto operator()(Args&&... args) const
-        NEO_RETURNS(std::invoke(_func, NEO_FWD(args)...));
+        NEO_RETURNS(neo::invoke(_func, NEO_FWD(args)...));
 };
 
 }  // namespace detail
@@ -39,6 +37,6 @@ public:
 };
 
 template <typename... Fs>
-explicit overload(Fs&&...) -> overload<std::remove_cvref_t<Fs>...>;
+explicit overload(const Fs&...) -> overload<Fs...>;
 
 }  // namespace neo
