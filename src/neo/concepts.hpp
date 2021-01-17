@@ -251,13 +251,25 @@ namespace neo {
 */
 
 template <typename T, typename Target>
-concept alike = same_as<std::decay_t<T>, std::decay_t<Target>>;
+concept alike = same_as<std::remove_cvref_t<T>, std::remove_cvref_t<Target>>;
 
 template <typename T, typename Target>
-concept unalike = !same_as<std::decay_t<T>, std::decay_t<Target>>;
+concept unalike = !same_as<std::remove_cvref_t<T>, std::remove_cvref_t<Target>>;
+
+template <typename T>
+concept trivially_default_constructible = std::is_trivially_default_constructible_v<T>;
+
+template <typename T>
+concept trivially_destructible = std::is_trivially_destructible_v<T>;
 
 template <typename T>
 concept trivially_copyable = copyable<T> && std::is_trivially_copyable_v<T>;
+
+template <typename T>
+concept trivially_movable =
+    movable<T> &&
+    std::is_trivially_move_constructible_v<T> &&
+    std::is_trivially_move_assignable_v<T>;
 
 template <typename T>
 concept trivial_type = trivially_copyable<T> && std::is_trivial_v<T>;
