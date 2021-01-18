@@ -67,7 +67,7 @@ using std::size;
     template <Concept T>                                                                           \
     using Name = TypeExpr
 
-DECL_ALIAS(typename, iterator_t, decltype(neo::ranges::begin(NEO_DECLVAL(T))));
+DECL_ALIAS(typename, iterator_t, decltype(neo::ranges::begin(NEO_DECLVAL(T&))));
 
 // clang-format off
 template <typename T>
@@ -76,7 +76,7 @@ concept range = requires(T& t) {
     end(t);
 };
 
-DECL_ALIAS(range, sentinel_t, decltype(neo::ranges::end(NEO_DECLVAL(T))));
+DECL_ALIAS(range, sentinel_t, decltype(neo::ranges::end(NEO_DECLVAL(T&))));
 DECL_ALIAS(range, range_reference_t, iter_reference_t<iterator_t<T>>);
 DECL_ALIAS(range, range_difference_t, iter_difference_t<iterator_t<T>>);
 DECL_ALIAS(range, range_value_t, iter_value_t<iterator_t<T>>);
@@ -92,7 +92,7 @@ concept sized_range =
         size(t);
     };
 
-DECL_ALIAS(sized_range, range_size_t, decltype(neo::ranges::size(NEO_DECLVAL(T))));
+DECL_ALIAS(sized_range, range_size_t, decltype(neo::ranges::size(NEO_DECLVAL(T&))));
 #undef DECL_ALIAS
 
 template <typename T>

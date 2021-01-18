@@ -5,6 +5,7 @@
 
 #include <catch2/catch.hpp>
 
+NEO_TEST_CONCEPT(neo::ranges::range<neo::any_input_range<int>>);
 NEO_TEST_CONCEPT(neo::ranges::input_range<neo::any_input_range<int>>);
 
 void foo(neo::erased_input_range<const int&>&& range) {
