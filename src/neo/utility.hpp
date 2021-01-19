@@ -1,8 +1,9 @@
 #pragma once
 
-#include <numeric>
+#include "./fwd.hpp"
+
 #include <tuple>
-#include <utility>
+#include <type_traits>
 
 namespace neo {
 
@@ -13,12 +14,40 @@ namespace neo {
  */
 template <typename T>
 constexpr T take(T& obj) noexcept(noexcept(std::remove_cvref_t<T>())) {
-    auto ret = std::move(obj);
+    auto ret = NEO_MOVE(obj);
     obj      = std::remove_cvref_t<T>();
     return ret;
 }
 
 namespace oper {
+
+constexpr inline struct equal_to_t {
+    template <typename Left, typename Right>
+    constexpr bool operator()(Left&& l, Right&& r) const noexcept {
+        return l == r;
+    }
+} equal_to;
+
+constexpr inline struct not_equal_to_t {
+    template <typename Left, typename Right>
+    constexpr bool operator()(Left&& l, Right&& r) const noexcept {
+        return l != r;
+    }
+} not_equal_to;
+
+constexpr inline struct logical_or_t {
+    template <typename Left, typename Right>
+    constexpr bool operator()(Left&& l, Right&& r) const noexcept {
+        return l || r;
+    }
+} logical_or;
+
+constexpr inline struct logical_and_t {
+    template <typename Left, typename Right>
+    constexpr bool operator()(Left&& l, Right&& r) const noexcept {
+        return l && r;
+    }
+} logical_and;
 
 /**
  * @brief Use with operator== and operator!= to do a natural language set membership check
@@ -27,14 +56,19 @@ template <typename... Items>
 class any_of {
     std::tuple<const Items&...> _items;
 
-    template <typename Oper, std::size_t... I, typename Other>
-    constexpr bool _op_1(std::index_sequence<I...>, Other&& o) const noexcept {
-        return (Oper()(o, std::get<I>(_items)) || ...);
+    template <auto Oper, std::size_t... I, typename Other>
+    constexpr bool _op_1(std::index_sequence<I...>, logical_or_t, Other&& o) const noexcept {
+        return (Oper(o, std::get<I>(_items)) || ...);
     }
 
-    template <typename Oper, typename Other>
+    template <auto Oper, std::size_t... I, typename Other>
+    constexpr bool _op_1(std::index_sequence<I...>, logical_and_t, Other&& o) const noexcept {
+        return (Oper(o, std::get<I>(_items)) && ...);
+    }
+
+    template <auto Oper, auto Joiner, typename Other>
     constexpr bool _op(Other&& other) const noexcept {
-        return _op_1<Oper>(std::index_sequence_for<Items...>(), other);
+        return _op_1<Oper>(std::index_sequence_for<Items...>(), Joiner, other);
     }
 
 public:
@@ -43,12 +77,12 @@ public:
 
     template <typename Left>
     constexpr friend bool operator==(Left&& lhs, const any_of& rhs) noexcept {
-        return rhs._op<std::equal_to<>>(lhs);
+        return rhs._op<equal_to, logical_or>(lhs);
     }
 
     template <typename Left>
     constexpr friend bool operator!=(Left&& lhs, const any_of& rhs) noexcept {
-        return rhs._op<std::not_equal_to<>>(lhs);
+        return rhs._op<not_equal_to, logical_and>(lhs);
     }
 };
 
@@ -62,12 +96,12 @@ template <typename... Items>
 class none_of {
     std::tuple<const Items&...> _items;
 
-    template <typename Oper, std::size_t... I, typename Other>
+    template <auto Oper, std::size_t... I, typename Other>
     constexpr bool _op_1(std::index_sequence<I...>, Other&& o) const noexcept {
-        return (Oper()(o, std::get<I>(_items)) || ...);
+        return (Oper(o, std::get<I>(_items)) || ...);
     }
 
-    template <typename Oper, typename Other>
+    template <auto Oper, typename Other>
     constexpr bool _op(Other&& other) const noexcept {
         return _op_1<Oper>(std::index_sequence_for<Items...>(), other);
     }
@@ -78,12 +112,7 @@ public:
 
     template <typename Left>
     constexpr friend bool operator==(Left&& lhs, const none_of& rhs) noexcept {
-        return !rhs._op<std::equal_to<>>(lhs);
-    }
-
-    template <typename Left>
-    constexpr friend bool operator!=(Left&& lhs, const none_of& rhs) noexcept {
-        return !rhs._op<std::not_equal_to<>>(lhs);
+        return !rhs._op<equal_to>(lhs);
     }
 };
 

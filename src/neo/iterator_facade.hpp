@@ -1,5 +1,6 @@
 #pragma once
 
+#include "./fwd.hpp"
 #include <neo/arrow_proxy.hpp>
 #include <neo/ref.hpp>
 
@@ -10,10 +11,10 @@ namespace neo {
 namespace detail {
 
 // clang-format off
-template <typename T>
-concept iter_has_distance_to_method =
-    requires(const T t) {
-        t.distance_to(t);
+template <typename Sentinel, typename T>
+concept sized_sentinel_of =
+    requires(const T& t, const Sentinel& s) {
+        t.distance_to(s);
     };
 
 template <typename>
@@ -21,7 +22,8 @@ struct infer_difference_type {
     using type = std::ptrdiff_t;
 };
 
-template <iter_has_distance_to_method T>
+template <typename T>
+    requires sized_sentinel_of<T, T>
 struct infer_difference_type<T> {
     static const T& _it;
     using type = decltype(_it.distance_to(_it));
@@ -45,50 +47,47 @@ struct infer_value_type<T> {
 template <typename T>
 using infer_value_type_t = typename infer_value_type<T>::type;
 
-template <typename T>
-concept iter_has_equal_to_method =
-    requires (const T it) {
-        it.equal_to(it);
+template <typename Sentinel, typename T>
+concept sentinel_of =
+    requires (const T& it, const Sentinel& s) {
+        it.equal_to(s);
     };
 
 template <typename T>
-concept iter_has_increment_method =
-    requires(T t) {
+concept can_increment =
+    requires(T& t) {
         t.increment();
     };
 
 template <typename T>
-concept iter_has_decrement_method =
-    requires(T t) {
+concept can_decrement =
+    requires(T& t) {
         t.decrement();
     };
 
 template <typename T>
-concept iter_has_advance_method =
-    requires(T t, const infer_difference_type_t<T> d) {
+concept can_advance =
+    requires(T& t, const infer_difference_type_t<T> d) {
         t.advance(d);
     };
 
 template <typename T>
 concept iter_is_random_access =
-    iter_has_distance_to_method<T> &&
-    iter_has_advance_method<T>;
+    sized_sentinel_of<T, T> &&
+    can_advance<T>;
 
 template <typename T>
 concept iter_is_bidirectional =
     iter_is_random_access<T> ||
-    iter_has_decrement_method<T>;
+    can_decrement<T>;
 
 template <typename T>
 concept iter_is_single_pass = bool(T::single_pass_iterator);
 
-template <typename T, typename Iter>
-concept iter_sentinel = std::is_same_v<T, typename Iter::sentinel_type>;
-
-template <typename Iter>
-concept equal_compare_check =
-    iter_has_equal_to_method<Iter>
-    || iter_has_distance_to_method<Iter>;
+template <typename Other, typename Iter>
+concept sentinel_check =
+    sentinel_of<Other, Iter>
+    || sized_sentinel_of<Other, Iter>;
 
 // clang-format on
 
@@ -117,25 +116,9 @@ struct iterator_facade_base {};
  *
  * ====== Iterator Equality
  *
- * In order for the iterator to be used in any situation that requires
- * comparison with other iterators (e.g. an `it != end()` check), then provide:
- *
- * - equal_to(Derived d) - determine if *this and `d` refer to the same
- *   position.
- *
- * Note that this is optional, and you can instead use sentinels:
- *
- *
- * ====== Sentinel Equality
- *
- * If your iterator uses a sentinel rather than an iterator to mark its end
- * state, you must inform `iterator_facade` of this fact by providing a
- * `sentinel_type` type member of the Derived class. If such a type member is
- * provided, then you must also provide:
- *
- * - at_end() - Return `true` if the iterator has reached the end. This is
- *   called automatically whenever the caller attempts to compare the iterator
- *   to an instance of `Derived::sentinel_type`.
+ * The generated iterator type is equality-comparible with any object of type
+ * S if the derived class implements `equal_to(S)` OR `distance_to(S)`. This
+ * includes sentinel types and other instances of the iterator.
  *
  *
  * ====== Single-pass Input
@@ -210,7 +193,7 @@ public:
             return std::addressof(deref);
         } else {
             // It returned a value, so we need to wrap it in an arrow_proxy for the caller
-            return arrow_proxy{std::move(deref)};
+            return arrow_proxy{NEO_MOVE(deref)};
         }
     }
 
@@ -229,7 +212,7 @@ public:
      * `.increment()`, if present, otherwise `*this += 1`
      */
     constexpr self_type& operator++() noexcept {
-        if constexpr (detail::iter_has_increment_method<self_type>) {
+        if constexpr (detail::can_increment<self_type>) {
             // If there is an increment(), assume it is the most efficient way to
             // advance, even if we have an advance()
             _self().increment();
@@ -257,7 +240,7 @@ public:
     }
 
     constexpr self_type& operator--() noexcept requires detail::iter_is_bidirectional<self_type> {
-        if constexpr (detail::iter_has_decrement_method<self_type>) {
+        if constexpr (detail::can_decrement<self_type>) {
             _self().decrement();
         } else {
             _self() -= 1;
@@ -265,34 +248,35 @@ public:
         return _self();
     }
 
-    constexpr self_type operator--(int) noexcept requires detail::iter_is_bidirectional<self_type> {
+    constexpr auto operator--(int) noexcept requires detail::iter_is_bidirectional<self_type> {
         auto cp = _self();
         --*this;
         return cp;
     }
 
     template <detail::iter_diff<self_type> Diff>
-    [[nodiscard]] constexpr friend self_type operator+(self_type left, Diff off) noexcept
+    [[nodiscard]] constexpr friend auto operator+(const self_type& left, Diff off) noexcept
         requires detail::iter_is_random_access<self_type> {
-        return left += off;
+        auto cp = left;
+        return cp += off;
     }
 
     template <detail::iter_diff<self_type> D>
-    [[nodiscard]] constexpr friend self_type operator+(D off, const self_type& self) noexcept
+    [[nodiscard]] constexpr friend auto operator+(D off, const self_type& self) noexcept
         requires detail::iter_is_random_access<self_type> {
         return self + off;
     }
 
     template <detail::iter_diff<self_type> D>
-    [[nodiscard]] constexpr friend self_type operator-(const self_type& self, D off) noexcept
+    [[nodiscard]] constexpr friend auto operator-(const self_type& self, D off) noexcept
         requires detail::iter_is_random_access<self_type> {
         using diff_type        = detail::infer_difference_type_t<self_type>;
         using signed_diff_type = std::make_signed_t<diff_type>;
         return self + -static_cast<signed_diff_type>(off);
     }
 
-    template <detail::iter_sentinel<self_type> S>
-    [[nodiscard]] constexpr friend auto operator-(S s, const self_type& self) noexcept {
+    template <detail::sized_sentinel_of<self_type> S>
+    [[nodiscard]] constexpr friend auto operator-(const S& s, const self_type& self) noexcept {
         return self.distance_to(s);
     }
 
@@ -315,122 +299,32 @@ public:
         return *(_self() + pos);
     }
 
-#if __cpp_impl_three_way_comparison
+#if !__cpp_impl_three_way_comparison
+#error "neo/iterator_facade.hpp requires three-way-comparison support"
+#endif
 
     /**
      * With three-way comparison, we can get away with much simpler comparison/equality
      * operators, since we can also rely on synthesized rewrites
      */
-    constexpr bool operator==(const self_type& other) const noexcept
-        requires detail::equal_compare_check<self_type> {
-        if constexpr (detail::iter_has_equal_to_method<self_type>) {
+    template <detail::sentinel_check<self_type> S>
+    [[nodiscard]] constexpr bool operator==(const S& other) const noexcept {
+        if constexpr (detail::sentinel_of<S, self_type>) {
             return _self().equal_to(other);
-        } else if constexpr (detail::iter_has_distance_to_method<self_type>) {
+        } else if constexpr (detail::sized_sentinel_of<self_type, S>) {
             return _self().distance_to(other) == 0;
         } else {
-            static_assert(detail::iter_has_distance_to_method<self_type>,
+            static_assert(detail::sized_sentinel_of<self_type, S>,
                           "Iterator must provide either `distance_to(other)` or `equal_to(other)`");
         }
     }
 
-    template <detail::iter_sentinel<self_type> S>
-    constexpr bool operator==(S) const noexcept {
-        return _self().at_end();
-    }
-
-    [[nodiscard]] constexpr auto operator<=>(const self_type& right) const noexcept
-        requires detail::iter_is_random_access<self_type> {
+    template <detail::sized_sentinel_of<self_type> S>
+    [[nodiscard]] constexpr auto operator<=>(const S& right) const noexcept {
         auto dist = _self() - right;
         auto rel  = dist <=> 0;
         return rel;
     }
-
-#else
-
-    /**
-     * Equality
-     */
-    [[nodiscard]] friend constexpr bool operator==(const self_type& me,
-                                                   const self_type& right) noexcept
-        requires detail::equal_compare_check<self_type> {
-        if constexpr (detail::iter_has_equal_to_method<self_type>) {
-            return me.equal_to(right);
-        } else if constexpr (detail::iter_has_distance_to_method<self_type>) {
-            return me.distance_to(right) == 0;
-        } else {
-            static_assert(detail::iter_has_distance_to_method<self_type>,
-                          "Iterator must provide either `distance_to(other)` or `equal_to(other)`");
-        }
-    }
-
-    template <detail::iter_sentinel<self_type> S>
-    [[nodiscard]] friend constexpr bool operator==(const self_type& self, S) noexcept {
-        return self.at_end();
-    }
-
-    /// XXX: GCC9 has a bug with the combination of features that are being used
-    /// in this free hidden friend operator function when the sentinel is the
-    /// left-hand argument and we are constrained through constraint syntax.
-    /// However: It still works with the good-ol' enable_if trick.
-    template <detail::iter_sentinel<self_type> S,
-              typename = std::enable_if_t<detail::iter_sentinel<S, self_type>>>
-    [[nodiscard]] friend constexpr bool operator==(S, const self_type& self) noexcept {
-        return self.at_end();
-    }
-
-    /**
-     * Inequality
-     */
-    [[nodiscard]] friend constexpr bool operator!=(const self_type& left,
-                                                   const self_type& right) noexcept
-        requires detail::equal_compare_check<self_type> {
-        return !(left == right);
-    }
-
-    template <detail::iter_sentinel<self_type> S>
-    [[nodiscard]] friend constexpr bool operator!=(const self_type& self, S) noexcept {
-        return !self.at_end();
-    }
-
-    /// See comment above regarding GCC9
-    template <detail::iter_sentinel<self_type> S,
-              typename = std::enable_if_t<detail::iter_sentinel<S, self_type>>>
-    [[nodiscard]] friend constexpr bool operator!=(S, const self_type& self) noexcept {
-        return !self.at_end();
-    }
-
-    /**
-     * Less-than
-     */
-    [[nodiscard]] friend constexpr bool operator<(const self_type& left,
-                                                  const self_type& right) noexcept
-        requires detail::iter_is_random_access<self_type> {
-        return (left - right) < 0;
-    }
-
-    [[nodiscard]] friend constexpr bool operator<=(const self_type& left,
-                                                   const self_type& right) noexcept
-        requires detail::iter_is_random_access<self_type> {
-        return (left - right) <= 0;
-    }
-
-    /**
-     * Greater-than
-     */
-    [[nodiscard]] friend constexpr bool operator>(const self_type& left,
-                                                  const self_type& right) noexcept
-        requires detail::iter_is_random_access<self_type> {
-        return (left - right) > 0;
-    }
-
-    [[nodiscard]] friend constexpr bool operator>=(const self_type& left,
-                                                   const self_type& right) noexcept
-        requires detail::iter_is_random_access<self_type> {
-        return (left - right) >= 0;
-    }
-
-#endif  // __cpp_impl_three_way_comparison
-
 };  // namespace neo
 
 template <typename Derived, typename InnerIterator>

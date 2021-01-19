@@ -1,14 +1,14 @@
 #pragma once
 
-#include <functional>
+#include "./fwd.hpp"
+#include "./invoke.hpp"
+#include "./version.hpp"
+
 #include <type_traits>
-#include <utility>
 
 #if defined __GNUC__ && __GNUC__ < 10
 #define NEO_CONCEPTS_IS_CONCEPTS_TS 1
 #endif
-
-#include "./version.hpp"
 
 #if __cpp_lib_concepts
 #include <concepts>
@@ -87,8 +87,8 @@ template <typename Left, typename Right>
 concept assignable_from =
     std::is_lvalue_reference_v<Left> &&
     requires(Left lhs, Right&& rhs) {
-        lhs = std::forward<Right>(rhs);
-        requires same_as<decltype(lhs = std::forward<Right>(rhs)), Left>;
+        lhs = NEO_FWD(rhs);
+        requires same_as<decltype(lhs = NEO_FWD(rhs)), Left>;
     };
 
 template <typename T>
@@ -179,7 +179,7 @@ concept regular = semiregular<T> && equality_comparable<T>;
 template <typename Func, typename... Args>
 concept invocable =
     requires(Func&& fn, Args&&... args) {
-        std::invoke(std::forward<Func>(fn), std::forward<Args>(args)...);
+        neo::invoke(NEO_FWD(fn), NEO_FWD(args)...);
     };
 
 template <typename Func, typename... Args>
@@ -188,7 +188,7 @@ concept regular_invocable = invocable<Func, Args...>;
 template <typename Func, typename... Args>
 concept predicate =
     regular_invocable<Func, Args...> &&
-    simple_boolean<std::invoke_result_t<Func, Args...>>;
+    simple_boolean<neo::invoke_result_t<Func, Args...>>;
 
 template <typename Rel, typename T, typename U>
 concept relation =
@@ -251,16 +251,35 @@ namespace neo {
 */
 
 template <typename T, typename Target>
-concept alike = same_as<std::decay_t<T>, std::decay_t<Target>>;
+concept alike = same_as<std::remove_cvref_t<T>, std::remove_cvref_t<Target>>;
 
 template <typename T, typename Target>
-concept unalike = !same_as<std::decay_t<T>, std::decay_t<Target>>;
+concept unalike = !same_as<std::remove_cvref_t<T>, std::remove_cvref_t<Target>>;
+
+template <typename T>
+concept trivially_default_constructible = std::is_trivially_default_constructible_v<T>;
+
+template <typename T>
+concept trivially_destructible = std::is_trivially_destructible_v<T>;
 
 template <typename T>
 concept trivially_copyable = copyable<T> && std::is_trivially_copyable_v<T>;
 
 template <typename T>
+concept trivially_movable =
+    movable<T> &&
+    std::is_trivially_move_constructible_v<T> &&
+    std::is_trivially_move_assignable_v<T>;
+
+template <typename T>
 concept trivial_type = trivially_copyable<T> && std::is_trivial_v<T>;
+
+template <typename Func, typename... Args>
+concept nothrow_invocable =
+    invocable<Func, Args...> &&
+    requires(Func fn, Args... args) {
+        { neo::invoke(NEO_FWD(fn), NEO_FWD(args)...) } noexcept;
+    };
 
 #if __cpp_lib_concepts
 template <typename B>

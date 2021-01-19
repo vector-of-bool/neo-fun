@@ -3,12 +3,12 @@
 #include "./assert.hpp"
 #include "./function_traits.hpp"
 #include "./fwd.hpp"
+#include "./invoke.hpp"
 #include "./opt_ref.hpp"
+#include "./optional.hpp"
 #include "./scope.hpp"
 #include "./tag.hpp"
 
-#include <functional>
-#include <string_view>
 #include <tuple>
 
 namespace neo {
@@ -118,18 +118,18 @@ void emit_one(const Event& ev) {
 /// Emit a single event, but lazily call a factory function that will produce the event object
 template <typename EventReturner>
 void emit_one(const EventReturner& func) requires(
-    !std::is_void_v<std::invoke_result_t<EventReturner>>) {
+    !std::is_void_v<neo::invoke_result_t<EventReturner>>) {
     // The actual event type:
-    using RetType = std::invoke_result_t<EventReturner>;
+    using RetType = neo::invoke_result_t<EventReturner>;
     // If we have a handler, invoke the factory and emit the event
     if (!!event_detail::tl_subscr<std::remove_cvref_t<RetType>>) {
-        emit_one(std::invoke(func));
+        emit_one(neo::invoke(func));
     }
 }
 
 // Forward-decl concrete implementation of erased subscriber type
 template <typename T, typename Func>
-struct scoped_subscription_impl;
+class scoped_subscription_impl;
 
 // Helper to calculate the type of an event handler
 template <typename Func, typename Arg>
@@ -154,15 +154,37 @@ class scoped_subscription_impl : scoped_subscription<T> {
     Func _fn;
 
     // Pass the event down to our handler function:
-    void do_invoke(const T& value) const override { std::invoke(_fn, value); }
+    void do_invoke(const T& value) const override { neo::invoke(_fn, value); }
 
 public:
+    scoped_subscription_impl() = default;
     // Simple construct:
     explicit scoped_subscription_impl(Func&& fn)
         : _fn(NEO_FWD(fn)) {}
 };
 
 }  // namespace event_detail
+
+/**
+ * @brief Class template that holds a subscription to an event.
+ *
+ * Should be instantiated as a local object via CTAD
+ */
+template <event_detail::subscription_func_check Func>
+class subscription : event_detail::subscription_func_result_t<Func> {
+public:
+    subscription() = default;
+    subscription(Func&& h)
+        : subscription::scoped_subscription_impl(NEO_FWD(h)) {}
+};
+
+template <event_detail::subscription_func_check Func>
+subscription(Func&& fn) -> subscription<Func>;
+
+/**
+ * @brief Declare an event subscription in the current scope
+ */
+#define NEO_SUBSCRIBE ::neo::subscription NEO_CONCAT(_local_neo_subscr_, __COUNTER__) = [&]
 
 /**
  * @brief Subscribe to one or more thread-local events.
@@ -180,7 +202,7 @@ public:
  */
 template <event_detail::subscription_func_check... Funcs>
 [[nodiscard]] auto subscribe(Funcs&&... fns) noexcept {
-    return std::tuple<event_detail::subscription_func_result_t<Funcs>...>(NEO_FWD(fns)...);
+    return std::tuple<subscription<Funcs>...>(NEO_FWD(fns)...);
 }
 
 /**
@@ -227,5 +249,34 @@ void bubble_event(const Event& ev) {
                "same type");
     event_detail::subscr_agent::bubble_event(*cur_handler, ev);
 }
+
+/**
+ * @brief Emit an event whose type is of the given expression.
+ *
+ * If there is no subscriber for the event in question, the expression will not be evaluated.
+ */
+#define NEO_EMIT(...) ::neo::emit([&] { return (__VA_ARGS__); })
+
+/**
+ * @brief Like a neo::subscription, but does not register the subscription immediately. Call
+ * `.subscribe()` to activate it.
+ *
+ * Should be instantiated via CTAD.
+ */
+template <typename Handler>
+class opt_subscription {
+    Handler _handler;
+
+    nano_opt<subscription<Handler&>> _opt;
+
+public:
+    opt_subscription(Handler&& h)
+        : _handler(h) {}
+
+    void subscribe() noexcept { _opt.emplace(_handler); }
+};
+
+template <typename Handler>
+opt_subscription(Handler &&) -> opt_subscription<Handler>;
 
 }  // namespace neo
