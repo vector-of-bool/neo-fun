@@ -1,5 +1,6 @@
 #pragma once
 
+#include "./fwd.hpp"
 #include <neo/arrow_proxy.hpp>
 #include <neo/ref.hpp>
 
@@ -192,7 +193,7 @@ public:
             return std::addressof(deref);
         } else {
             // It returned a value, so we need to wrap it in an arrow_proxy for the caller
-            return arrow_proxy{std::move(deref)};
+            return arrow_proxy{NEO_MOVE(deref)};
         }
     }
 
