@@ -3,6 +3,7 @@
 #include <catch2/catch.hpp>
 
 void not_noexcept() {}
+void is_noexcept() noexcept {}
 
 TEST_CASE("Create a simple lambda expression") {
     auto l     = NEO_TL(_1 + 2);
@@ -18,4 +19,7 @@ TEST_CASE("Create a simple lambda expression") {
 
     auto maybe_throws = NEO_TL(not_noexcept());
     static_assert(!noexcept(maybe_throws()));
+
+    auto no_throws = NEO_TL(is_noexcept());
+    static_assert(noexcept(no_throws));
 }
