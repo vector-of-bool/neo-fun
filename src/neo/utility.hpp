@@ -28,13 +28,18 @@ class any_of {
     std::tuple<const Items&...> _items;
 
     template <typename Oper, std::size_t... I, typename Other>
-    constexpr bool _op_1(std::index_sequence<I...>, Other&& o) const noexcept {
+    constexpr bool _op_1(std::index_sequence<I...>, std::logical_or<>, Other&& o) const noexcept {
         return (Oper()(o, std::get<I>(_items)) || ...);
     }
 
-    template <typename Oper, typename Other>
+    template <typename Oper, std::size_t... I, typename Other>
+    constexpr bool _op_1(std::index_sequence<I...>, std::logical_and<>, Other&& o) const noexcept {
+        return (Oper()(o, std::get<I>(_items)) && ...);
+    }
+
+    template <typename Oper, typename Joiner, typename Other>
     constexpr bool _op(Other&& other) const noexcept {
-        return _op_1<Oper>(std::index_sequence_for<Items...>(), other);
+        return _op_1<Oper>(std::index_sequence_for<Items...>(), Joiner{}, other);
     }
 
 public:
@@ -43,12 +48,12 @@ public:
 
     template <typename Left>
     constexpr friend bool operator==(Left&& lhs, const any_of& rhs) noexcept {
-        return rhs._op<std::equal_to<>>(lhs);
+        return rhs._op<std::equal_to<>, std::logical_or<>>(lhs);
     }
 
     template <typename Left>
     constexpr friend bool operator!=(Left&& lhs, const any_of& rhs) noexcept {
-        return rhs._op<std::not_equal_to<>>(lhs);
+        return rhs._op<std::not_equal_to<>, std::logical_and<>>(lhs);
     }
 };
 
@@ -79,11 +84,6 @@ public:
     template <typename Left>
     constexpr friend bool operator==(Left&& lhs, const none_of& rhs) noexcept {
         return !rhs._op<std::equal_to<>>(lhs);
-    }
-
-    template <typename Left>
-    constexpr friend bool operator!=(Left&& lhs, const none_of& rhs) noexcept {
-        return !rhs._op<std::not_equal_to<>>(lhs);
     }
 };
 
