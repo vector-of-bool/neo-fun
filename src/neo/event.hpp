@@ -3,13 +3,12 @@
 #include "./assert.hpp"
 #include "./function_traits.hpp"
 #include "./fwd.hpp"
+#include "./invoke.hpp"
 #include "./opt_ref.hpp"
 #include "./optional.hpp"
 #include "./scope.hpp"
 #include "./tag.hpp"
 
-#include <functional>
-#include <string_view>
 #include <tuple>
 
 namespace neo {
@@ -119,12 +118,12 @@ void emit_one(const Event& ev) {
 /// Emit a single event, but lazily call a factory function that will produce the event object
 template <typename EventReturner>
 void emit_one(const EventReturner& func) requires(
-    !std::is_void_v<std::invoke_result_t<EventReturner>>) {
+    !std::is_void_v<neo::invoke_result_t<EventReturner>>) {
     // The actual event type:
-    using RetType = std::invoke_result_t<EventReturner>;
+    using RetType = neo::invoke_result_t<EventReturner>;
     // If we have a handler, invoke the factory and emit the event
     if (!!event_detail::tl_subscr<std::remove_cvref_t<RetType>>) {
-        emit_one(std::invoke(func));
+        emit_one(neo::invoke(func));
     }
 }
 
@@ -155,7 +154,7 @@ class scoped_subscription_impl : scoped_subscription<T> {
     Func _fn;
 
     // Pass the event down to our handler function:
-    void do_invoke(const T& value) const override { std::invoke(_fn, value); }
+    void do_invoke(const T& value) const override { neo::invoke(_fn, value); }
 
 public:
     scoped_subscription_impl() = default;
