@@ -230,7 +230,7 @@ public:
     constexpr auto size() requires sized_range<R> { return std::ranges::size(_range); }
     // Obtain the underlying range:
     constexpr R base() const& requires std::copy_constructible<R> { return _range; }
-    constexpr R base() && { return std::move(_range); }
+    constexpr R base() && { return NEO_MOVE(_range); }
 };
 
 template <typename R>
