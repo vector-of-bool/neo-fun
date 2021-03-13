@@ -319,6 +319,19 @@ public:
         }
     }
 
+    [[nodiscard]] constexpr friend bool operator==(const self_type& left,
+                                                   const self_type& other) noexcept
+        requires detail::sentinel_check<self_type, self_type> {
+        if constexpr (detail::sentinel_of<self_type, self_type>) {
+            return left.equal_to(other);
+        } else if constexpr (detail::sized_sentinel_of<self_type, self_type>) {
+            return left.distance_to(other) == 0;
+        } else {
+            static_assert(detail::sized_sentinel_of<self_type, self_type>,
+                          "[should never be seen]");
+        }
+    }
+
     template <detail::sized_sentinel_of<self_type> S>
     [[nodiscard]] constexpr auto operator<=>(const S& right) const noexcept {
         auto dist = _self() - right;
