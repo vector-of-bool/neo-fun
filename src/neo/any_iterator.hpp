@@ -111,7 +111,7 @@ public:
     virtual void    increment()                  = 0;
     virtual RefType dereference() const noexcept = 0;
     // Compare to an iterator or a sentinel
-    virtual bool equal_to(const erased_iterator_base& other) const noexcept = 0;
+    virtual bool operator==(const erased_iterator_base& other) const noexcept = 0;
     // Type-erased copy of the impl
     virtual std::unique_ptr<erased_input_iterator<RefType>> clone() const noexcept = 0;
 };
@@ -151,7 +151,7 @@ public:
     // Return the type tag of the underlying iterator
     neo::type_tag type_tag() const noexcept override { return type_tag_v<Iter>; }
 
-    bool equal_to(const erased_iterator_base& other) const noexcept override {
+    bool operator==(const erased_iterator_base& other) const noexcept override {
         return other.get<Iter>() == _it;
     }
 
@@ -241,7 +241,7 @@ public:
     void      increment() { impl().increment(); }
 
     template <convertible_to<const any_input_iterator&> S>
-    bool equal_to(S&& other) const noexcept {
+    bool operator==(S&& other) const noexcept {
         const any_input_iterator& r{other};
         return impl() == r.impl();
     }

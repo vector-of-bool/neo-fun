@@ -47,12 +47,6 @@ struct infer_value_type<T> {
 template <typename T>
 using infer_value_type_t = typename infer_value_type<T>::type;
 
-template <typename Sentinel, typename T>
-concept sentinel_of =
-    requires (const T& it, const Sentinel& s) {
-        it.equal_to(s);
-    };
-
 template <typename T>
 concept can_increment =
     requires(T& t) {
@@ -84,11 +78,6 @@ concept iter_is_bidirectional =
 template <typename T>
 concept iter_is_single_pass = bool(T::single_pass_iterator);
 
-template <typename Other, typename Iter>
-concept sentinel_check =
-    sentinel_of<Other, Iter>
-    || sized_sentinel_of<Other, Iter>;
-
 // clang-format on
 
 template <typename T, typename Iter>
@@ -117,8 +106,8 @@ struct iterator_facade_base {};
  * ====== Iterator Equality
  *
  * The generated iterator type is equality-comparible with any object of type
- * S if the derived class implements `equal_to(S)` OR `distance_to(S)`. This
- * includes sentinel types and other instances of the iterator.
+ * S if the derived class implements `distance_to(S)`. This includes sentinel
+ * types and other instances of the iterator.
  *
  *
  * ====== Single-pass Input
@@ -307,29 +296,9 @@ public:
      * With three-way comparison, we can get away with much simpler comparison/equality
      * operators, since we can also rely on synthesized rewrites
      */
-    template <detail::sentinel_check<self_type> S>
+    template <detail::sized_sentinel_of<self_type> S>
     [[nodiscard]] constexpr friend bool operator==(const self_type& self, const S& other) noexcept {
-        if constexpr (detail::sentinel_of<S, self_type>) {
-            return self.equal_to(other);
-        } else if constexpr (detail::sized_sentinel_of<S, self_type>) {
-            return self.distance_to(other) == 0;
-        } else {
-            static_assert(detail::sized_sentinel_of<S, self_type>,
-                          "Iterator must provide either `distance_to(other)` or `equal_to(other)`");
-        }
-    }
-
-    [[nodiscard]] constexpr friend bool operator==(const self_type& left,
-                                                   const self_type& other) noexcept
-        requires detail::sentinel_check<self_type, self_type> {
-        if constexpr (detail::sentinel_of<self_type, self_type>) {
-            return left.equal_to(other);
-        } else if constexpr (detail::sized_sentinel_of<self_type, self_type>) {
-            return left.distance_to(other) == 0;
-        } else {
-            static_assert(detail::sized_sentinel_of<self_type, self_type>,
-                          "[should never be seen]");
-        }
+        return self.distance_to(other) == 0;
     }
 
     template <detail::sized_sentinel_of<self_type> S>
@@ -367,7 +336,7 @@ public:
     }
     // clang-format on
 
-    constexpr bool equal_to(const self_type& other) const noexcept {
+    constexpr bool operator==(const self_type& other) const noexcept {
         return wrapped_iterator == other.wrapped_iterator;
     }
 };

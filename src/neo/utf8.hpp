@@ -182,8 +182,8 @@ public:
 
         constexpr bool at_end() const noexcept { return _iter == _stop; }
 
-        constexpr bool equal_to(iterator other) const noexcept { return _iter == other._iter; }
-        constexpr bool equal_to(sentinel_type) const noexcept { return at_end(); }
+        constexpr bool operator==(iterator other) const noexcept { return _iter == other._iter; }
+        constexpr bool operator==(sentinel_type) const noexcept { return at_end(); }
 
         constexpr std::string_view tail_string() const noexcept {
             return at_end() ? "" : std::string_view(&*_iter, _stop - _iter);
