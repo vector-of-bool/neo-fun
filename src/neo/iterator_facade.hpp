@@ -308,11 +308,11 @@ public:
      * operators, since we can also rely on synthesized rewrites
      */
     template <detail::sentinel_check<self_type> S>
-    [[nodiscard]] constexpr bool operator==(const S& other) const noexcept {
+    [[nodiscard]] constexpr friend bool operator==(const self_type& self, const S& other) noexcept {
         if constexpr (detail::sentinel_of<S, self_type>) {
-            return _self().equal_to(other);
+            return self.equal_to(other);
         } else if constexpr (detail::sized_sentinel_of<self_type, S>) {
-            return _self().distance_to(other) == 0;
+            return self.distance_to(other) == 0;
         } else {
             static_assert(detail::sized_sentinel_of<self_type, S>,
                           "Iterator must provide either `distance_to(other)` or `equal_to(other)`");
