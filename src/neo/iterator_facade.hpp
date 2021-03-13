@@ -311,10 +311,10 @@ public:
     [[nodiscard]] constexpr friend bool operator==(const self_type& self, const S& other) noexcept {
         if constexpr (detail::sentinel_of<S, self_type>) {
             return self.equal_to(other);
-        } else if constexpr (detail::sized_sentinel_of<self_type, S>) {
+        } else if constexpr (detail::sized_sentinel_of<S, self_type>) {
             return self.distance_to(other) == 0;
         } else {
-            static_assert(detail::sized_sentinel_of<self_type, S>,
+            static_assert(detail::sized_sentinel_of<S, self_type>,
                           "Iterator must provide either `distance_to(other)` or `equal_to(other)`");
         }
     }
