@@ -297,8 +297,8 @@ public:
      * operators, since we can also rely on synthesized rewrites
      */
     template <detail::sized_sentinel_of<self_type> S>
-    [[nodiscard]] constexpr friend bool operator==(const self_type& self, const S& other) noexcept {
-        return self.distance_to(other) == 0;
+    [[nodiscard]] constexpr bool operator==(const S& other) const noexcept {
+        return _self().distance_to(other) == 0;
     }
 
     template <detail::sized_sentinel_of<self_type> S>
