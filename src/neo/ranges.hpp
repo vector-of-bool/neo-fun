@@ -180,7 +180,7 @@ class enumerate_view : public std::ranges::view_interface<enumerate_view<R>> {
 
         constexpr auto dereference() const noexcept { return reference{_pos, *_base_iter}; }
 
-        constexpr bool equal_to(const _iter_t& other) const noexcept
+        constexpr bool operator==(const _iter_t& other) const noexcept
             requires std::equality_comparable<BaseIter> {
             return _base_iter == other._base_iter;
         }

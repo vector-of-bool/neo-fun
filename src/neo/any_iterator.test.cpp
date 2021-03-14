@@ -59,6 +59,6 @@ TEST_CASE("Created an any_input_iterator") {
     CHECK(it == it2);
     ++it;
     CHECK(it != it2);
-    CHECK_FALSE(it.equal_to(vec.cend()));
+    CHECK_FALSE(it == vec.cend());
     CHECK(it != end);
 }
