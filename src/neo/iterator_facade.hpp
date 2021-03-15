@@ -1,5 +1,6 @@
 #pragma once
 
+#include "./concepts.hpp"
 #include "./fwd.hpp"
 #include <neo/arrow_proxy.hpp>
 #include <neo/ref.hpp>
@@ -11,10 +12,10 @@ namespace neo {
 namespace detail {
 
 // clang-format off
-template <typename Sentinel, typename T>
+template <typename Sentinel, typename Iter>
 concept sized_sentinel_of =
-    requires(const T& t, const Sentinel& s) {
-        t.distance_to(s);
+    requires(const Iter& it, const Sentinel& sentinel) {
+        it.distance_to(sentinel);
     };
 
 template <typename>
@@ -296,14 +297,9 @@ public:
      * With three-way comparison, we can get away with much simpler comparison/equality
      * operators, since we can also rely on synthesized rewrites
      */
-    template <detail::sized_sentinel_of<self_type> S>
-    [[nodiscard]] constexpr bool operator==(const S& other) const noexcept {
-        return _self().distance_to(other) == 0;
-    }
-
-    template <detail::sized_sentinel_of<self_type> S>
-    [[nodiscard]] constexpr auto operator<=>(const S& right) const noexcept {
-        auto dist = _self() - right;
+    template <convertible_to<const self_type&> Self, detail::sized_sentinel_of<Self> S>
+    [[nodiscard]] constexpr friend auto operator<=>(const Self& self, const S& right) noexcept {
+        auto dist = self - right;
         auto rel  = dist <=> 0;
         return rel;
     }

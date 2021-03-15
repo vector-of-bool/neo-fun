@@ -30,6 +30,7 @@ public:
 
     void advance(int off) noexcept { _value += off; }
     int  distance_to(iota_iterator o) const noexcept { return *o - **this; }
+    bool operator==(iota_iterator o) const noexcept { return *o == **this; }
 };
 
 }  // namespace
@@ -143,6 +144,7 @@ TEST_CASE("Sentinel support") {
         auto increment() noexcept { ++value; }
 
         auto distance_to(sentinel_type) const noexcept { return 7 - value; }
+        bool operator==(sentinel_type s) const noexcept { return distance_to(s) == 0; }
     };
 
     struct seven_range {
