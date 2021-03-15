@@ -114,6 +114,12 @@ public:
     virtual bool operator==(const erased_iterator_base& other) const noexcept = 0;
     // Type-erased copy of the impl
     virtual std::unique_ptr<erased_input_iterator<RefType>> clone() const noexcept = 0;
+
+    template <convertible_to<const erased_input_iterator&> Left,
+              convertible_to<const erased_input_iterator&> Right>
+    friend bool operator==(const Left& left, const Right& right) noexcept {
+        return left.operator==(right);
+    }
 };
 
 /**
@@ -240,17 +246,13 @@ public:
     reference dereference() const { return impl().dereference(); }
     void      increment() { impl().increment(); }
 
-    template <convertible_to<const any_input_iterator&> S>
-    bool operator==(S&& other) const noexcept {
-        const any_input_iterator& r{other};
-        return impl() == r.impl();
+    bool operator==(const any_input_iterator& other) const noexcept {
+        return impl() == other.impl();
     }
+
+    bool operator==(const any_sentinel& s) const noexcept { return impl() == s; }
 
     neo::type_tag type_tag() const noexcept { return impl().type_tag(); }
-
-    friend bool operator==(const any_input_iterator& it, const any_sentinel& s) noexcept {
-        return it.impl() == s;
-    }
 };
 
 template <input_iterator It>

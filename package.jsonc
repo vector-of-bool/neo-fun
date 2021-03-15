@@ -1,6 +1,6 @@
 {
     "name": "neo-fun",
     "namespace": "neo",
-    "version": "0.7.1",
+    "version": "0.7.2",
     "test_driver": "Catch-Main"
 }
