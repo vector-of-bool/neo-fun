@@ -112,10 +112,12 @@ struct boolean_testable {
 
 template <typename Other>
 struct weakly_equality_comparable_with : pathological {
-    friend bool operator==(const weakly_equality_comparable_with&, const Other&) { return {}; }
+    bool operator==(const Other&) const;
 };
 
-struct equality_comparable : weakly_equality_comparable_with<equality_comparable> {};
+struct equality_comparable : pathological {
+    bool operator==(const equality_comparable&) const;
+};
 
 template <typename Left, typename Right>
 struct decl_order_ops {
@@ -128,8 +130,7 @@ struct decl_order_ops {
 template <typename T>
 struct partially_ordered_with : pathological, decl_order_ops<partially_ordered_with<T>, T> {};
 
-struct totally_ordered : weakly_equality_comparable_with<totally_ordered>,
-                         decl_order_ops<totally_ordered, totally_ordered> {};
+struct totally_ordered : equality_comparable, decl_order_ops<totally_ordered, totally_ordered> {};
 
 struct regular : semiregular {
     friend bool operator==(const regular&, const regular&);
