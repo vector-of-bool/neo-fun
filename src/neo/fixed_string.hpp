@@ -160,7 +160,7 @@ public:
     template <std::size_t S>
     friend constexpr bool operator==(const basic_fixed_string& left,
                                      const value_type (&arr)[S]) noexcept {
-        return left == basic_fixed_string{arr};
+        return left == basic_fixed_string<Char, S - 1>{arr};
     }
 
     template <std::size_t S>
@@ -172,7 +172,7 @@ public:
     template <std::size_t S>
     friend constexpr auto operator<=>(const basic_fixed_string& left,
                                       const value_type (&right)[S]) noexcept {
-        return left <=> basic_fixed_string{right};
+        return left <=> basic_fixed_string<Char, S - 1>{right};
     }
 
     template <std::size_t S>
