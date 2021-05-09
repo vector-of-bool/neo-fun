@@ -1,5 +1,7 @@
 
-#if __cpp_nontype_template_args < 201911L && (__GNUC__ < 10)
+#if __cpp_nontype_template_args < 201911L && (__GNUC__ < 10) && (__clang_major__ < 11)             \
+    && (_MSC_VER < 1926)
+
 // No class-type non-type template parameter suppoet
 
 #else
@@ -18,24 +20,47 @@ TEST_CASE("Create a basic fixed string") {
     constexpr neo::basic_fixed_string a   = "foo";
     constexpr neo::basic_fixed_string b   = "bar";
     constexpr auto                    two = a + b;
+    CHECK(a != "false");
     static_assert(two == "foobar");
     CHECK(two == "foobar");
+    CHECK((two + "baz") == "foobarbaz");
+    CHECK(("baz" + two) == "bazfoobar");
 }
 
 TEST_CASE("Take a substring") {
     neo::basic_fixed_string f    = "Hello, world!";
-    auto                    part = f.substr(neo::val_v<0>, neo::val_v<5>);
+    auto                    part = f.substr<0, 5>();
     CHECK(part == "Hello");
-    auto part2 = f.substr(neo::val_v<7>, neo::val_v<6>);
+    auto part2 = f.substr<7, 6>();
     CHECK(part2 == "world!");
 }
 
 TEST_CASE("Create a string view") {
     constexpr neo::basic_fixed_string f    = "I am a string";
-    auto                              view = f.view();
+    auto                              view = f.string_view();
     CHECK(view == "I am a string");
     CHECK(view != "lolnope");
     CHECK_FALSE(view.empty());
+}
+
+TEST_CASE("Use a string as a template parameter") {
+    test_nttp_string<"egg salad"> v;
+
+    neo::tstring<"I am a string"> t;
+
+    // Check comparisons
+    auto             view = neo::tstring_view_v<"Hello!">;
+    std::string_view sv   = view;
+    CHECK(sv == "Hello!");
+    CHECK(sv == view);
+
+    CHECK(view == "Hello!");
+    CHECK(view != "Goodbye!");
+    CHECK("Hello!" == view);
+    CHECK("Goodbye!" != view);
+    CHECK(view == view);
+    CHECK(view > "A");
+    CHECK(view < "Z");
 }
 
 #endif
