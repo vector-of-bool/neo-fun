@@ -49,8 +49,10 @@ TEST_CASE("Use a string as a template parameter") {
     neo::tstring<"I am a string"> t;
 
     // Check comparisons
-    auto             view = neo::tstring_view_v<"Hello!">;
-    std::string_view sv   = view;
+    using ts               = neo::tstring<"I am a string">;
+    auto             view1 = neo::make_tstring_view<ts>;
+    auto             view  = neo::tstring_view_v<"Hello!">;
+    std::string_view sv    = view;
     CHECK(sv == "Hello!");
     CHECK(sv == view);
 
@@ -61,6 +63,7 @@ TEST_CASE("Use a string as a template parameter") {
     CHECK(view == view);
     CHECK(view > "A");
     CHECK(view < "Z");
+    CHECK_FALSE(view < view);
 }
 
 #endif

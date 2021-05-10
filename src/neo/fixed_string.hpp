@@ -11,6 +11,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <compare>
 #include <concepts>
 #include <cstddef>
 #include <string_view>
@@ -266,8 +267,6 @@ struct tstring_view {
 
     static constexpr auto npos = tstring_type::string.npos;
 
-    constexpr tstring_view() = default;
-
     /// Convert the tstring_view into a coresponding std::basic_string_view
     constexpr string_view_type string_view() const noexcept {
         return tstring_type::string_view().substr(inner_position(), length());
@@ -352,20 +351,32 @@ struct tstring_view {
     template <typename O>
     friend constexpr auto operator<=>(const tstring_view&    left,
                                       const tstring_view<O>& right) noexcept {
-        return string_view_type{left} <=> string_view_type{right};
+        return left <=> string_view_type{right};
     }
 
     /**
      * @brief Ordering between basic_fixed_strings and string literals
      */
-    friend constexpr auto operator<=>(const tstring_view& left, string_view_type right) noexcept {
-        return string_view_type{left} <=> right;
+    friend constexpr auto operator<=>(const tstring_view& left_, string_view_type right) noexcept {
+        // Could just be string_view::operator<=>, but MSVC doesn't like that (yet)
+        auto left = string_view_type{left_};
+        auto comp = left.compare(right);
+        if (comp < 0) {
+            return std::strong_ordering::less;
+        } else if (comp > 0) {
+            return std::strong_ordering::greater;
+        } else {
+            return std::strong_ordering::equal;
+        }
     }
 };
 
+template <typename TS>
+constexpr tstring_view<TS> make_tstring_view{};
+
 template <basic_fixed_string S>
-constexpr tstring_view<tstring<basic_fixed_string<typename decltype(S)::value_type, S.size()>(S)>>
-    tstring_view_v{};
+constexpr auto tstring_view_v
+    = make_tstring_view<tstring<basic_fixed_string<typename decltype(S)::value_type, S.size()>(S)>>;
 
 }  // namespace neo
 
