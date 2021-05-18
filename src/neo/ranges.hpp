@@ -298,6 +298,24 @@ struct each_fn {
  */
 inline constexpr each_fn each;
 
+template <typename R, typename T>
+concept range_of = range<R>&& std::same_as<range_value_t<R>, T>;
+
+template <typename R, typename T>
+concept input_range_of = range_of<R, T>&& std::ranges::input_range<R>;
+
+template <typename R, typename T>
+concept forward_range_of = input_range_of<R, T>&& std::ranges::input_range<R>;
+
+template <typename R, typename T>
+concept bidirectional_range_of = forward_range_of<R, T>&& std::ranges::bidirectional_range<R>;
+
+template <typename R, typename T>
+concept random_access_range_of = bidirectional_range_of<R, T>&& std::ranges::random_access_range<R>;
+
+template <typename R, typename T>
+concept contiguous_range_of = random_access_range_of<R, T>&& std::ranges::contiguous_range<R>;
+
 }  // namespace neo::ranges
 
 namespace neo {
