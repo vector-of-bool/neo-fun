@@ -1,9 +1,12 @@
 #include "./any_range.hpp"
 
+#include "./iterator_facade.hpp"
 #include "./range_concepts.hpp"
 #include "./test_concept.hpp"
 
 #include <catch2/catch.hpp>
+
+#include <ranges>
 
 NEO_TEST_CONCEPT(neo::ranges::range<neo::any_input_range<int>>);
 NEO_TEST_CONCEPT(neo::ranges::input_range<neo::any_input_range<int>>);
@@ -47,4 +50,35 @@ TEST_CASE("Create an any_range for vector<int>") {
         d_counter += d;
     }
     CHECK(d_counter == (1.0 + 2.0 + 3.0 + 4.0));
+}
+
+TEST_CASE("Create an any_range for an uncommon range") {
+    struct until_7_iter : neo::iterator_facade<until_7_iter> {
+        int value = 0;
+        struct sentinel_type {};
+
+        auto dereference() const noexcept { return value; }
+        auto increment() noexcept { ++value; }
+
+        auto distance_to(sentinel_type) const noexcept { return 7 - value; }
+        bool operator==(sentinel_type s) const noexcept { return distance_to(s) == 0; }
+    };
+
+    struct seven_range {
+        auto begin() { return until_7_iter(); }
+        auto end() { return until_7_iter::sentinel_type(); }
+    };
+
+    seven_range          svn;
+    neo::any_input_range any_svn = svn;
+
+    auto plus_two = any_svn | std::views::transform([](auto i) { return i + 2; });
+    auto it       = plus_two.begin();
+    CHECK(*it == 2);
+    std::ranges::advance(it, 5);
+    CHECK(*it == 7);
+    CHECK(it != plus_two.end());
+    ++it;
+    ++it;
+    CHECK(it == plus_two.end());
 }

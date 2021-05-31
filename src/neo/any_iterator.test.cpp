@@ -13,17 +13,16 @@ NEO_TEST_CONCEPT(neo::sentinel_for<neo::any_sentinel, neo::any_input_iterator<in
 TEST_CASE("Create an erased input_iterator") {
     std::vector<int>          vec = {1, 2, 3, 4};
     neo::erase_input_iterator it{vec.cbegin()};
-    neo::erase_input_iterator end{vec.cend()};
+    neo::erase_sentinel       end{vec.cend()};
 
     CHECK(*it == 1);
     ++it;
     CHECK(*it == 2);
     CHECK(it != end);
-    CHECK(it == it);
-    auto it2 = it;
-    CHECK(it == it2);
     ++it;
-    CHECK(it != it2);
+    ++it;
+    ++it;
+    CHECK(it == end);
 
     neo::any_input_iterator any_it = it;
 }
@@ -48,17 +47,13 @@ TEST_CASE("Created an any_input_iterator") {
     std::vector<int> vec = {1, 2, 3, 4};
 
     neo::any_input_iterator it{vec.cbegin()};
-    neo::any_input_iterator end{vec.cend()};
+    neo::any_sentinel       end{vec.cend()};
 
     CHECK(*it == 1);
     ++it;
     CHECK(*it == 2);
     CHECK(it != end);
-    CHECK(it == it);
-    auto it2 = it;
-    CHECK(it == it2);
     ++it;
-    CHECK(it != it2);
-    CHECK_FALSE(it == vec.cend());
+    ++it;
     CHECK(it != end);
 }

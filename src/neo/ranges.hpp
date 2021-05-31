@@ -7,10 +7,6 @@
 #include "./returns.hpp"
 #include "./version.hpp"
 
-#if !__cpp_lib_ranges
-#error "<neo/ranges.hpp> requires C++20 <ranges> support"
-#endif
-
 #include <concepts>
 #include <functional>
 #include <ranges>
@@ -96,11 +92,6 @@ struct enumerator_reference {
     using reference_type = range_reference_t<R>;
     count_type     index;
     reference_type value;
-};
-
-enum class constness {
-    const_,
-    non_const,
 };
 
 template <std::ranges::input_range R>
