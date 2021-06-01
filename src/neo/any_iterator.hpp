@@ -42,14 +42,26 @@ public:
     }
 };
 
+template <std::input_or_output_iterator Iter>
+requires std::sentinel_for<Iter, Iter> struct common_erased_sentinel_compare {
+    Iter           iter;
+    constexpr bool operator()(const erased_iterator_base& other) const noexcept {
+        return iter == other.get<Iter>();
+    }
+};
+
 /**
  * @brief Base class of erased range sentinels
  */
 class erased_sentinel {
+    virtual bool do_compare_equal(const erased_iterator_base& iter) const noexcept = 0;
+
 public:
     virtual ~erased_sentinel() = default;
 
-    virtual bool operator==(const erased_iterator_base&) const noexcept = 0;
+    bool operator==(const erased_iterator_base& iter) const noexcept {
+        return do_compare_equal(iter);
+    }
 };
 
 /**
@@ -66,14 +78,27 @@ template <invocable<const erased_iterator_base&> Func>
 class erase_sentinel : public erased_sentinel {
     Func _fn;
 
+    bool do_compare_equal(const erased_iterator_base& iter) const noexcept override {
+        return _fn(iter);
+    }
+
 public:
     erase_sentinel() = default;
 
     explicit erase_sentinel(Func&& fn)
         : _fn(NEO_FWD(fn)) {}
 
-    bool operator==(const erased_iterator_base& iter) const noexcept override { return _fn(iter); }
+    template <forward_iterator Iter>
+    explicit erase_sentinel(const Iter& it)
+        : _fn{it} {}
 };
+
+template <invocable<const erased_iterator_base&> Func>
+explicit erase_sentinel(Func &&) -> erase_sentinel<Func>;
+
+template <forward_iterator Iter>
+requires sentinel_for<Iter, Iter> explicit erase_sentinel(const Iter&)
+    -> erase_sentinel<common_erased_sentinel_compare<Iter>>;
 
 /**
  * @brief A type-erased sentinel object.
@@ -91,6 +116,10 @@ public:
     template <invocable<const erased_iterator_base&> Func>
     explicit any_sentinel(Func&& fn)
         : _impl(std::make_shared<erase_sentinel<Func>>(NEO_FWD(fn))) {}
+
+    template <std::forward_iterator Iter>
+    requires std::sentinel_for<Iter, Iter> any_sentinel(const Iter& it)
+        : any_sentinel(common_erased_sentinel_compare<Iter>{it}) {}
 
     bool operator==(const erased_iterator_base& iter) const noexcept { return *_impl == iter; }
 };
@@ -110,16 +139,8 @@ public:
 
     virtual void    increment()                  = 0;
     virtual RefType dereference() const noexcept = 0;
-    // Compare to an iterator or a sentinel
-    virtual bool operator==(const erased_iterator_base& other) const noexcept = 0;
     // Type-erased copy of the impl
     virtual std::unique_ptr<erased_input_iterator<RefType>> clone() const noexcept = 0;
-
-    template <convertible_to<const erased_input_iterator&> Left,
-              convertible_to<const erased_input_iterator&> Right>
-    friend bool operator==(const Left& left, const Right& right) noexcept {
-        return left.operator==(right);
-    }
 };
 
 /**
@@ -156,10 +177,6 @@ public:
 
     // Return the type tag of the underlying iterator
     neo::type_tag type_tag() const noexcept override { return type_tag_v<Iter>; }
-
-    bool operator==(const erased_iterator_base& other) const noexcept override {
-        return other.get<Iter>() == _it;
-    }
 
     // Clone this object:
     std::unique_ptr<erased_input_iterator<RefType>> clone() const noexcept override {
@@ -246,11 +263,7 @@ public:
     reference dereference() const { return impl().dereference(); }
     void      increment() { impl().increment(); }
 
-    bool operator==(const any_input_iterator& other) const noexcept {
-        return impl() == other.impl();
-    }
-
-    bool operator==(const any_sentinel& s) const noexcept { return impl() == s; }
+    bool operator==(const any_sentinel& s) const noexcept { return s == *_iter; }
 
     neo::type_tag type_tag() const noexcept { return impl().type_tag(); }
 };
