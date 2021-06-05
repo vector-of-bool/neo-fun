@@ -21,7 +21,7 @@ TEST_CASE("repr() some integers") {
     int array[] = {1, 2, 3, 4};
     CHECK(neo::repr(array) == "i32[]{1.i32, 2.i32, 3.i32, 4.i32}");
 
-    std::array<int, 5> arr;
+    std::array<int, 5> arr{};
     CHECK(neo::repr(arr) == "array<i32>{0.i32, 0.i32, 0.i32, 0.i32, 0.i32}");
 
     auto pair = std::pair{1, str};
