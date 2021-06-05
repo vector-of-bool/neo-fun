@@ -5,4 +5,8 @@
         "/Zc:preprocessor",
         "/utf-8"
     ],
+    "warning_flags": [
+        "/WX",
+        "/wd5105", // "Macro 'defined' has undefined behavior -- appears in winbase.h
+    ]
 }

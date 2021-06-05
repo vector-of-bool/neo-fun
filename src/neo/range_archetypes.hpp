@@ -4,6 +4,9 @@
 
 #include <ranges>
 
+NEO_PRAGMA_WARNING_PUSH();
+NEO_MSVC_PRAGMA(disable : 4624);
+
 namespace neo::arch {
 
 template <typename Derived>
@@ -161,3 +164,5 @@ struct output_range : range<output_iterator<T>> {};
 
 template <typename It, typename Se>
 inline constexpr bool std::ranges::enable_borrowed_range<neo::arch::borrowed_range<It, Se>> = true;
+
+NEO_PRAGMA_WARNING_POP();

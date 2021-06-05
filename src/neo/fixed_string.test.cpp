@@ -44,15 +44,17 @@ TEST_CASE("Create a string view") {
 }
 
 TEST_CASE("Use a string as a template parameter") {
-    test_nttp_string<"egg salad"> v;
+    test_nttp_string<"egg salad"> v [[maybe_unused]];
 
-    neo::tstring<"I am a string"> t;
+    neo::tstring<"I am a string"> t [[maybe_unused]];
 
     // Check comparisons
-    using ts               = neo::tstring<"I am a string">;
-    auto             view1 = neo::make_tstring_view<ts>;
-    auto             view  = neo::tstring_view_v<"Hello!">;
-    std::string_view sv    = view;
+    using ts = neo::tstring<"I am a string">;
+    // Create a view from an alias
+    auto view1 [[maybe_unused]] = neo::make_tstring_view<ts>;
+
+    const auto       view = neo::tstring_view_v<"Hello!">;
+    std::string_view sv   = view;
     CHECK(sv == "Hello!");
     CHECK(sv == view);
 

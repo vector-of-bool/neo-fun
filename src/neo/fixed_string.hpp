@@ -141,7 +141,7 @@ public:
     template <std::input_iterator I, std::sentinel_for<I> S>
     constexpr void assign(I it, S stop) noexcept {
         if constexpr (std::forward_iterator<I>) {
-            assert(std::ranges::distance(it, stop) == size());
+            assert(static_cast<size_type>(std::ranges::distance(it, stop)) == size());
         }
         std::ranges::copy(it, stop, begin());
     }
