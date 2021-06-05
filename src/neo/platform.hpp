@@ -166,7 +166,8 @@ constexpr inline bool os_is_unix_like = NEO_OS_IS_UNIX_LIKE;
 #define NEO_CLANG_PRAGMA(...) static_assert(true)
 #define NEO_GNU_LIKE_PRAGMA(...) static_assert(true)
 
-#define NEO_PRAGMA(...) _Pragma(NEO_STR(__VA_ARGS__)) static_assert(true)
+#define NEO_PRAGMA_1(String) _Pragma(String) static_assert(true)
+#define NEO_PRAGMA(...) NEO_PRAGMA_1(NEO_STR(__VA_ARGS__))
 
 // clang-format off
 #if NEO_COMPILER_IS_MSVC
