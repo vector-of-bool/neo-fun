@@ -28,10 +28,10 @@ namespace neo {
     #undef NEO_COMPILER_IS_CLANG
     #define NEO_COMPILER_IS_CLANG 1
     #if defined(__apple_build_version__)
-            #undef NEO_COMPILER_IS_APPLE_CLANG
+        #undef NEO_COMPILER_IS_APPLE_CLANG
         #define NEO_COMPILER_IS_APPLE_CLANG 1
     #else
-            #undef NEO_COMPILER_IS_LLVM_CLANG
+        #undef NEO_COMPILER_IS_LLVM_CLANG
         #define NEO_COMPILER_IS_LLVM_CLANG 1
     #endif
 #elif defined(__GNUC__)
