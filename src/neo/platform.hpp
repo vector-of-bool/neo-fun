@@ -161,9 +161,13 @@ constexpr inline bool os_is_macos     = NEO_OS_IS_MACOS;
 constexpr inline bool os_is_bsd       = NEO_OS_IS_BSD;
 constexpr inline bool os_is_unix_like = NEO_OS_IS_UNIX_LIKE;
 
+/// Emit a '_Pragma' for only MSVC
 #define NEO_MSVC_PRAGMA(...) static_assert(true)
+/// Emit a '_Pragma' for only GCC
 #define NEO_GNU_PRAGMA(...) static_assert(true)
+/// Emit a '_Pragma' for only Clang
 #define NEO_CLANG_PRAGMA(...) static_assert(true)
+/// Emit a '_Pragma' for GNU-like compilers (GCC and Clang)
 #define NEO_GNU_LIKE_PRAGMA(...) static_assert(true)
 
 #define NEO_PRAGMA_1(String) _Pragma(String) static_assert(true)
