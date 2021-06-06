@@ -172,7 +172,7 @@ constexpr inline bool os_is_unix_like = NEO_OS_IS_UNIX_LIKE;
 // clang-format off
 #if NEO_COMPILER_IS_MSVC
     #undef NEO_MSVC_PRAGMA
-    #define MSVC_PRAGMA NEO_PRAGMA
+    #define NEO_MSVC_PRAGMA NEO_PRAGMA
     #define NEO_PRAGMA_WARNING_PUSH() NEO_PRAGMA(warning(push))
     #define NEO_PRAGMA_WARNING_POP() NEO_PRAGMA(warning(pop))
 #elif NEO_COMPILER_IS_GNU
@@ -203,11 +203,11 @@ constexpr inline bool os_is_unix_like = NEO_OS_IS_UNIX_LIKE;
 #else
     #define NEO_PRAGMA_WARNING(String) NEO_PRAGMA_MESSAGE("warning: " String)
 #endif
-// clang-format on
 
 #if NEO_COMPILER_IS_GNU_LIKE
-#undef NEO_GNU_LIKE_PRAGMA
-#define NEO_GNU_LIKE_PRAGMA NEO_PRAGMA
+    #undef NEO_GNU_LIKE_PRAGMA
+    #define NEO_GNU_LIKE_PRAGMA NEO_PRAGMA
 #endif
+// clang-format on
 
 }  // namespace neo
