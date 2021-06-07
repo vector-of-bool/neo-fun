@@ -14,8 +14,8 @@ void ufmt_append(std::string& str, neo::alike<bool> auto b) noexcept {
     str.append(b ? "true" : "false");
 }
 
-void ufmt_append(std::string& str, std::string_view s) noexcept;
-void ufmt_append(std::string& str, char c) noexcept;
+inline void ufmt_append(std::string& str, std::string_view s) noexcept { str.append(s); }
+inline void ufmt_append(std::string& str, char c) noexcept { str.push_back(c); }
 
 void ufmt_append(std::string& str, std::uint8_t i) noexcept;
 void ufmt_append(std::string& str, std::int8_t i) noexcept;
