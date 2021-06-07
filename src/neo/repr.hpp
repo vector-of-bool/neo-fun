@@ -453,6 +453,7 @@ requires requires {
     requires forward_range_<R>;
     requires !alike<std::string, R> && !alike<std::string_view, R>;
     requires !detect_map<R>;
+    requires !detect_path<R>;
     requires reprable<std::ranges::range_value_t<R>>;
 }
 constexpr void repr_fallback(auto out, tag<R>) noexcept {
