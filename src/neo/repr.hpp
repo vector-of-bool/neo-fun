@@ -224,10 +224,10 @@ concept detect_vector = requires(T vec, std::ranges::range_value_t<T> item) {
 };
 
 template <typename T>
-constexpr bool forward_range_ = std::ranges::forward_range<T>;
+concept forward_range_ = std::ranges::forward_range<T>;
 
 template <typename T>
-constexpr bool detect_map = forward_range_<T>  //
+concept detect_map = forward_range_<T>  //
     && requires(T& map, std::ranges::range_value_t<T> pair, typename T::key_type key) {
     typename T::key_type;
     typename T::mapped_type;
@@ -236,14 +236,14 @@ constexpr bool detect_map = forward_range_<T>  //
 };
 
 template <typename T>
-constexpr bool detect_std_array = requires(T arr, std::ranges::range_value_t<T> item) {
+concept detect_std_array = requires(T arr, std::ranges::range_value_t<T> item) {
     arr.data();
     requires std::same_as<T, typename T::array>;
     check_constexpr<T().size()>;
 };
 
 template <typename Tuple>
-constexpr bool detect_tuple = requires {
+concept detect_tuple = requires {
     requires(
         requires(Tuple t) { std::get<0>(t); } ||  //
         requires(Tuple t) { t.template get<0>(); });
@@ -253,9 +253,9 @@ constexpr bool detect_tuple = requires {
 };
 
 template <typename Pair>
-constexpr bool detect_pair = detect_tuple<Pair>&& requires(std::remove_cvref_t<Pair>& p,
-                                                           typename Pair::first_type  f,
-                                                           typename Pair::second_type s) {
+concept detect_pair = detect_tuple<Pair>&& requires(std::remove_cvref_t<Pair>& p,
+                                                    typename Pair::first_type  f,
+                                                    typename Pair::second_type s) {
     typename Pair::first_type;
     typename Pair::second_type;
     requires std::same_as<Pair, typename Pair::pair>;
@@ -264,7 +264,7 @@ constexpr bool detect_pair = detect_tuple<Pair>&& requires(std::remove_cvref_t<P
 };
 
 template <typename Opt>
-constexpr bool detect_optional = requires(Opt opt) {
+concept detect_optional = requires(Opt opt) {
     typename Opt::value_type;
     {opt.has_value()};
     {opt.value()};
