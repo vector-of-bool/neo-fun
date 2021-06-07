@@ -1,5 +1,6 @@
 #pragma once
 
+#include <concepts>
 #include <cstdint>
 #include <stdexcept>
 #include <string>
@@ -9,6 +10,28 @@
 #include "./concepts.hpp"
 
 namespace neo {
+
+namespace ufmt_detail {
+
+/// Check if T has a .to_string() member function
+template <typename T>
+concept to_string_member = requires(const T& item) {
+    { item.to_string() }
+    ->std::same_as<std::string>;
+};
+
+/// Check if to_string() is visible via ADL for T
+template <typename T>
+concept to_string_adl = requires(const T& item) {
+    { to_string(item) }
+    ->std::same_as<std::string>;
+};
+
+}  // namespace ufmt_detail
+
+/// Check if the given type has a .to_string() member or a to_string() ADL-visible function.
+template <typename T>
+concept can_to_string = ufmt_detail::to_string_member<T> || ufmt_detail::to_string_adl<T>;
 
 void ufmt_append(std::string& str, neo::alike<bool> auto b) noexcept {
     str.append(b ? "true" : "false");
@@ -26,6 +49,28 @@ void ufmt_append(std::string& str, std::int32_t i) noexcept;
 void ufmt_append(std::string& str, std::uint64_t i) noexcept;
 void ufmt_append(std::string& str, std::int64_t i) noexcept;
 
+/// Check if the given T can be formatted via ufmt_append()
+template <typename T>
+concept ufmt_formattable = requires(std::string& out, const T& arg) {
+    ufmt_append(out, arg);
+};
+
+/// Check if the given type is valid to pass to neo::ufmt()
+template <typename T>
+concept formattable = ufmt_formattable<T> || can_to_string<T>;
+
+/// Append the string represenation of the given item to the given string
+template <formattable T>
+constexpr void to_string_into(std::string& out, const T& item) noexcept {
+    if constexpr (ufmt_formattable<T>) {
+        ufmt_append(out, item);
+    } else if constexpr (ufmt_detail::to_string_member<T>) {
+        out.append(item.to_string());
+    } else {
+        out.append(to_string(item));
+    }
+}
+
 namespace detail {
 
 [[noreturn]] void ufmt_too_few_args(std::string_view fmt_str, std::size_t count) noexcept;
@@ -37,7 +82,7 @@ void ufmt_append_nth(std::string_view fmt_str,
                      int              idx,
                      std::index_sequence<Seq...>,
                      const Ts&... ts) {
-    bool any = (((idx == Seq) && static_cast<bool>(ufmt_append(out, ts), true)) || ...);
+    bool any = (((idx == Seq) && static_cast<bool>(to_string_into(out, ts), true)) || ...);
     if (!any) {
         ufmt_too_few_args(fmt_str, sizeof...(ts));
     }
@@ -45,36 +90,52 @@ void ufmt_append_nth(std::string_view fmt_str,
 
 }  // namespace detail
 
-template <typename T>
-concept formattable = requires(std::string& out, const T& arg) {
-    ufmt_append(out, arg);
-};
-
+/**
+ * @brief Append the result of the format-string `fmt_str` with `args` to the end of `str`
+ */
 template <typename String, formattable... Args>
-constexpr void ufmt_into(String& arg, const std::string_view fmt_str, const Args&... args) {
+constexpr void ufmt_into(String& str, const std::string_view fmt_str, const Args&... args) {
     auto remaining_fmt_str = fmt_str;
-    arg.reserve(arg.size() + (fmt_str.size() * 2));
+    str.reserve(str.size() + (fmt_str.size() * 2));
     auto idx = 0;
     while (true) {
         auto next_pl_pos = remaining_fmt_str.find("{}");
         if (next_pl_pos == remaining_fmt_str.npos) {
-            arg.append(remaining_fmt_str);
+            str.append(remaining_fmt_str);
             return;
         }
         auto next_lit_part = remaining_fmt_str.substr(0, next_pl_pos);
-        arg.append(next_lit_part);
-        detail::ufmt_append_nth(fmt_str, arg, idx, std::index_sequence_for<Args...>(), args...);
+        str.append(next_lit_part);
+        detail::ufmt_append_nth(fmt_str, str, idx, std::index_sequence_for<Args...>(), args...);
         remaining_fmt_str.remove_prefix(next_pl_pos + 2);
         ++idx;
     }
     detail::ufmt_too_many_args(fmt_str, sizeof...(args));
 }
 
+/**
+ * @brief Generate a std::string containing the result of rendering the given format-string
+ */
 template <formattable... Ts>
 std::string ufmt(const std::string_view fmt_str, const Ts&... args) {
     std::string ret;
     ufmt_into(ret, fmt_str, args...);
     return ret;
 }
+
+/**
+ * @brief Convert the given item into its string representation.
+ *
+ * Works with any type that has a .to_string() member, a to_string() ADL-visible function, or
+ * supported by neo::ufmt
+ */
+inline constexpr struct to_string_fn {
+    template <formattable T>
+    constexpr auto operator()(const T& item) const noexcept {
+        std::string ret;
+        to_string_into(ret, item);
+        return ret;
+    }
+} to_string;
 
 }  // namespace neo
