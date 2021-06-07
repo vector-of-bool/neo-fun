@@ -86,48 +86,71 @@ concept has_repr_fallback = requires(type_writer& out, tag<T> t) {
 template <typename T>
 concept repr_check = has_adl_repr_into<T> || has_repr_fallback<T>;
 
-}  // namespace repr_detail
+template <typename T>
+struct type_repr {
+    std::string string() const noexcept { return neo::ufmt("{}", *this); }
+};
 
-template <repr_detail::repr_check T>
-constexpr auto repr_type() noexcept {
-    std::string              ret;
-    repr_detail::type_writer wr{ret};
+template <typename T, bool WantType>
+struct value_repr {
+    const T&    value;
+    std::string string() const noexcept { return neo::ufmt("{}", *this); }
+
+    friend std::ostream& operator<<(std::ostream& out, value_repr self) noexcept {
+        out << self.string();
+        return out;
+    }
+};
+
+template <typename T>
+void ufmt_append(std::string& out, type_repr<T>) noexcept {
+    repr_detail::type_writer wr{out};
     if constexpr (repr_detail::has_adl_repr_into<T>) {
         repr_into(wr, (T*)(nullptr));
     } else {
         using repr_detail::repr_fallback;
         repr_fallback(wr, repr_detail::tag<T>{});
     }
-    return ret;
 }
 
-template <repr_detail::repr_check T>
-constexpr auto repr_value(const T& value) noexcept {
-    std::string                         ret;
-    repr_detail::value_writer<T, false> wr{ret, value};
+template <typename T, bool WantType>
+void ufmt_append(std::string& out, value_repr<T, WantType> r) noexcept {
+    repr_detail::value_writer<T, WantType> wr{out, r.value};
     if constexpr (repr_detail::has_adl_repr_into<T>) {
-        repr_into(wr, std::addressof(value));
+        repr_into(wr, std::addressof(r.value));
     } else {
         using repr_detail::repr_fallback;
         repr_fallback(wr, repr_detail::tag<T>{});
     }
-    return ret;
+}
+
+}  // namespace repr_detail
+
+template <repr_detail::repr_check T>
+constexpr auto repr_type() noexcept {
+    return repr_detail::type_repr<T>{};
+}
+
+template <repr_detail::repr_check T>
+constexpr auto repr_value(const T& value) noexcept {
+    return repr_detail::value_repr<T, false>{value};
 }
 
 /// Function object type for neo::repr
 struct repr_fn {
     template <repr_detail::repr_check T>
-    constexpr std::string operator()(const T& arg) const {
-        std::string ret;
-        // Write both type and value
-        repr_detail::value_writer<T, true> wr{ret, arg};
-        if constexpr (repr_detail::has_adl_repr_into<T>) {
-            repr_into(wr, std::addressof(arg));
-        } else {
-            using repr_detail::repr_fallback;
-            repr_fallback(wr, repr_detail::tag<T>{});
-        }
-        return ret;
+    constexpr auto operator()(const T& arg) const {
+        return repr_detail::value_repr<T, true>{arg};
+        // std::string ret;
+        // // Write both type and value
+        // repr_detail::value_writer<T, true> wr{ret, arg};
+        // if constexpr (repr_detail::has_adl_repr_into<T>) {
+        //     repr_into(wr, std::addressof(arg));
+        // } else {
+        //     using repr_detail::repr_fallback;
+        //     repr_fallback(wr, repr_detail::tag<T>{});
+        // }
+        // return ret;
     }
 };
 
