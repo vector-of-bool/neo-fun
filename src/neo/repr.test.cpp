@@ -1,11 +1,13 @@
 #include "./repr.hpp"
 
+#include <filesystem>
 #include <map>
 #include <optional>
 #include <string_view>
 
 #include <catch2/catch.hpp>
 
+static_assert(neo::reprable<std::int32_t>);
 static_assert(neo::reprable<std::string>);
 
 struct unknown_thing {};
@@ -60,12 +62,17 @@ TEST_CASE("Repr a map") {
     CHECK(neo::repr_type<i32*>() == "int32*");
     CHECK(neo::repr_type<const i32*>() == "int32 const*");
     CHECK(neo::repr_type<std::pair<i32, const i32*>>() == "pair<int32, int32 const*>");
+}
 
+TEST_CASE("repr() some pointers") {
     i32  i  = 4;
     auto p  = &i;
     auto p1 = &p;
     CHECK(neo::repr(p) == "[int32* [4]]");
     CHECK(neo::repr(p1) == "[int32** [[4]]]");
+
+    unknown_thing thing;
+    CHECK(neo::repr(&thing).starts_with("[unknown-pointer 0x"));
 }
 
 TEST_CASE("repr() an optional") {
@@ -73,4 +80,12 @@ TEST_CASE("repr() an optional") {
     CHECK(neo::repr(opt) == "[optional<int32> [332]]");
     opt.reset();
     CHECK(neo::repr(opt) == "[optional<int32> nullopt]");
+}
+
+static_assert(neo::repr_detail::detect_path<std::filesystem::path>);
+TEST_CASE("repr() a filesystem path") {
+    auto cwd    = std::filesystem::current_path();
+    auto rep    = neo::repr(cwd);
+    auto expect = neo::ufmt("[path {}]", neo::repr_value(cwd.string()));
+    CHECK(rep == expect);
 }

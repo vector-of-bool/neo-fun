@@ -3,6 +3,7 @@
 #include <neo/attrib.hpp>
 #include <neo/platform.hpp>
 #include <neo/pp.hpp>
+#include <neo/repr.hpp>
 
 #include <array>
 #include <initializer_list>
@@ -177,6 +178,9 @@ class assertion_expression_impl : public assertion_expression {
     // The value of that expression when the assertion fired.
     const T& _value;
 
+    static_assert(reprable<T>,
+                  "Captured assertion expressions should be compatible with neo::repr()");
+
 public:
     assertion_expression_impl(const char* s, const T& v)
         : _spelling(s)
@@ -184,13 +188,7 @@ public:
 
     const char* spelling() const noexcept override { return _spelling; }
 
-    void write_into(std::ostream& out) const noexcept override {
-        if constexpr (detail::can_write_to_ostream<T>) {
-            out << _value;
-        } else {
-            out << "[Unrepresentable type]";
-        }
-    }
+    void write_into(std::ostream& out) const noexcept override { out << neo::repr(_value); }
 };
 
 template <typename T>
