@@ -261,11 +261,31 @@ requires(!std::is_pointer_v<Integral> && std::same_as<Integral, std::remove_cvre
         } else {
             out("'{}'", out.value());
         }
+    } else if constexpr (std::same_as<Integral, wchar_t>) {
+        if constexpr (out.just_type) {
+            out("wchar_t");
+        } else {
+            out("L'{}'", out.value());
+        }
+    } else if constexpr (std::same_as<Integral, char8_t>) {
+        if constexpr (out.just_type) {
+            out("char8_t");
+        } else {
+            out("u8'{}'", out.value());
+        }
+    } else if constexpr (std::same_as<Integral, char16_t>) {
+        if constexpr (out.just_type) {
+            out("char16_t");
+        } else {
+            out("u'{}'", out.value());
+        }
+    } else if constexpr (std::same_as<Integral, char32_t>) {
+        if constexpr (out.just_type) {
+            out("char32_t");
+        } else {
+            out("U'{}'", out.value());
+        }
     }
-    DECL_REPR_TYPE_CASE(wchar_t, "wchar_t")
-    DECL_REPR_TYPE_CASE(char8_t, "char8_t")
-    DECL_REPR_TYPE_CASE(char16_t, "char16_t")
-    DECL_REPR_TYPE_CASE(char32_t, "char32_t")
     DECL_REPR_TYPE_CASE(std::uint8_t, "uint8")
     DECL_REPR_TYPE_CASE(std::uint16_t, "uint16")
     DECL_REPR_TYPE_CASE(std::uint32_t, "uint32")
@@ -274,6 +294,7 @@ requires(!std::is_pointer_v<Integral> && std::same_as<Integral, std::remove_cvre
     DECL_REPR_TYPE_CASE(std::int16_t, "int16")
     DECL_REPR_TYPE_CASE(std::int32_t, "int32")
     DECL_REPR_TYPE_CASE(std::int64_t, "int64")
+    DECL_REPR_TYPE_CASE(std::size_t, "size_t")  // Some seem to have size_t defined differently??
     else {
         static_assert(std::is_void_v<Integral>, "Unhandled built-in integral type");
     }
@@ -344,6 +365,7 @@ concept detect_optional = requires(Opt opt) {
 
 template <typename Path>
 concept detect_path = requires(Path path) {
+    typename Path::path;
     std::same_as<typename Path::path, Path>;
     path.native();
     path.generic_string();
