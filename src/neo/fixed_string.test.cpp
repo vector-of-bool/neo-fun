@@ -1,3 +1,4 @@
+#include "./repr.hpp"
 
 #if __cpp_nontype_template_args < 201911L && (__GNUC__ < 10) && (__clang_major__ < 11)             \
     && (_MSC_VER < 1926)
@@ -16,6 +17,8 @@ struct test_nttp_string {};
 TEST_CASE("Create a basic fixed string") {
     neo::basic_fixed_string fstr = "I am another fixed string";
     CHECK(fstr == fstr);
+    auto r = neo::repr(fstr).string();
+    CHECK(r == R"(neo::fixed_string{"I am another fixed string"})");
 
     constexpr neo::basic_fixed_string a   = "foo";
     constexpr neo::basic_fixed_string b   = "bar";
@@ -25,6 +28,16 @@ TEST_CASE("Create a basic fixed string") {
     CHECK(two == "foobar");
     CHECK((two + "baz") == "foobarbaz");
     CHECK(("baz" + two) == "bazfoobar");
+
+    neo::basic_fixed_string wide_fstr = L"I am a wide fixed string";
+    CHECK(wide_fstr == wide_fstr);
+    r = neo::repr(wide_fstr).string();
+    CHECK(r == R"(neo::basic_fixed_string{L"I am a wide fixed string"})");
+
+    neo::basic_fixed_string u8_fstr = u8"I am a UTF-8 fixed string";
+    CHECK(u8_fstr == u8_fstr);
+    r = neo::repr(u8_fstr).string();
+    CHECK(r == R"(neo::basic_fixed_string{u8"I am a UTF-8 fixed string"})");
 }
 
 TEST_CASE("Take a substring") {

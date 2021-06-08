@@ -221,6 +221,26 @@ public:
         auto l = neo::basic_fixed_string{left};
         return l + right;
     }
+
+    friend constexpr void repr_into(auto out, basic_fixed_string const* self) noexcept {
+        if constexpr (out.just_type) {
+            if constexpr (std::same_as<Char, char>) {
+                out("neo::fixed_string<{}>", out.repr_value(Size));
+            } else {
+                out("neo::basic_fixed_string<{}, {}>",
+                    out.template repr_type<Char>(),
+                    out.value(Size));
+            }
+        } else if constexpr (out.just_value) {
+            out("{}", out.repr_value(self->string_view()));
+        } else {
+            if constexpr (std::same_as<Char, char>) {
+                out("neo::fixed_string{{}}", out.repr_value(*self));
+            } else {
+                out("neo::basic_fixed_string{{}}", out.repr_value(*self));
+            }
+        }
+    }
 };
 
 template <typename Char, std::size_t N>

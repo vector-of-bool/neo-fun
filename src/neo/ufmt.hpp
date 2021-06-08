@@ -27,6 +27,13 @@ concept to_string_adl = requires(const T& item) {
     ->std::same_as<std::string>;
 };
 
+inline void write_str(std::string& s, std::string_view sv) noexcept { s.append(sv); }
+
+void write_str(std::string& s, std::wstring_view sv) noexcept;
+void write_str(std::string& s, std::u8string_view sv) noexcept;
+void write_str(std::string& s, std::u16string_view sv) noexcept;
+void write_str(std::string& s, std::u32string_view sv) noexcept;
+
 }  // namespace ufmt_detail
 
 /// Check if the given type has a .to_string() member or a to_string() ADL-visible function.
@@ -37,7 +44,17 @@ void ufmt_append(std::string& str, neo::alike<bool> auto b) noexcept {
     str.append(b ? "true" : "false");
 }
 
-inline void ufmt_append(std::string& str, std::string_view s) noexcept { str.append(s); }
+template <typename Char, typename Traits>
+inline void ufmt_append(std::string& str, std::basic_string_view<Char, Traits> sv) noexcept {
+    ufmt_detail::write_str(str, std::basic_string_view<Char>(sv.data(), sv.size()));
+}
+
+template <typename Char, typename Traits, typename Alloc>
+inline void ufmt_append(std::string& str, const std::basic_string<Char, Traits, Alloc> s) noexcept {
+    ufmt_detail::write_str(str, std::basic_string_view<Char>(s.data(), s.size()));
+}
+
+inline void ufmt_append(std::string& str, const char* s) noexcept { str.append(s); }
 inline void ufmt_append(std::string& str, char c) noexcept { str.push_back(c); }
 
 void ufmt_append(std::string& str, std::uint8_t i) noexcept;

@@ -12,59 +12,18 @@
 
 namespace neo {
 
+template <typename T>
+constexpr auto repr_type() noexcept;
+
+template <typename T>
+constexpr auto repr_value(const T& value) noexcept;
+
 namespace repr_detail {
 
 template <typename>
 struct tag {};
 
-template <typename T, bool WantType>
-class value_writer {
-    std::string* _out;
-    const T*     _value;
-
-public:
-    enum { just_type = false, just_value = not WantType };
-
-    constexpr explicit value_writer(std::string& out, const T& val)
-        : _out(&out)
-        , _value(std::addressof(val)) {}
-
-    const T& value() const noexcept { return *_value; }
-
-    template <formattable... Ts>
-    constexpr void operator()(const Ts&... args) const {
-        neo::ufmt_into(*_out, args...);
-    }
-};
-
-class type_writer {
-    std::string* _out;
-
-public:
-    enum { just_type = true, just_value = false };
-    constexpr explicit type_writer(std::string& out)
-        : _out(&out) {}
-
-    template <formattable... Ts>
-    constexpr void operator()(const Ts&... args) const {
-        neo::ufmt_into(*_out, args...);
-    }
-};
-
-template <typename T>
-struct strip_all_cvrptr {
-    using type = T;
-};
-
-template <typename T>
-requires(!std::same_as<T, std::remove_cvref_t<T>>)  //
-    struct strip_all_cvrptr<T> : strip_all_cvrptr<std::remove_cvref_t<T>> {};
-
-template <typename T>
-struct strip_all_cvrptr<T*> : strip_all_cvrptr<T> {};
-
-template <typename T>
-using strip_all_cvrptr_t = strip_all_cvrptr<T>::type;
+class type_writer;
 
 // Give these names, even though they are unused
 void repr_fallback();
@@ -85,6 +44,69 @@ concept has_repr_fallback = requires(type_writer& out, tag<T> t) {
 /// Check that we can write a repr of T via ADL, member, or a fallback
 template <typename T>
 concept repr_check = has_adl_repr_into<T> || has_repr_fallback<T>;
+
+}  // namespace repr_detail
+
+/// Constraint to a type that is valid for neo::repr()
+template <typename T>
+concept reprable = repr_detail::repr_check<std::remove_cvref_t<T>>;
+
+namespace repr_detail {
+
+class repr_writer_base {
+    std::string* _out;
+
+public:
+    explicit repr_writer_base(std::string& out)
+        : _out(&out) {}
+
+    template <formattable... Ts>
+    constexpr void operator()(std::string_view fmt_str, const Ts&... args) const {
+        neo::ufmt_into(*_out, fmt_str, args...);
+    }
+
+    template <reprable T>
+    constexpr auto repr_type() const noexcept;
+
+    template <reprable T>
+    constexpr auto repr_value(const T& arg) const noexcept;
+};
+
+template <typename T, bool WantType>
+class value_writer : public repr_writer_base {
+    const T* _value;
+
+public:
+    enum { just_type = false, just_value = not WantType };
+
+    constexpr explicit value_writer(std::string& out, const T& val)
+        : repr_writer_base(out)
+        , _value(std::addressof(val)) {}
+
+    const T& value() const noexcept { return *_value; }
+};
+
+class type_writer : public repr_writer_base {
+public:
+    enum { just_type = true, just_value = false };
+
+    using repr_writer_base::repr_writer_base;
+};
+
+template <typename T>
+struct strip_all_cvrptr {
+    using type = T;
+};
+
+template <typename T>
+requires(!std::same_as<T, std::remove_cvref_t<T>>)  //
+    struct strip_all_cvrptr<T> : strip_all_cvrptr<std::remove_cvref_t<T>> {};
+
+template <typename T>
+struct strip_all_cvrptr<T*> : strip_all_cvrptr<T> {};
+
+template <typename T>
+using strip_all_cvrptr_t = strip_all_cvrptr<T>::type;
 
 template <typename T>
 struct type_repr {
@@ -141,16 +163,6 @@ struct repr_fn {
     template <repr_detail::repr_check T>
     constexpr auto operator()(const T& arg) const {
         return repr_detail::value_repr<T, true>{arg};
-        // std::string ret;
-        // // Write both type and value
-        // repr_detail::value_writer<T, true> wr{ret, arg};
-        // if constexpr (repr_detail::has_adl_repr_into<T>) {
-        //     repr_into(wr, std::addressof(arg));
-        // } else {
-        //     using repr_detail::repr_fallback;
-        //     repr_fallback(wr, repr_detail::tag<T>{});
-        // }
-        // return ret;
     }
 };
 
@@ -159,11 +171,17 @@ struct repr_fn {
  */
 inline constexpr repr_fn repr{};
 
-/// Constraint to a type that is valid for neo::repr()
-template <typename T>
-concept reprable = repr_detail::repr_check<std::remove_cvref_t<T>>;
-
 namespace repr_detail {
+
+template <reprable T>
+constexpr auto repr_writer_base::repr_type() const noexcept {
+    return neo::repr_type<T>();
+}
+
+template <reprable T>
+constexpr auto repr_writer_base::repr_value(const T& arg) const noexcept {
+    return neo::repr_value(arg);
+}
 
 template <typename T>
 requires(!std::same_as<T, std::remove_cvref_t<T>> && repr_check<std::remove_cvref_t<T>>)  //
@@ -237,9 +255,17 @@ requires(!std::is_pointer_v<Integral> && std::same_as<Integral, std::remove_cvre
         } else {
             out(out.value() ? "true" : "false");
         }
+    } else if constexpr (std::same_as<Integral, char>) {
+        if constexpr (out.just_type) {
+            out("char");
+        } else {
+            out("'{}'", out.value());
+        }
     }
-    DECL_REPR_TYPE_CASE(char, "char")
     DECL_REPR_TYPE_CASE(wchar_t, "wchar_t")
+    DECL_REPR_TYPE_CASE(char8_t, "char8_t")
+    DECL_REPR_TYPE_CASE(char16_t, "char16_t")
+    DECL_REPR_TYPE_CASE(char32_t, "char32_t")
     DECL_REPR_TYPE_CASE(std::uint8_t, "uint8")
     DECL_REPR_TYPE_CASE(std::uint16_t, "uint16")
     DECL_REPR_TYPE_CASE(std::uint32_t, "uint32")
@@ -378,7 +404,19 @@ constexpr void repr_fallback(auto out, tag<Optional>) noexcept {
     }
 }
 
-constexpr void repr_write_string_val(auto out, std::string_view sv) noexcept {
+template <typename Char, typename Traits>
+constexpr void repr_write_string_val(auto out, std::basic_string_view<Char, Traits> sv) noexcept {
+    if constexpr (same_as<Char, char>) {
+        // No prefix
+    } else if constexpr (same_as<Char, wchar_t>) {
+        out("L");
+    } else if constexpr (same_as<Char, char8_t>) {
+        out("u8");
+    } else if constexpr (same_as<Char, char16_t>) {
+        out("u");
+    } else if constexpr (same_as<Char, char32_t>) {
+        out("U");
+    }
     out("\"");
     while (!sv.empty()) {
         auto qpos = sv.find('"');
@@ -394,26 +432,54 @@ constexpr void repr_write_string_val(auto out, std::string_view sv) noexcept {
     out("\"");
 }
 
-template <alike<std::string> StdString>
-constexpr void repr_fallback(auto out, tag<StdString>) noexcept {
+template <typename Char, typename Traits>
+constexpr void repr_fallback(auto out, tag<std::basic_string_view<Char, Traits>>) noexcept {
+    using view = std::basic_string_view<Char, Traits>;
+    using std::same_as;
     if constexpr (out.just_type) {
-        out("std::string");
-    } else {
-        repr_write_string_val(out, out.value());
-        if constexpr (not out.just_value) {
-            out("s");
+        if constexpr (same_as<view, std::string_view>) {
+            out("std::string_view");
+        } else if constexpr (same_as<view, std::wstring_view>) {
+            out("std::wstring_view");
+        } else if constexpr (same_as<view, std::u8string_view>) {
+            out("std::u8string_view");
+        } else if constexpr (same_as<view, std::u16string_view>) {
+            out("std::16string_view");
+        } else if constexpr (same_as<view, std::u32string_view>) {
+            out("std::u32string_view");
+        } else {
+            out("std::basic_string_view<{}, [traits]>", repr_type<Char>());
         }
-    }
-}
-
-template <alike<std::string_view> StdStringView>
-constexpr void repr_fallback(auto out, tag<StdStringView>) noexcept {
-    if constexpr (out.just_type) {
-        out("std::string_view");
     } else {
         repr_write_string_val(out, out.value());
         if constexpr (not out.just_value) {
             out("sv");
+        }
+    }
+}
+
+template <typename Char, typename Traits, typename Alloc>
+constexpr void repr_fallback(auto out, tag<std::basic_string<Char, Traits, Alloc>>) noexcept {
+    using string = std::basic_string<Char, Traits, Alloc>;
+    using std::same_as;
+    if constexpr (out.just_type) {
+        if constexpr (same_as<string, std::string>) {
+            out("std::string");
+        } else if constexpr (same_as<string, std::wstring>) {
+            out("std::wstring");
+        } else if constexpr (same_as<string, std::u8string>) {
+            out("std::u8string");
+        } else if constexpr (same_as<string, std::u16string>) {
+            out("std::16string");
+        } else if constexpr (same_as<string, std::u32string>) {
+            out("std::u32string");
+        } else {
+            out("std::basic_string<{}, [traits], [alloc]>", repr_type<Char>());
+        }
+    } else {
+        repr_write_string_val(out, std::basic_string_view<Char, Traits>(out.value()));
+        if constexpr (not out.just_value) {
+            out("s");
         }
     }
 }

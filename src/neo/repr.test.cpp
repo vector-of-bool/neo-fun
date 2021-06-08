@@ -9,6 +9,9 @@
 
 static_assert(neo::reprable<std::int32_t>);
 static_assert(neo::reprable<std::string>);
+static_assert(neo::reprable<std::string_view>);
+static_assert(neo::reprable<std::wstring>);
+static_assert(neo::reprable<std::wstring_view>);
 
 struct unknown_thing {};
 
