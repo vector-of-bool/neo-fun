@@ -66,6 +66,15 @@ void ufmt_append(std::string& str, std::int32_t i) noexcept;
 void ufmt_append(std::string& str, std::uint64_t i) noexcept;
 void ufmt_append(std::string& str, std::int64_t i) noexcept;
 
+void ufmt_append(std::string& str, neo::alike<std::size_t> auto i) noexcept
+    requires(!std::same_as<std::size_t, std::uint64_t>) {
+    ufmt_append(str, static_cast<std::uint64_t>(i));
+}
+void ufmt_append(std::string& str, neo::alike<std::ptrdiff_t> auto i) noexcept
+    requires(!std::same_as<std::ptrdiff_t, std::int64_t>) {
+    ufmt_append(str, static_cast<std::int64_t>(i));
+}
+
 /// Check if the given T can be formatted via ufmt_append()
 template <typename T>
 concept ufmt_formattable = requires(std::string& out, const T& arg) {
@@ -89,7 +98,6 @@ constexpr void to_string_into(std::string& out, const T& item) noexcept {
 }
 
 namespace detail {
-
 [[noreturn]] void ufmt_too_few_args(std::string_view fmt_str, std::size_t count) noexcept;
 [[noreturn]] void ufmt_too_many_args(std::string_view fmt_str, std::size_t count) noexcept;
 
