@@ -45,7 +45,7 @@ namespace {
 template <typename C>
 void write_str(std::string& out, std::basic_string_view<C> sv) noexcept {
     for (char32_t c : sv) {
-        if (c > std::numeric_limits<char>::max()) {
+        if (static_cast<std::size_t>(c) > std::numeric_limits<char>::max()) {
             auto v = static_cast<std::uint16_t>(c);
             char buf[8];
             auto res = std::to_chars(buf, buf + 8, v, 16);
