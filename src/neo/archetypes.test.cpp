@@ -2,6 +2,8 @@
 
 #include <string>
 
+NEO_MSVC_PRAGMA(warning(disable : 4624));
+
 using namespace neo::arch;
 
 static_assert(!neo::destructible<indestructible>);

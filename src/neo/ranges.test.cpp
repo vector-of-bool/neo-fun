@@ -2,7 +2,6 @@
 
 #include <neo/version.hpp>
 
-#if __cpp_lib_ranges
 #include "./ranges.hpp"
 
 #include <array>
@@ -29,12 +28,12 @@ TEST_CASE("Enumerate a range") {
 
     auto enumer = neo::views::enumerate(list);
     for (const auto [idx, ref] : enumer) {
-        CHECK((idx * 2) == ref);
+        CHECK(static_cast<int>(idx * 2) == ref);
     }
 
     auto io = std::views::iota(0) | neo::views::enumerate;
     for (const auto [idx, val] : io) {
-        CHECK(idx == val);
+        CHECK(static_cast<int>(idx) == val);
         if (val == 100) {
             break;
         }
@@ -51,5 +50,3 @@ TEST_CASE("each() over a range") {
     });
     CHECK(last_seen == 4);
 }
-
-#endif

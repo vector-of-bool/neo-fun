@@ -1,5 +1,7 @@
 #pragma once
 
+#include "./pp.hpp"
+
 namespace neo {
 
 /*
@@ -26,10 +28,10 @@ namespace neo {
     #undef NEO_COMPILER_IS_CLANG
     #define NEO_COMPILER_IS_CLANG 1
     #if defined(__apple_build_version__)
-            #undef NEO_COMPILER_IS_APPLE_CLANG
+        #undef NEO_COMPILER_IS_APPLE_CLANG
         #define NEO_COMPILER_IS_APPLE_CLANG 1
     #else
-            #undef NEO_COMPILER_IS_LLVM_CLANG
+        #undef NEO_COMPILER_IS_LLVM_CLANG
         #define NEO_COMPILER_IS_LLVM_CLANG 1
     #endif
 #elif defined(__GNUC__)
@@ -158,5 +160,58 @@ constexpr inline bool os_is_linux     = NEO_OS_IS_LINUX;
 constexpr inline bool os_is_macos     = NEO_OS_IS_MACOS;
 constexpr inline bool os_is_bsd       = NEO_OS_IS_BSD;
 constexpr inline bool os_is_unix_like = NEO_OS_IS_UNIX_LIKE;
+
+/// Emit a '_Pragma' for only MSVC
+#define NEO_MSVC_PRAGMA(...) static_assert(true)
+/// Emit a '_Pragma' for only GCC
+#define NEO_GNU_PRAGMA(...) static_assert(true)
+/// Emit a '_Pragma' for only Clang
+#define NEO_CLANG_PRAGMA(...) static_assert(true)
+/// Emit a '_Pragma' for GNU-like compilers (GCC and Clang)
+#define NEO_GNU_LIKE_PRAGMA(...) static_assert(true)
+
+#define NEO_PRAGMA_1(String) _Pragma(String) static_assert(true)
+#define NEO_PRAGMA(...) NEO_PRAGMA_1(NEO_STR(__VA_ARGS__))
+
+// clang-format off
+#if NEO_COMPILER_IS_MSVC
+    #undef NEO_MSVC_PRAGMA
+    #define NEO_MSVC_PRAGMA NEO_PRAGMA
+    #define NEO_PRAGMA_WARNING_PUSH() NEO_PRAGMA(warning(push))
+    #define NEO_PRAGMA_WARNING_POP() NEO_PRAGMA(warning(pop))
+#elif NEO_COMPILER_IS_GNU
+    #undef NEO_GNU_PRAGMA
+    #define NEO_GNU_PRAGMA NEO_PRAGMA
+    #define NEO_PRAGMA_WARNING_PUSH() NEO_PRAGMA(GCC diagnostic push)
+    #define NEO_PRAGMA_WARNING_POP() NEO_PRAGMA(GCC diagnostic pop)
+#elif NEO_COMPILER_IS_CLANG
+    #undef NEO_CLANG_PRAGMA
+    #define NEO_CLANG_PRAGMA NEO_PRAGMA
+    #define NEO_PRAGMA_WARNING_PUSH() NEO_PRAGMA(clang diagnostic push)
+    #define NEO_PRAGMA_WARNING_POP() NEO_PRAGMA(clang diagnostic pop)
+#else
+    #define NEO_PRAGMA_WARNING_PUSH() static_assert(true)
+    #define NEO_PRAGMA_WARNING_POP() static_assert(true)
+#endif
+
+#if NEO_COMPILER_IS_GNU_LIKE
+    #define NEO_PRAGMA_MESSAGE(String) NEO_PRAGMA(message, String)
+#elif NEO_COMPILER_IS_MSVC
+    #define NEO_PRAGMA_MESSAGE(String) NEO_PRAGMA(message(String))
+#else
+    #define NEO_PRAGMA_MESSAGE(S) static_assert(true)
+#endif
+
+#if NEO_COMPILER_IS_GNU_LIKE
+    #define NEO_PRAGMA_WARNING(String) NEO_PRAGMA(GCC warning String)
+#else
+    #define NEO_PRAGMA_WARNING(String) NEO_PRAGMA_MESSAGE("warning: " String)
+#endif
+
+#if NEO_COMPILER_IS_GNU_LIKE
+    #undef NEO_GNU_LIKE_PRAGMA
+    #define NEO_GNU_LIKE_PRAGMA NEO_PRAGMA
+#endif
+// clang-format on
 
 }  // namespace neo

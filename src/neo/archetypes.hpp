@@ -1,6 +1,10 @@
 #pragma once
 
 #include "./concepts.hpp"
+#include "./platform.hpp"
+
+NEO_PRAGMA_WARNING_PUSH();
+NEO_MSVC_PRAGMA(warning(disable : 4624));
 
 namespace neo::arch {
 
@@ -161,3 +165,5 @@ struct predicate : pathological {
 };
 
 }  // namespace neo::arch
+
+NEO_PRAGMA_WARNING_POP();
