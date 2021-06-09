@@ -15,17 +15,27 @@ static_assert(neo::reprable<std::wstring_view>);
 
 struct unknown_thing {};
 
+/// Fails:
+// static_assert(neo::reprable<std::map<std::string, unknown_thing>>);
+// ^^ This static assert should be uncommented to guage the readability of error
+// messages involving repr() on un-reprable types
+
 static_assert(!neo::reprable<unknown_thing>);
 
 using i32 = std::int32_t;
 
-TEST_CASE("repr() some integers") {
+TEST_CASE("repr() some numbers") {
     auto v = neo::repr(12).string();
     CHECK(v == "12:int32");
 
     CHECK(neo::repr_type<i32*>().string() == "int32*");
     CHECK(neo::repr_type<const i32*>().string() == "int32 const*");
     CHECK(neo::repr(true).string() == "true");
+
+    double d = 33.02;
+    CHECK_THAT(neo::repr(d).string(), Catch::Matches("33\\.02.*"));
+    float f = 4.1f;
+    CHECK_THAT(neo::repr(f).string(), Catch::Matches("4\\.1.*f"));
 }
 
 TEST_CASE("repr() some vectors/arrays") {
