@@ -101,18 +101,15 @@ protected:
     scoped_subscription(const scoped_subscription&) = delete;
 
     friend constexpr void do_repr(auto out, scoped_subscription const* self) {
-        bool is_active = self == event_detail::tl_cur_handler<T>.pointer();
-        bool is_tail   = self == event_detail::tl_subscr<T>.pointer();
-        if constexpr (out.just_type) {
-            if constexpr (reprable<T>) {
-                out.append("neo::scoped_subscription<{}>", repr_type<T>());
-            } else {
-                out.append("neo::scoped_subscription<...>");
-            }
-        } else if constexpr (out.just_value) {
-            out.append("[active={}, tail={}]", is_active, is_tail);
+        if constexpr (out.template can_repr<T>) {
+            out.type("neo::scoped_subscription", out.template repr_type<T>());
         } else {
-            out.append("[{} active={}, tail={}]", is_active, is_tail);
+            out.type("neo::scoped_subscription<...>");
+        }
+        if (self) {
+            bool is_active = self == event_detail::tl_cur_handler<T>.pointer();
+            bool is_tail   = self == event_detail::tl_subscr<T>.pointer();
+            out.bracket_value("active={}, tail={}", is_active, is_tail);
         }
     }
 

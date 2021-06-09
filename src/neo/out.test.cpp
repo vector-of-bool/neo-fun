@@ -1,4 +1,5 @@
 #include <neo/out.hpp>
+#include <neo/repr.hpp>
 
 #include <catch2/catch.hpp>
 
@@ -12,5 +13,13 @@ TEST_CASE("output") {
     put_opt_seven(neo::into(val));
     CHECK(val == 7);
 
-    put_opt_seven(std::nullopt); // Nothing happens
+    put_opt_seven(std::nullopt);  // Nothing happens
+
+    auto test_out = neo::into(val);
+    CHECK(neo::repr(test_out).string() == "[neo::output<int32> 7]");
+
+    neo::optional_output<int> test_opt_out = std::nullopt;
+    CHECK(neo::repr(test_opt_out).string() == "[neo::optional_output<int32> nullopt]");
+    test_opt_out = neo::into(test_out);
+    CHECK(neo::repr(test_opt_out).string() == "[neo::optional_output<int32> [7]]");
 }

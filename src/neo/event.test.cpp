@@ -1,4 +1,5 @@
 #include <neo/event.hpp>
+#include <neo/repr.hpp>
 
 #include <catch2/catch.hpp>
 
@@ -30,6 +31,10 @@ TEST_CASE("Install a handler") {
         CHECK(emitted_value == 42);
         neo::emit(44);  // Different type, differen subscribers
         CHECK(emitted_value == 42);
+
+        CHECK(neo::repr(sub).string()
+              == "tuple{[neo::scoped_subscription<...> active=false, tail=true]}");
+        CHECK(neo::repr_value(sub).string() == "{[active=false, tail=true]}");
 
         {
             auto sub2 = neo::subscribe([](my_event) {});  // Do nothing

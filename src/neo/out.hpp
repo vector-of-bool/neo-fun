@@ -25,9 +25,19 @@ public:
         _dest.get() = NEO_FWD(value);
     }
 
-    constexpr T& get() noexcept { return _dest; }
+    constexpr T& get() const noexcept { return _dest; }
 
     constexpr operator T&() const noexcept { return _dest; }
+
+    friend constexpr void do_repr(auto out, const output* self) noexcept requires requires {
+        out.repr(self->get());
+    }
+    {
+        out.type("neo::output<{}>", out.template repr_type<T>());
+        if (self) {
+            out.value("{}", out.repr_value(self->get()));
+        }
+    }
 };
 
 /**
@@ -63,6 +73,21 @@ public:
     constexpr T* operator->() const noexcept { return _dest.operator->(); }
 
     constexpr explicit operator bool() const noexcept { return bool(_dest); }
+
+    friend constexpr void do_repr(auto out, const optional_output* self) noexcept
+        requires requires {
+        out.repr(**self);
+    }
+    {
+        out.type("neo::optional_output<{}>", out.template repr_type<T>());
+        if (self) {
+            if (self->get()) {
+                out.value("[{}]", out.repr_value(**self));
+            } else {
+                out.value("nullopt");
+            }
+        }
+    }
 };
 
 template <typename T>

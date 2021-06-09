@@ -329,6 +329,40 @@ public:
         just_value = WantValue and not WantType,
     };
     using repr_writer::repr_writer;
+
+    constexpr void type(std::string_view fmt [[maybe_unused]],
+                        const auto&... args [[maybe_unused]]) noexcept {
+        if constexpr (not just_value) {
+            if constexpr (not just_type) {
+                append("[");
+            }
+            append(fmt, args...);
+        }
+    }
+
+    constexpr void value(std::string_view fmt [[maybe_unused]],
+                         const auto&... args [[maybe_unused]]) noexcept {
+        if constexpr (not just_type) {
+            if constexpr (not just_value) {
+                append(" ");
+            }
+            append(fmt, args...);
+            if constexpr (not just_value) {
+                append("]");
+            }
+        }
+    }
+
+    constexpr void bracket_value(std::string_view fmt [[maybe_unused]],
+                                 const auto&... args [[maybe_unused]]) noexcept {
+        if constexpr (just_value) {
+            append("[");
+            append(fmt, args...);
+            append("]");
+        } else {
+            value(fmt, args...);
+        }
+    }
 };
 
 /**

@@ -73,6 +73,31 @@ constexpr inline bool compiler_is_clang       = compiler_id == compiler_id_t::cl
 constexpr inline bool compiler_is_apple_clang = NEO_COMPILER_IS_APPLE_CLANG;
 constexpr inline bool compiler_is_llvm_clang  = NEO_COMPILER_IS_LLVM_CLANG;
 
+/// do_repr for compiler_id_t
+constexpr void do_repr(auto out, compiler_id_t const* value) noexcept {
+    if constexpr (out.just_type) {
+        out.append("neo::compiler_id_t");
+    } else if constexpr (out.just_value) {
+        using t = compiler_id_t;
+        switch (*value) {
+        case t::clang:
+            out.append("clang");
+            break;
+        case t::gnu:
+            out.append("gnu");
+            break;
+        case t::msvc:
+            out.append("msvc");
+            break;
+        case t::unknown:
+            out.append("unknown");
+            break;
+        }
+    } else {
+        out.append("{}::{}", out.template repr_type<compiler_id_t>(), out.repr_value(*value));
+    }
+}
+
 /*
  #######   ######
 ##     ## ##    ##
@@ -160,6 +185,43 @@ constexpr inline bool os_is_linux     = NEO_OS_IS_LINUX;
 constexpr inline bool os_is_macos     = NEO_OS_IS_MACOS;
 constexpr inline bool os_is_bsd       = NEO_OS_IS_BSD;
 constexpr inline bool os_is_unix_like = NEO_OS_IS_UNIX_LIKE;
+
+/// do_repr for operating_system_t
+constexpr void do_repr(auto out, operating_system_t const* value) noexcept {
+    if constexpr (out.just_type) {
+        out.append("neo::operating_system_t");
+    } else if constexpr (out.just_value) {
+        using t = operating_system_t;
+        switch (*value) {
+        case t::windows:
+            out.append("windows");
+            break;
+        case t::linux:
+            out.append("linux");
+            break;
+        case t::macos:
+            out.append("macos");
+            break;
+        case t::freebsd:
+            out.append("freebsd");
+            break;
+        case t::netbsd:
+            out.append("netbsd");
+            break;
+        case t::dragonflybsd:
+            out.append("dragonflybsd");
+            break;
+        case t::openbsd:
+            out.append("openbsd");
+            break;
+        case t::unknown:
+            out.append("unknown");
+            break;
+        }
+    } else {
+        out.append("{}::{}", out.template repr_type<operating_system_t>(), out.repr_value(*value));
+    }
+}
 
 /// Emit a '_Pragma' for only MSVC
 #define NEO_MSVC_PRAGMA(...) static_assert(true)
