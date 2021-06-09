@@ -100,19 +100,19 @@ protected:
     // We are immobile
     scoped_subscription(const scoped_subscription&) = delete;
 
-    friend constexpr void repr_into(auto out, scoped_subscription<T> const* self) {
+    friend constexpr void do_repr(auto out, scoped_subscription const* self) {
         bool is_active = self == event_detail::tl_cur_handler<T>.pointer();
         bool is_tail   = self == event_detail::tl_subscr<T>.pointer();
         if constexpr (out.just_type) {
             if constexpr (reprable<T>) {
-                out("neo::scoped_subscription<{}>", repr_type<T>());
+                out.append("neo::scoped_subscription<{}>", repr_type<T>());
             } else {
-                out("neo::scoped_subscription<...>");
+                out.append("neo::scoped_subscription<...>");
             }
         } else if constexpr (out.just_value) {
-            out("[active={}, tail={}]", is_active, is_tail);
+            out.append("[active={}, tail={}]", is_active, is_tail);
         } else {
-            out("[{} active={}, tail={}]", is_active, is_tail);
+            out.append("[{} active={}, tail={}]", is_active, is_tail);
         }
     }
 
@@ -193,8 +193,8 @@ public:
     subscription(Func&& h)
         : subscription::scoped_subscription_impl(NEO_FWD(h)) {}
 
-    constexpr friend void repr_into(auto out, subscription const* self) noexcept {
-        repr_into(out, static_cast<subscription::scoped_subscription const*>(self));
+    constexpr friend void do_repr(auto out, subscription const* self) noexcept {
+        do_repr(out, static_cast<subscription::scoped_subscription const*>(self));
     }
 };
 
@@ -297,6 +297,6 @@ public:
 };
 
 template <typename Handler>
-opt_subscription(Handler&&) -> opt_subscription<Handler>;
+opt_subscription(Handler &&) -> opt_subscription<Handler>;
 
 }  // namespace neo

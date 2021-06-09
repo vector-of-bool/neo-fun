@@ -42,6 +42,11 @@ TEST_CASE("repr() some vectors/arrays") {
 TEST_CASE("Repr a tuple and a pair") {
     auto pair = std::pair{1, std::string_view("I am a string")};
     CHECK(neo::repr(pair).string() == "pair{1:int32, \"I am a string\"sv}");
+
+    auto tup = std::tuple{1, 3, std::string{"eggs"}};
+    CHECK(neo::repr(tup).string() == "tuple{1:int32, 3:int32, \"eggs\"s}");
+    CHECK(neo::repr_type<decltype(tup)>().string() == "tuple<int32, int32, std::string>");
+    CHECK(neo::repr_value(tup).string() == "{1, 3, \"eggs\"}");
 }
 
 TEST_CASE("Repr some strings") {
@@ -74,8 +79,13 @@ TEST_CASE("repr() some pointers") {
     CHECK(neo::repr(p).string() == "[int32* [4]]");
     CHECK(neo::repr(p1).string() == "[int32** [[4]]]");
 
+    void*       vp  = &i;
+    const void* cvp = &i;
+    CHECK_THAT(neo::repr(vp).string(), Catch::StartsWith("[void* 0x"));
+    CHECK_THAT(neo::repr(cvp).string(), Catch::StartsWith("[void const* 0x"));
+
     unknown_thing thing;
-    CHECK(neo::repr(&thing).string().starts_with("[unknown-pointer 0x"));
+    CHECK_THAT(neo::repr(&thing).string(), Catch::StartsWith("[unknown-pointer 0x"));
 }
 
 TEST_CASE("repr() an optional") {

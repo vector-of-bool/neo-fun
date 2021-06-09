@@ -59,7 +59,9 @@ TEST_CASE("Create a string view") {
 TEST_CASE("Use a string as a template parameter") {
     test_nttp_string<"egg salad"> v [[maybe_unused]];
 
-    neo::tstring<"I am a string"> t [[maybe_unused]];
+    neo::tstring<"I am a string"> t;
+
+    CHECK(neo::repr(t).string() == "neo::tstring<\"I am a string\">");
 
     // Check comparisons
     using ts = neo::tstring<"I am a string">;

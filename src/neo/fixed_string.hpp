@@ -222,22 +222,22 @@ public:
         return l + right;
     }
 
-    friend constexpr void repr_into(auto out, basic_fixed_string const* self) noexcept {
+    friend constexpr void do_repr(auto out, basic_fixed_string const* self) noexcept {
         if constexpr (out.just_type) {
             if constexpr (std::same_as<Char, char>) {
-                out("neo::fixed_string<{}>", out.repr_value(Size));
+                out.append("neo::fixed_string<{}>", out.repr_value(Size));
             } else {
-                out("neo::basic_fixed_string<{}, {}>",
-                    out.template repr_type<Char>(),
-                    out.value(Size));
+                out.append("neo::basic_fixed_string<{}, {}>",
+                           out.template repr_type<Char>(),
+                           out.value(Size));
             }
         } else if constexpr (out.just_value) {
-            out("{}", out.repr_value(self->string_view()));
+            out.append("{}", out.repr_value(self->string_view()));
         } else {
             if constexpr (std::same_as<Char, char>) {
-                out("neo::fixed_string{{}}", out.repr_value(*self));
+                out.append("neo::fixed_string{{}}", out.repr_value(*self));
             } else {
-                out("neo::basic_fixed_string{{}}", out.repr_value(*self));
+                out.append("neo::basic_fixed_string{{}}", out.repr_value(*self));
             }
         }
     }
@@ -262,6 +262,14 @@ struct tstring {
 
     /// Get a string_view for the string of this tstring
     constexpr static auto string_view() noexcept { return string.string_view(); }
+
+    constexpr friend void do_repr(auto out, const tstring*) noexcept {
+        if constexpr (out.just_value) {
+            out.append("{}", out.repr_value(tstring::string_view()));
+        } else {
+            out.append("neo::tstring<{}>", out.repr_value(tstring::string_view()));
+        }
+    }
 };
 
 /**
