@@ -76,3 +76,7 @@ void neo::ufmt_detail::write_str(std::string& out, std::u16string_view sv) noexc
 void neo::ufmt_detail::write_str(std::string& out, std::u32string_view sv) noexcept {
     ::write_str(out, sv);
 }
+
+void neo::ufmt_append(std::string& str, float f) noexcept { str.append(std::to_string(f)); }
+
+void neo::ufmt_append(std::string& str, double d) noexcept { str.append(std::to_string(d)); }

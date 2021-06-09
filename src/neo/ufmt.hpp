@@ -65,6 +65,8 @@ void ufmt_append(std::string& str, std::uint32_t i) noexcept;
 void ufmt_append(std::string& str, std::int32_t i) noexcept;
 void ufmt_append(std::string& str, std::uint64_t i) noexcept;
 void ufmt_append(std::string& str, std::int64_t i) noexcept;
+void ufmt_append(std::string& str, float i) noexcept;
+void ufmt_append(std::string& str, double i) noexcept;
 
 void ufmt_append(std::string& str, neo::alike<std::size_t> auto i) noexcept
     requires(!std::same_as<std::size_t, std::uint64_t>) {
