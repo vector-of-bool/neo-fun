@@ -510,13 +510,13 @@ struct repr_builtin<T*> {
                 out.append("[{}* {}]", repr_type<T>(), repr_value(*value));
             }
         } else if constexpr (out.just_type) {
-            if constexpr (out.template can_repr<T>) {
+            if constexpr (reprable<T>) {
                 out.append("{}*", repr_type<T>());
             } else {
                 out.append("unknown-pointer");
             }
         } else if constexpr (out.just_value) {
-            if constexpr (out.template can_repr<T>) {
+            if constexpr (reprable<T>) {
                 if (*value != nullptr) {
                     // Wrap the value in brackets to represent the de-referencing
                     out.append("[{}]", repr_value(**value));
@@ -843,9 +843,9 @@ struct repr_builtin<Map> {
             auto  iter = std::ranges::begin(map);
             auto  end  = std::ranges::end(map);
             while (iter != end) {
-                auto& pair               = *iter;
-                const auto& [key, value] = pair;
-                out.append("[{} => {}]", repr_value(key), repr_value(value));
+                auto& pair                = *iter;
+                const auto& [key, mapped] = pair;
+                out.append("[{} => {}]", repr_value(key), repr_value(mapped));
                 ++iter;
                 if (iter != end) {
                     out.append(", ");
@@ -901,7 +901,8 @@ struct repr_builtin<R> {
 constexpr void tuple_out_next(auto, auto, const auto&) noexcept {}
 
 template <std::size_t First, std::size_t... Idx, typename Tuple>
-constexpr void tuple_out_next(auto out, std::index_sequence<First, Idx...>, const Tuple& tup) {
+constexpr void
+tuple_out_next(auto out, std::index_sequence<First, Idx...>, const Tuple& tup [[maybe_unused]]) {
     if constexpr (out.just_type) {
         out.append("{}", repr_type<std::tuple_element_t<First, Tuple>>());
     } else if constexpr (out.just_value) {
@@ -909,7 +910,7 @@ constexpr void tuple_out_next(auto out, std::index_sequence<First, Idx...>, cons
     } else {
         out.append("{}", repr(std::get<First>(tup)));
     }
-    if (sizeof...(Idx) != 0) {
+    if constexpr (sizeof...(Idx) != 0) {
         out.append(", ");
         tuple_out_next(out, std::index_sequence<Idx...>{}, tup);
     }
