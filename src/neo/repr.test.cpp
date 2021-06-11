@@ -86,8 +86,8 @@ TEST_CASE("repr() some pointers") {
     i32  i  = 4;
     auto p  = &i;
     auto p1 = &p;
-    CHECK(neo::repr(p).string() == "[int32* [4]]");
-    CHECK(neo::repr(p1).string() == "[int32** [[4]]]");
+    CHECK(neo::repr(p).string() == "[int32* ->4]");
+    CHECK(neo::repr(p1).string() == "[int32** ->->4]");
 
     void*       vp  = &i;
     const void* cvp = &i;
@@ -100,15 +100,15 @@ TEST_CASE("repr() some pointers") {
 
 TEST_CASE("repr() an optional") {
     std::optional<int> opt = 332;
-    CHECK(neo::repr(opt).string() == "[optional<int32> [332]]");
+    CHECK(neo::repr(opt).string() == "optional<int32>{->332}");
     opt.reset();
-    CHECK(neo::repr(opt).string() == "[optional<int32> nullopt]");
+    CHECK(neo::repr(opt).string() == "optional<int32>{nullopt}");
 }
 
 static_assert(neo::repr_detail::detect_path<std::filesystem::path>);
 TEST_CASE("repr() a filesystem path") {
     auto cwd    = std::filesystem::current_path();
     auto rep    = neo::repr(cwd).string();
-    auto expect = neo::ufmt("[path {}]", neo::repr_value(cwd.string()));
+    auto expect = neo::ufmt("path{{}}", neo::repr_value(cwd.string()));
     CHECK(rep == expect);
 }

@@ -151,16 +151,10 @@ struct assertion_expression {
 namespace detail {
 
 template <typename T>
-concept can_write_to_ostream = requires(std::ostream& out, const T item) {
-    out << item;
-};
-
-template <typename T>
 constexpr void check_one_representable(T&&) noexcept {
-    static_assert(
-        can_write_to_ostream<T>,
-        "All assertion capture expressions should be representable by writing them to an ostream. "
-        "One or more capture expressions has a type that cannot be written to a std::ostream.");
+    static_assert(reprable<T>,
+                  "All assertion capture expressions should be representable by neo::repr(). "
+                  "One or more capture expressions have a type that cannot be repr()'d.");
 }
 
 template <typename... Args>
@@ -178,9 +172,6 @@ class assertion_expression_impl : public assertion_expression {
     // The value of that expression when the assertion fired.
     const T& _value;
 
-    static_assert(reprable<T>,
-                  "Captured assertion expressions should be compatible with neo::repr()");
-
 public:
     assertion_expression_impl(const char* s, const T& v)
         : _spelling(s)
@@ -188,7 +179,11 @@ public:
 
     const char* spelling() const noexcept override { return _spelling; }
 
-    void write_into(std::ostream& out) const noexcept override { out << neo::repr(_value); }
+    void write_into(std::ostream& out) const noexcept override {
+        if constexpr (reprable<T>) {
+            out << neo::repr(_value);
+        }
+    }
 };
 
 template <typename T>

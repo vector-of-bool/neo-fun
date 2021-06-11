@@ -33,9 +33,13 @@ public:
         out.repr(self->get());
     }
     {
-        out.type("neo::output<{}>", out.template repr_type<T>());
+        out.type("neo::output");
         if (self) {
-            out.value("{}", out.repr_value(self->get()));
+            if constexpr (out.just_value) {
+                out.value("->{}", out.repr_value(self->get()));
+            } else {
+                out.value("->{}", out.repr(self->get()));
+            }
         }
     }
 };
@@ -80,12 +84,10 @@ public:
     }
     {
         out.type("neo::optional_output<{}>", out.template repr_type<T>());
-        if (self) {
-            if (self->get()) {
-                out.value("[{}]", out.repr_value(**self));
-            } else {
-                out.value("nullopt");
-            }
+        if (self and *self) {
+            out.value("->{}", out.repr_value(**self));
+        } else {
+            out.value("nullopt");
         }
     }
 };

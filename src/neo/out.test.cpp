@@ -16,10 +16,10 @@ TEST_CASE("output") {
     put_opt_seven(std::nullopt);  // Nothing happens
 
     auto test_out = neo::into(val);
-    CHECK(neo::repr(test_out).string() == "[neo::output<int32> 7]");
+    CHECK(neo::repr(test_out).string() == "neo::output{->7:int32}");
 
     neo::optional_output<int> test_opt_out = std::nullopt;
-    CHECK(neo::repr(test_opt_out).string() == "[neo::optional_output<int32> nullopt]");
+    CHECK(neo::repr(test_opt_out).string() == "neo::optional_output<int32>{nullopt}");
     test_opt_out = neo::into(test_out);
-    CHECK(neo::repr(test_opt_out).string() == "[neo::optional_output<int32> [7]]");
+    CHECK(neo::repr(test_opt_out).string() == "neo::optional_output<int32>{->7}");
 }

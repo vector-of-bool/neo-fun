@@ -26,8 +26,8 @@ TEST_CASE("Basics") {
     CHECK(*engaged_2 == 4);
 
     // Some repr()
-    CHECK(neo::repr(engaged_1).string() == "[neo::opt_ref<int32> [3]]");
-    CHECK(neo::repr(disengaged_1).string() == "[neo::opt_ref<int32> nullopt]");
+    CHECK(neo::repr(engaged_1).string() == "neo::opt_ref<int32>{->3}");
+    CHECK(neo::repr(disengaged_1).string() == "neo::opt_ref<int32>{nullopt}");
 
     // Convert a reference to T to an optional<T>
     std::optional<int> opt_1 = engaged_1;

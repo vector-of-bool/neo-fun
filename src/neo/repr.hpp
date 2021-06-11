@@ -6,225 +6,16 @@
 #include <charconv>
 #include <cinttypes>
 #include <concepts>
+#include <ostream>
 #include <ranges>
 #include <string>
 #include <tuple>
 
 /**
-
- @file repr.hpp - Define and render rich representations of objects and values.
-
-neo::repr(), neo::repr_type(), and neo::repr_value() are APIs designed to
-provide developers terse textual representations of objects and their values.
-
-neo::repr() provides a set of default-repr() implementations for many built-in and standard
-library types, including:
-
-- Integral types, bool, and character types.
-- Pointers. If the pointee is also representable, it will be rendered inline.
-- Any forward-range of representable objects.
-- Associative containers like std::map whose key and mapped types are also representable.
-- std::basic_string and std::basic_string_view objects.
-- Any cvr-qualified type whose underlying type is also reprable.
-- pair and tuple-like types
-- Path types like std::filesystem::path
-
-Arbitrary types can be made repr()-able through a simple unintrusive customization method.
-
-To allow a type to be repr()'d, it must provide a non-member ADL-visible do_repr()
-function which takes two arguments: The first is an unspecified-type deduced
-serializing object, and the second is a pointer-to-const of the type to be
-serialized. The standard way to provide this is as a hidden friend function
-defined within the class itself. For example, a rectangle type:
-
-    namespace geo {
-    template <typename Scalar>
-    struct rectangle {
-        Scalar width = 0;
-        Scalar height = 0;
-
-        // The do_repr() customization point function:
-        friend constexpr void
-        do_repr(auto out,
-                const rectangle* self) noexcept
-        {
-            // ...
-        }
-    };
-    }  // end namespace geo
-
-Because the first parameter 'out' is deduced, the function itself is a template
-function and need not pull in the <neo/repr.hpp> header in order to define this
-customization point. Thus the provider of `rectangle` need not have neo-fun
-as a direct dependency.
-
-The 'out' object is an unspecified type with the following interface:
-
-    interface repr_output {
-        constexpr static bool just_type;
-        constexpr static bool just_value;
-
-        template <typename T>
-        constexpr static bool can_repr = [...];
-
-        void append(std::string_view fmt_str,
-                    formattable auto const&... ts);
-
-        template <reprable T>
-        auto repr_type();
-        auto repr(reprable auto const& object);
-        auto repr_value(reprable auto const& value);
-
-        std::string& underlying_string();
-    };
-
-The 'out.append()' variadic method template takes a simplified
-std::format()-style format string and a set of arguments to interpolate into
-the string. The values are interpolated as-if by std::format(), and not
-as-if being passed through neo::repr().
-
-A 'do_repr()' function must handle three different cases:
-
-    constexpr void do_repr(auto out, const rectangle* self) {
-        if constexpr (out.just_type) {
-            // ... Only render our type
-        } else if constexpr (out.just_value) {
-            // ... Only render our value
-        } else {
-            // ... Render a value with annotated type
-        }
-    }
-
-These three cases correspond to the 'repr_type<T>()', 'repr_value(v)', and
-'repr(v)' APIs. The results are given by calling 'out.append()' with the
-appropriate arguments. If any sub-objects or types need to be repr'd rather
-than just formatted into the output string, the 'out.repr()' functions
-should be used rather than calling 'neo::repr' functions. Using these APIs
-on the 'out' object again remove direct dependencies on 'neo/repr.hpp'
-
-There is no fixed standard on how objects should be repr'd, but the following
-is recommended:
-
-- Types should be repr'd as concisely, yet accurately.
-- Redundant type information should be omitted.
-- For tuple-like types and range-like types:
-  - Subobjects should be enclosed in curl braces '{}'.
-  - The type-name, if present, should appear on the left of the curly braces.
-  - Subobjects should be rendered WITH their type information if the enclosing
-    object is being rendered WITH its type information.
-  - Subobjects should be rendered WITHOUT their type information if the
-    enclosing object is being rendered WITHOUT its type information.
-- For aggregate-like types with named subobjects:
-  - Subobjects should be enclosed in square brackets, with each subobject's
-    name included as `name=value` pairs, separated by commas.
-  - If rendering both the type and the value, both type and values should be
-    together in the square brackets.
-
-- If rendering as 'just_value', the types of subobjects should also be omitted
-  UNLESS the type is part of the object's runtime value (eg. a variant type).
-- If rendering both type and value on a tuple-like type, the type of
-  subobjects should be apparent,but not placed redundantly. For example, a
-  'pair<T, U>' should be rendered as 'pair{repr(t), repr(u)}' AND NOT
-  'pair<T, U>{repr(t), repr(u)}'.
-- If rendering both type and value on a range-like type, the type of the
-  subobjects should be included in the type rendering of the range, but not
-  as part of the range values. For example, 'vector<int>' should be
-  rendered as 'vector<int>{repr_value(values)...}', since 'repr_value' will
-  not include type annotations of its rendered parameters.
-
-For example, the `do_repr` of `geo::rectangle<S>` should look as below:
-
-    constexpr void do_repr(auto out, const rectangle* self) noexcept {
-        if constexpr (out.just_type) {
-            out.append(
-                "geo::rectangle<{}>",
-                out.template repr_type<Scalar>());
-        } else if constexpr (out.just_value) {
-            out.append(
-                "[width={}, height={}]",
-                out.repr_value(self->width),
-                out.repr_value(self->height));
-        } else {
-            out.append(
-                "[geo::rectangle<int> width={}, height={}]",
-                out.template repr_type<rectangle>(),
-                out.repr_value(self->width),
-                out.repr_value(self->height));
-        }
-    }
-
-
-If given a 'geo::rectangle<int>{3, 1} rect', then it will render as:
-
-
-    repr(rect): [geo::rectangle<int32> width=3, height=1]
-    repr_type: geo::rectangle<int32>
-    repr_value(rect): [width=3, height=1]
-
-The reasoning for the above rules is to reduce the appearance of redundant type information in
-the generated output. For example, if we have a 'vector<geo::rectangle<int>>', this will be
-rendered as:
-
-    repr_type: vector<geo::rectangle<int>>
-    repr(vec): vector<geo::rectangle<int>>{[width=2, height=4], [width=5, height=11]}
-    repr_value(vec): {[width=2, height=4], [width=5, height=11]}
-
-Because the repr(vec) already renders its element type in 'vector<geo::rectangle<int>>', we
-can omit the type information on each element of that vector, rather than rendering it
-repeatedly.
-
-For other types, in which the type of named subobjects is not obvious as rendered
-template arguments, we may want to include those in the rendered subobjects
-by using 'out.repr()':
-
-    template <typename AgeUnits, typename HeightUnits>
-    class person {
-        public:
-        std::string_view name();
-        AgeUnits age();
-        HeightUnits height();
-
-        friend constexpr void do_repr(auto out, const person* self) {
-            if constexpr (out.just_type) {
-                out.append(
-                    "person<AgeUnits={}, HeightUnits={}>",
-                    out.template repr_type<AgeUnits>(),
-                    out.template repr_type<HeightUnits>());
-            } else if constexpr (out.just_value) {
-                // Only include the values without additional type information
-                out.append(
-                    "[name={}, age={}, height={}]",
-                    out.repr_value(self->name()),
-                    out.repr_value(self->age()),
-                    out.repr_value(self->height()));
-            } else {
-                // Include types with 'out.repr'
-                out.append(
-                    "[person name={}, age={}, height={}]",
-                    out.repr_value(self->name()),  // Type is not relevant
-                    out.repr(self->age()),
-                    out.repr(self->height()));
-            }
-        }
-    };
-
-This will render 'person<int, double> p' as:
-
-    repr_type(): person<AgeUnits=int32, HeightUnits=double>
-    repr(p): [person name="Joe", age=34:int32, height=2.1]
-    repr_value(p): [name="joe", age=34, height=2.1]
-
-And therefore a 'vector<person<int, double>>' as:
-
-    repr_type(): vector<person<AgeUnits=int, HeightUnits=double>>
-    repr(v):
-        vector<person<AgeUnits=int, HeightUnits=double>>{
-            [name="joe", age=34, height=2.1],
-            [name="jane", age=42, height=1.7]}
-    repr_value(v):
-        {[name="joe", age=34, height=2.1], [name="jane", age=42, height=1.7]}
-
-*/
+ * @file repr.hpp - Define and render rich representations of objects and values.
+ *
+ * Refer to the docs/repr.md page for information on using and extending this API
+ */
 
 namespace neo {
 
@@ -255,7 +46,7 @@ concept has_adl_do_repr_exact = requires(repr_writer& out, const T* t) {
      * This concept detects if there is an ADL-visible overload of `do_repr()`
      * for the given type `T`. `do_repr()` should be a non-member function that
      * takes a deduced parameter `out` and a pointer-to-const of `T`. Refer to
-     * the top of this file on how to write a do_repr() function.
+     * the docs/repr.md file on how to write a do_repr() function.
      */
 };
 
@@ -333,9 +124,6 @@ public:
     constexpr void type(std::string_view fmt [[maybe_unused]],
                         const auto&... args [[maybe_unused]]) noexcept {
         if constexpr (not just_value) {
-            if constexpr (not just_type) {
-                append("[");
-            }
             append(fmt, args...);
         }
     }
@@ -344,23 +132,27 @@ public:
                          const auto&... args [[maybe_unused]]) noexcept {
         if constexpr (not just_type) {
             if constexpr (not just_value) {
-                append(" ");
+                append("{");
             }
             append(fmt, args...);
             if constexpr (not just_value) {
-                append("]");
+                append("}");
             }
         }
     }
 
     constexpr void bracket_value(std::string_view fmt [[maybe_unused]],
                                  const auto&... args [[maybe_unused]]) noexcept {
+        append("{");
+        append(fmt, args...);
+        append("}");
+    }
+
+    constexpr auto repr_sub(const auto& obj) noexcept {
         if constexpr (just_value) {
-            append("[");
-            append(fmt, args...);
-            append("]");
+            return repr_value(obj);
         } else {
-            value(fmt, args...);
+            return repr(obj);
         }
     }
 };
@@ -377,7 +169,8 @@ struct type_repr {
 
     /// Serialize the repr() of the type to an output stream
     friend std::ostream& operator<<(std::ostream& out, type_repr self) noexcept {
-        out << self.string();
+        auto str = self.string();
+        out.write(str.data(), str.size());
         return out;
     }
 
@@ -409,7 +202,8 @@ struct value_repr {
 
     /// Write the repr() of the value to the given stream
     friend std::ostream& operator<<(std::ostream& out, value_repr self) noexcept {
-        out << self.string();
+        auto str = self.string();
+        out.write(str.data(), str.size());
         return out;
     }
 
@@ -445,6 +239,11 @@ constexpr bool reprable_v = reprable<T>;
 template <reprable T>
 constexpr auto repr_type() noexcept {
     return repr_detail::type_repr<T>{};
+}
+
+template <reprable T>
+constexpr auto repr_type(const T& t) noexcept {
+    return repr_type<T>();
 }
 
 /// Function object type for neo::repr_value
@@ -553,7 +352,7 @@ struct repr_builtin<T*> {
             if constexpr (reprable<T>) {
                 if (*value != nullptr) {
                     // Wrap the value in brackets to represent the de-referencing
-                    out.append("[{}]", repr_value(**value));
+                    out.append("->{}", repr_value(**value));
                 } else {
                     out.append("nullptr");
                 }
@@ -732,12 +531,9 @@ concept detect_path = requires(Path path) {
 template <detect_path Path>
 struct repr_builtin<Path> {
     constexpr static void write(auto out, auto* value) noexcept {
-        if constexpr (out.just_type) {
-            out.append("path");
-        } else if constexpr (out.just_value) {
-            out.append("{}", repr_value(value->string()));
-        } else {
-            out.append("[path {}]", repr_value(*value));
+        out.type("path");
+        if (value) {
+            out.value("{}", out.repr_value(value->string()));
         }
     }
 };
@@ -764,16 +560,11 @@ template <detect_optional Optional>
 struct repr_builtin<Optional> {
     using val_t = Optional::value_type;
     constexpr static void write(auto out, auto* value) noexcept requires reprable<val_t> {
-        if constexpr (out.just_type) {
-            out.append("optional<{}>", repr_type<typename Optional::value_type>());
-        } else if constexpr (out.just_value) {
-            if (value->has_value()) {
-                out.append("[{}]", repr_value(value->value()));
-            } else {
-                out.append("nullopt");
-            }
+        out.type("optional<{}>", repr_type<typename Optional::value_type>());
+        if (value and *value) {
+            out.value("->{}", out.repr_value(**value));
         } else {
-            out.append("[{} {}]", repr_type<Optional>(), repr_value(*value));
+            out.value("nullopt");
         }
     }
 };
@@ -902,27 +693,21 @@ struct repr_builtin<R> {
         requires reprable<std::ranges::range_value_t<R>>;
     }
     {
-        if constexpr (not out.just_value) {
-            auto value_type_str = repr_type<std::ranges::range_value_t<R>>();
-            if constexpr (detect_vector<R>) {
-                out.append("vector<{}>", value_type_str);
-            } else if constexpr (std::is_array_v<R>) {
-                out.append("{}[]", value_type_str);
-            } else if constexpr (detect_std_array<R>) {
-                out.append("array<{}>", value_type_str);
-            } else {
-                out.append("range<{}>", value_type_str);
-            }
+        auto value_type_str = repr_type<std::ranges::range_value_t<R>>();
+        if constexpr (detect_vector<R>) {
+            out.type("vector<{}>", value_type_str);
+        } else if constexpr (std::is_array_v<R>) {
+            out.type("{}[]", value_type_str);
+        } else if constexpr (detect_std_array<R>) {
+            out.type("array<{}>", value_type_str);
+        } else {
+            out.type("range-of<{}>", value_type_str);
         }
-        if constexpr (not out.just_type) {
+        if (value) {
             out.append("{");
             auto end = std::ranges::cend(*value);
             for (auto it = std::ranges::cbegin(*value); it != end; ++it) {
-                if constexpr (not out.just_value) {
-                    out.append("{}", repr_value(*it));
-                } else {
-                    out.append("{}", repr(*it));
-                }
+                out.append("{}", repr_value(*it));
                 if (std::next(it) != end) {
                     out.append(", ");
                 }
@@ -932,17 +717,15 @@ struct repr_builtin<R> {
     }
 };
 
-constexpr void tuple_out_next(auto, auto, const auto&) noexcept {}
+constexpr void tuple_out_next(auto, auto, const auto*) noexcept {}
 
 template <std::size_t First, std::size_t... Idx, typename Tuple>
 constexpr void
-tuple_out_next(auto out, std::index_sequence<First, Idx...>, const Tuple& tup [[maybe_unused]]) {
+tuple_out_next(auto out, std::index_sequence<First, Idx...>, const Tuple* tup [[maybe_unused]]) {
     if constexpr (out.just_type) {
         out.append("{}", repr_type<std::tuple_element_t<First, Tuple>>());
-    } else if constexpr (out.just_value) {
-        out.append("{}", repr_value(std::get<First>(tup)));
     } else {
-        out.append("{}", repr(std::get<First>(tup)));
+        out.append("{}", out.repr_sub(std::get<First>(*tup)));
     }
     if constexpr (sizeof...(Idx) != 0) {
         out.append(", ");
@@ -971,7 +754,7 @@ struct repr_builtin<Tuple> {
         } else {
             out.append("tuple{");
         }
-        tuple_out_next(out, std::make_index_sequence<std::tuple_size_v<Tuple>>{}, *value);
+        tuple_out_next(out, std::make_index_sequence<std::tuple_size_v<Tuple>>{}, value);
         if constexpr (out.just_type) {
             out.append(">");
         } else {
@@ -981,5 +764,25 @@ struct repr_builtin<Tuple> {
 };
 
 }  // namespace repr_detail
+
+namespace repr_ostream_operator {
+
+/**
+ * @brief Provide an ostream<< insertion operator for any reprable object.
+ *
+ * This should be pulled into a scope via: 'using neo::repr_ostream_operator::operator<<'
+ *
+ * NOTE: When you 'using' this 'operator<<', this operator will become *more constrained*
+ * than every other 'operator<<' that is in scope. This will cause the compiler to prefer
+ * this 'operator<<' for every single object that is reprable. This will change the
+ * result of 'operator<<' for almost every type that is already ostream-insertible,
+ * including integers, floats, and strings.
+ */
+std::ostream& operator<<(std::ostream& out, reprable auto const& arg) noexcept {
+    out << neo::repr(arg);
+    return out;
+}
+
+}  // namespace repr_ostream_operator
 
 }  // namespace neo
