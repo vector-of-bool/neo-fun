@@ -2,8 +2,6 @@
 
 #include <catch2/catch.hpp>
 
-using neo::repr_ostream_operator::operator<<;
-
 struct rectangle_data {
     int width  = 0;
     int height = 0;
@@ -28,21 +26,29 @@ TEST_CASE("Create a shared state object") {
     CHECK(copy->width == 4);
     CHECK(rect->width == 8);
 
-    auto weak = rect.weak_ref();
+    {
+        neo::weak_ref     wr  = rect;
+        neo::ref_to_const cr  = rect;
+        neo::weak_ref     cwr = cr;
+        static_assert(std::same_as<decltype(wr), neo::weak_ref<shared_rectangle>>);
+        static_assert(std::same_as<decltype(cr), neo::ref_to_const<shared_rectangle>>);
+        static_assert(std::same_as<decltype(cwr), neo::weak_ref<const shared_rectangle>>);
+    }
+
+    auto weak = neo::weak_ref(rect);
     CHECK(weak.lock().has_value());
     rect.unshare();  // Detatch ownership
     CHECK_FALSE(weak.lock().has_value());
 
-    auto cref = rect.const_ref();
+    auto cref = neo::ref_to_const(rect);
     // cref->width = 3;  // Will not compile
 
-    const shared_rectangle& r = cref;
+    // const shared_rectangle& r = cref;
     // We cannot copy using a ref-to-const
     // shared_rectangle r2 = r;  // Will not compile
     // r->width                  = 8;
-    (void)r;
 
-    auto const_weak = std::as_const(rect).weak_ref();
+    auto const_weak = neo::weak_ref(neo::ref_to_const(rect));
     auto const_ref  = *const_weak.lock();
     // const_ref->width        = 22;  // Will not compile
     auto clone_from_const   = const_ref.clone();
@@ -50,8 +56,12 @@ TEST_CASE("Create a shared state object") {
     CHECK(rect->width == 8);
     CHECK(clone_from_const->width == 5);
 
-    neo::ref_to_const<shared_rectangle> cr = rect;
+    /// We can bind a reference from the shared-state
+    static_assert(std::convertible_to<shared_rectangle, const rectangle_data&>);
+    static_assert(std::convertible_to<shared_rectangle, rectangle_data&>);
+    static_assert(std::convertible_to<shared_rectangle, rectangle_data>);
+    static_assert(std::convertible_to<neo::ref_to_const<shared_rectangle>, const rectangle_data&>);
+    static_assert(!std::convertible_to<neo::ref_to_const<shared_rectangle>, rectangle_data&>);
 
-    const shared_rectangle& lang_cr = cr;
-    (void)lang_cr;
+    auto new_rect = shared_rectangle::clone_from(rect);
 }
