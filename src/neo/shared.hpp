@@ -49,9 +49,10 @@ public:
     /// The type that is referred-to
     using referred_type = T;
 
-private:
+    /// The shared-state type
     using state_type = referred_type::state_type;
 
+private:
     /// The value that we only expose via const
     std::shared_ptr<state_type> _state;
 
@@ -74,6 +75,11 @@ public:
     }
 
     /**
+     * @brief Detach the shared state referred to by this object.
+     */
+    void unshare() noexcept { _state = clone()._state; }
+
+    /**
      * @brief Create a new weak reference-to-const to the shared object
      */
     [[nodiscard]] class weak_ref<const referred_type> weak_ref() const noexcept {
@@ -93,12 +99,15 @@ public:
 
 template <typename T, typename SharedState>
 class shared_state {
+public:
+    /// The shared-state type
+    using state_type = SharedState;
+
 private:
     /// Tag for constructing a new instance from a shared_ptr to the state
     struct _emplace_ptr_tag {};
 
     using derived_type = T;
-    using state_type   = SharedState;
 
 private:
     friend neo::weak_ref<derived_type>;

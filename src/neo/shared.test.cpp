@@ -50,6 +50,9 @@ TEST_CASE("Create a shared state object") {
 
     auto const_weak = neo::weak_ref(neo::ref_to_const(rect));
     auto const_ref  = *const_weak.lock();
+    CHECK(const_ref.use_count() == 3);
+    const_ref.unshare();
+    CHECK(const_ref.use_count() == 1);
     // const_ref->width        = 22;  // Will not compile
     auto clone_from_const   = const_ref.clone();
     clone_from_const->width = 5;
@@ -62,6 +65,9 @@ TEST_CASE("Create a shared state object") {
     static_assert(std::convertible_to<shared_rectangle, rectangle_data>);
     static_assert(std::convertible_to<neo::ref_to_const<shared_rectangle>, const rectangle_data&>);
     static_assert(!std::convertible_to<neo::ref_to_const<shared_rectangle>, rectangle_data&>);
-
-    auto new_rect = shared_rectangle::clone_from(rect);
+    static_assert(std::convertible_to<neo::ref_to_const<shared_rectangle>,
+                                      neo::weak_ref<const shared_rectangle>>);
+    static_assert(std::convertible_to<shared_rectangle, neo::weak_ref<const shared_rectangle>>);
+    static_assert(
+        !std::convertible_to<neo::ref_to_const<shared_rectangle>, neo::weak_ref<shared_rectangle>>);
 }
