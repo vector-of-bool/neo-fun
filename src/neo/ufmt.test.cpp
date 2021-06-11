@@ -13,3 +13,15 @@ TEST_CASE("Format a simple string") {
     CHECK(neo::ufmt("2 + 2 = 4 ? {}", true) == "2 + 2 = 4 ? true");
     CHECK(neo::ufmt("'Y' is {}", 'Y') == "'Y' is Y");
 }
+
+struct my_item {
+    int i = 1;
+
+    friend std::string to_string(my_item item) noexcept { return neo::to_string(item.i); }
+};
+
+TEST_CASE("Custom format my_item") {
+    my_item item;
+    item.i = 52;
+    CHECK(neo::ufmt("{}", item) == "52");
+}

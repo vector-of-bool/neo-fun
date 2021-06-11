@@ -6,6 +6,18 @@
 
 namespace neo {
 
+namespace function_detail {
+
+template <typename... Args>
+struct sole_arg_impl {};
+
+template <typename T>
+struct sole_arg_impl<T> {
+    using sole_arg_type = T;
+};
+
+}  // namespace function_detail
+
 /**
  * @brief A tag type that holds a function signature
  *
@@ -15,7 +27,7 @@ template <typename Sig>
 struct signature_tag;
 
 template <typename Ret, typename... Args>
-struct signature_tag<Ret(Args...)> {
+struct signature_tag<Ret(Args...)> : function_detail::sole_arg_impl<Args...> {
     /// The return type of the function signature
     using return_type = Ret;
     /// A tag containing the argument types of the function signature
@@ -60,6 +72,13 @@ using invocable_return_type_t = typename invocable_signature<T>::return_type;
  */
 template <typename T>
 using invocable_arg_types_t = typename invocable_signature<T>::arg_types;
+
+/**
+ * @brief Get the type of the sole argument to the given invocable type. If the invocable does not
+ * accept exactly one argument, this is not a valid type.
+ */
+template <typename Func>
+using sole_arg_type_t = typename invocable_signature<Func>::sole_arg_type;
 
 /**
  * @brief Obtain the arity (argument count) of an invocable type

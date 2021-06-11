@@ -1,5 +1,6 @@
 #include "./optional.hpp"
 
+#include "./repr.hpp"
 #include "./test_concept.hpp"
 
 #include <catch2/catch.hpp>
@@ -58,4 +59,11 @@ TEST_CASE("Constexpr nano_opt") {
 
     constexpr auto opt_2 = get_const_opt_2();
     CHECK(opt_2.get() == 33);
+
+    CHECK(neo::repr(opt).string() == "[neo::nano_opt<int32> [42]]");
+    CHECK(neo::repr(opt_2).string() == "[neo::nano_opt<int32> [33]]");
+
+    neo::nano_opt<int> null;
+    CHECK(!null.has_value());
+    CHECK(neo::repr(null).string() == "[neo::nano_opt<int32> nullopt]");
 }

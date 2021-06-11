@@ -24,7 +24,7 @@ constexpr no_argument_provided& nth_arg() noexcept {
 }
 
 template <int I, typename A, typename... Tail>
-constexpr decltype(auto) nth_arg(A&& first, Tail&&... tail) {
+constexpr decltype(auto) nth_arg(A&& first [[maybe_unused]], Tail&&... tail [[maybe_unused]]) {
     if constexpr (I == 0) {
         return NEO_FWD(first);
     } else {

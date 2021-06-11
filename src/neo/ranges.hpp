@@ -244,7 +244,7 @@ inline constexpr enumerate_fn enumerate;
 
 }  // namespace views
 
-struct exhaust_fn {
+struct exhaust_fn : pipable {
     template <std::ranges::input_range R>
     constexpr void operator()(R&& range) {
         for (auto&& el : range) {

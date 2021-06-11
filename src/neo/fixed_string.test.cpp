@@ -1,3 +1,4 @@
+#include "./repr.hpp"
 
 #if __cpp_nontype_template_args < 201911L && (__GNUC__ < 10) && (__clang_major__ < 11)             \
     && (_MSC_VER < 1926)
@@ -16,6 +17,8 @@ struct test_nttp_string {};
 TEST_CASE("Create a basic fixed string") {
     neo::basic_fixed_string fstr = "I am another fixed string";
     CHECK(fstr == fstr);
+    auto r = neo::repr(fstr).string();
+    CHECK(r == R"(neo::fixed_string{"I am another fixed string"})");
 
     constexpr neo::basic_fixed_string a   = "foo";
     constexpr neo::basic_fixed_string b   = "bar";
@@ -25,6 +28,16 @@ TEST_CASE("Create a basic fixed string") {
     CHECK(two == "foobar");
     CHECK((two + "baz") == "foobarbaz");
     CHECK(("baz" + two) == "bazfoobar");
+
+    neo::basic_fixed_string wide_fstr = L"I am a wide fixed string";
+    CHECK(wide_fstr == wide_fstr);
+    r = neo::repr(wide_fstr).string();
+    CHECK(r == R"(neo::basic_fixed_string{L"I am a wide fixed string"})");
+
+    neo::basic_fixed_string u8_fstr = u8"I am a UTF-8 fixed string";
+    CHECK(u8_fstr == u8_fstr);
+    r = neo::repr(u8_fstr).string();
+    CHECK(r == R"(neo::basic_fixed_string{u8"I am a UTF-8 fixed string"})");
 }
 
 TEST_CASE("Take a substring") {
@@ -44,15 +57,19 @@ TEST_CASE("Create a string view") {
 }
 
 TEST_CASE("Use a string as a template parameter") {
-    test_nttp_string<"egg salad"> v;
+    test_nttp_string<"egg salad"> v [[maybe_unused]];
 
     neo::tstring<"I am a string"> t;
 
+    CHECK(neo::repr(t).string() == "neo::tstring<\"I am a string\">");
+
     // Check comparisons
-    using ts               = neo::tstring<"I am a string">;
-    auto             view1 = neo::make_tstring_view<ts>;
-    auto             view  = neo::tstring_view_v<"Hello!">;
-    std::string_view sv    = view;
+    using ts = neo::tstring<"I am a string">;
+    // Create a view from an alias
+    auto view1 [[maybe_unused]] = neo::make_tstring_view<ts>;
+
+    const auto       view = neo::tstring_view_v<"Hello!">;
+    std::string_view sv   = view;
     CHECK(sv == "Hello!");
     CHECK(sv == view);
 

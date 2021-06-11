@@ -1,6 +1,9 @@
 #include <neo/event.hpp>
+#include <neo/repr.hpp>
 
 #include <catch2/catch.hpp>
+
+using neo::repr_ostream_operator::operator<<;
 
 struct my_event {
     int value;
@@ -30,6 +33,10 @@ TEST_CASE("Install a handler") {
         CHECK(emitted_value == 42);
         neo::emit(44);  // Different type, differen subscribers
         CHECK(emitted_value == 42);
+
+        CHECK(neo::repr(sub).string()
+              == "tuple{neo::scoped_subscription<...>{active=false, tail=true}}");
+        CHECK(neo::repr_value(sub).string() == "{{active=false, tail=true}}");
 
         {
             auto sub2 = neo::subscribe([](my_event) {});  // Do nothing
@@ -62,6 +69,8 @@ TEST_CASE("Install a handler") {
     }
 }
 
+static int S_emitted_value = 0;
+
 TEST_CASE("Optional handler") {
     int emitted_value = 0;
 
@@ -71,4 +80,20 @@ TEST_CASE("Optional handler") {
     sub.subscribe();
     NEO_EMIT(my_event{42});
     CHECK(emitted_value == 42);  // Subscribed this time
+    sub.unsubscribe();
+    NEO_EMIT(my_event{41});
+    CHECK(emitted_value == 42);  // Did not change
+
+    neo::opt_subscription<decltype([](my_event ev) { S_emitted_value = ev.value; })> sub2;
+    CAPTURE(sub2);
+    NEO_EMIT(my_event{5});
+    CHECK(S_emitted_value == 0);  // Not fired
+    sub2.subscribe();
+    CHECK(sub2.is_subscribed());
+    NEO_EMIT(my_event{31});
+    CHECK(S_emitted_value == 31);
+    sub2.unsubscribe();
+    CHECK_FALSE(sub2.is_subscribed());
+    NEO_EMIT(my_event{41});
+    CHECK(S_emitted_value == 31);  // Didn't change
 }

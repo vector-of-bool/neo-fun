@@ -141,7 +141,7 @@ public:
     template <std::input_iterator I, std::sentinel_for<I> S>
     constexpr void assign(I it, S stop) noexcept {
         if constexpr (std::forward_iterator<I>) {
-            assert(std::ranges::distance(it, stop) == size());
+            assert(static_cast<size_type>(std::ranges::distance(it, stop)) == size());
         }
         std::ranges::copy(it, stop, begin());
     }
@@ -221,6 +221,26 @@ public:
         auto l = neo::basic_fixed_string{left};
         return l + right;
     }
+
+    friend constexpr void do_repr(auto out, basic_fixed_string const* self) noexcept {
+        if constexpr (out.just_type) {
+            if constexpr (std::same_as<Char, char>) {
+                out.append("neo::fixed_string<{}>", out.repr_value(Size));
+            } else {
+                out.append("neo::basic_fixed_string<{}, {}>",
+                           out.template repr_type<Char>(),
+                           out.value(Size));
+            }
+        } else if constexpr (out.just_value) {
+            out.append("{}", out.repr_value(self->string_view()));
+        } else {
+            if constexpr (std::same_as<Char, char>) {
+                out.append("neo::fixed_string{{}}", out.repr_value(*self));
+            } else {
+                out.append("neo::basic_fixed_string{{}}", out.repr_value(*self));
+            }
+        }
+    }
 };
 
 template <typename Char, std::size_t N>
@@ -242,6 +262,14 @@ struct tstring {
 
     /// Get a string_view for the string of this tstring
     constexpr static auto string_view() noexcept { return string.string_view(); }
+
+    constexpr friend void do_repr(auto out, const tstring*) noexcept {
+        if constexpr (out.just_value) {
+            out.append("{}", out.repr_value(tstring::string_view()));
+        } else {
+            out.append("neo::tstring<{}>", out.repr_value(tstring::string_view()));
+        }
+    }
 };
 
 /**
