@@ -154,8 +154,7 @@ struct subscription_func_result<Func, tag<Arg>> {
 };
 
 template <typename Func>
-using subscription_func_result_t =
-    typename subscription_func_result<Func, invocable_arg_types_t<Func>>::type;
+using subscription_func_result_t = scoped_subscription_impl<sole_arg_type_t<Func>, Func>;
 
 template <typename Func>
 concept subscription_func_check = fixed_invocable<Func>&& invocable_arity_v<Func> == 1;
@@ -286,14 +285,59 @@ class opt_subscription {
 
     nano_opt<subscription<Handler&>> _opt;
 
+    friend constexpr void do_repr(auto out, opt_subscription const* self) {
+        using event_type = sole_arg_type_t<Handler>;
+        if constexpr (decltype(out)::template can_repr<Handler>) {
+            out.type("neo::opt_subscription<{}>", out.template repr_type<Handler>());
+        } else {
+            out.type("neo::opt_subscription<[...]>");
+        }
+        if constexpr (decltype(out)::template can_repr<event_type>) {
+            out.type("[Event type '{}']", out.template repr_type<event_type>());
+        }
+        if (self) {
+            bool is_enabled = self->_opt.has_value();
+            if (!is_enabled) {
+                out.value("[disabled]");
+            } else {
+                out.value("{}", out.repr_value(self->_opt.get()));
+            }
+        }
+    }
+
 public:
+    opt_subscription() = default;
+
     opt_subscription(Handler&& h)
         : _handler(h) {}
 
-    void subscribe() noexcept { _opt.emplace(_handler); }
+    void subscribe() noexcept {
+        neo_assert(expects,
+                   !is_subscribed(),
+                   "Called subscribe() on active opt_subscription",
+                   *this);
+        _opt.emplace(_handler);
+    }
+    void unsubscribe() noexcept {
+        neo_assert(expects,
+                   is_subscribed(),
+                   "Called unsubscribe() on inactive opt_subscription",
+                   *this);
+        _opt.reset();
+    }
+    /// Check whether this subscription is active
+    [[nodiscard]] bool is_subscribed() const noexcept { return _opt.has_value(); }
 };
 
 template <typename Handler>
 opt_subscription(Handler &&) -> opt_subscription<Handler>;
+
+/**
+ * @brief Determine whether there is anyone listening for the given event type
+ */
+template <typename Event>
+[[nodiscard]] bool has_subscriber() noexcept {
+    return !!event_detail::tl_subscr<Event>;
+}
 
 }  // namespace neo
