@@ -35,7 +35,7 @@ public:
     {
         out.type("neo::output");
         if (self) {
-            if (out.just_value) {
+            if constexpr (out.just_value) {
                 out.value("->{}", out.repr_value(self->get()));
             } else {
                 out.value("->{}", out.repr(self->get()));
