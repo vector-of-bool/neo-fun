@@ -33,8 +33,8 @@ TEST_CASE("Install a handler") {
         CHECK(emitted_value == 42);
 
         CHECK(neo::repr(sub).string()
-              == "tuple{[neo::scoped_subscription<...> active=false, tail=true]}");
-        CHECK(neo::repr_value(sub).string() == "{[active=false, tail=true]}");
+              == "tuple{neo::scoped_subscription<...>{active=false, tail=true}}");
+        CHECK(neo::repr_value(sub).string() == "{{active=false, tail=true}}");
 
         {
             auto sub2 = neo::subscribe([](my_event) {});  // Do nothing

@@ -101,7 +101,7 @@ protected:
     scoped_subscription(const scoped_subscription&) = delete;
 
     friend constexpr void do_repr(auto out, scoped_subscription const* self) {
-        if constexpr (out.template can_repr<T>) {
+        if constexpr (decltype(out)::template can_repr<T>) {
             out.type("neo::scoped_subscription", out.template repr_type<T>());
         } else {
             out.type("neo::scoped_subscription<...>");

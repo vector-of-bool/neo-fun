@@ -72,21 +72,19 @@ public:
     constexpr friend bool operator>=(nullopt_t, opt_ref rhs) noexcept { return !rhs; }
 
     constexpr friend void do_repr(auto out, opt_ref const* self) noexcept {
-        if constexpr (out.template can_repr<T>) {
+        if constexpr (decltype(out)::template can_repr<T>) {
             out.type("neo::opt_ref<{}>", out.template repr_type<T>());
         } else {
             out.type("neo::opt_ref<[...]>");
         }
-        if (self) {
-            if (*self) {
-                if constexpr (out.template can_repr<T>) {
-                    out.value("[{}]", out.repr_value(**self));
-                } else {
-                    out.value("<opaque-value>");
-                }
+        if (self and *self) {
+            if constexpr (decltype(out)::template can_repr<T>) {
+                out.value("->{}", out.repr_value(**self));
             } else {
-                out.value("nullopt");
+                out.value("->[opaque-value]");
             }
+        } else {
+            out.value("nullopt");
         }
     }
 
