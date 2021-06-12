@@ -144,17 +144,10 @@ void emit_one(const EventReturner& func) requires(
 template <typename T, typename Func>
 class scoped_subscription_impl;
 
-// Helper to calculate the type of an event handler
-template <typename Func, typename Arg>
-struct subscription_func_result;
-
-template <typename Func, typename Arg>
-struct subscription_func_result<Func, tag<Arg>> {
-    using type = scoped_subscription_impl<std::remove_cvref_t<Arg>, Func>;
-};
-
+// Calculate the type of an event handler
 template <typename Func>
-using subscription_func_result_t = scoped_subscription_impl<sole_arg_type_t<Func>, Func>;
+using subscription_func_result_t
+    = scoped_subscription_impl<std::remove_cvref_t<sole_arg_type_t<Func>>, Func>;
 
 template <typename Func>
 concept subscription_func_check = fixed_invocable<Func>&& invocable_arity_v<Func> == 1;
@@ -165,8 +158,21 @@ class scoped_subscription_impl : public scoped_subscription<T> {
     // Our handler:
     Func _fn;
 
+    using arg_type                 = sole_arg_type_t<Func>;
+    constexpr static bool is_rref  = std::is_rvalue_reference_v<arg_type>;
+    constexpr static bool is_ref   = std::is_reference_v<arg_type>;
+    constexpr static bool is_const = std::is_const_v<std::remove_reference_t<arg_type>>;
+    constexpr static bool is_okay  = not is_rref and (not is_ref || (is_ref && is_const));
+    static_assert(
+        is_okay,
+        "Subscription function should take a single parameter of value type or of 'const&' type");
+
     // Pass the event down to our handler function:
-    void do_invoke(const T& value) const override { neo::invoke(_fn, value); }
+    void do_invoke(const T& value) const override {
+        if constexpr (is_okay) {
+            neo::invoke(_fn, value);
+        }
+    }
 
 public:
     scoped_subscription_impl() = default;

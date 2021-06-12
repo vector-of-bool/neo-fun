@@ -150,13 +150,15 @@ std::string ufmt(const std::string_view fmt_str, const Ts&... args) {
     return ret;
 }
 
-/**
- * @brief Convert the given item into its string representation.
- *
- * Works with any type that has a .to_string() member, a to_string() ADL-visible function, or
- * supported by neo::ufmt
- */
+namespace _to_string_fn_ns_ {
+
 inline constexpr struct to_string_fn {
+    /**
+     * @brief Convert the given item into its string representation.
+     *
+     * Works with any type that has a .to_string() member, a to_string() ADL-visible function, or
+     * supported by neo::ufmt
+     */
     template <formattable T>
     constexpr auto operator()(const T& item) const noexcept {
         std::string ret;
@@ -164,5 +166,9 @@ inline constexpr struct to_string_fn {
         return ret;
     }
 } to_string;
+
+}  // namespace _to_string_fn_ns_
+
+using namespace _to_string_fn_ns_;
 
 }  // namespace neo

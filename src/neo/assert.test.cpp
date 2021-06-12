@@ -2,6 +2,8 @@
 
 #include <catch2/catch.hpp>
 
+#include <iostream>
+
 bool false_bool = false;
 bool true_bool  = true;
 
@@ -12,6 +14,7 @@ TEST_CASE("Test some assertions") {
     neo_assert(invariant, n != 2, "n was two?", n);
     neo_assert_always(invariant, n == 40, "ehg", n);
     neo_assert_audit(invariant, n + 7 == 47, "ehg", n + 7);
+    neo_assert(invariant, 4 == 4, "test", std::cin.rdstate());
 }
 
 TEST_CASE("Audits are never executed") {
