@@ -10,23 +10,6 @@ namespace neo {
     { return __VA_ARGS__; }                                                                        \
     static_assert(true)
 
-namespace invoke_detail {
-
-template <typename Func>
-struct invoker {
-    template <typename... Args>
-    static constexpr decltype(auto) invoke(Func&& fn, Args&&... args)
-        INVOKE_BODY(((Func &&)(fn))((Args &&)(args)...));
-};
-
-template <typename Func, typename... Args>
-concept is_noexcept = requires(Func&& fn, Args&&... args) {
-    { invoker<Func>::invoke(NEO_FWD(fn), NEO_FWD(args)...) }
-    noexcept;
-};
-
-}  // namespace invoke_detail
-
 /**
  * @brief "Invoke" an invocable object. Like std::invoke, but cleaner and less debug overhead
  *
@@ -36,40 +19,20 @@ concept is_noexcept = requires(Func&& fn, Args&&... args) {
  * This is the base overload that will catch things that are callable, including with operator()
  */
 template <typename Func, typename... Args>
-constexpr decltype(auto) invoke(Func&& fn,
-                                Args&&... args)          //
-    noexcept(invoke_detail::is_noexcept<Func, Args...>)  //
-    requires requires {
-    invoke_detail::invoker<Func>::invoke(NEO_FWD(fn), NEO_FWD(args)...);
-}
-{ return invoke_detail::invoker<Func>::invoke(NEO_FWD(fn), NEO_FWD(args)...); }
+constexpr decltype(auto) invoke(Func&& fn, Args&&... args)
+    INVOKE_BODY(NEO_FWD(fn)(NEO_FWD(args)...));
 
 /// Overload for a regular member object pointer
-template <typename Owner, typename T>
-struct invoke_detail::invoker<T(Owner::*)> {
-    static constexpr decltype(auto) invoke(T(Owner::*memptr), auto&& self)
-        INVOKE_BODY(self.*memptr);
-};
-
-template <typename Owner, typename T>
-struct invoke_detail::invoker<T(Owner::*&)> : invoker<T(Owner::*)> {};
-template <typename Owner, typename T>
-struct invoke_detail::invoker<T(Owner::*const&)> : invoker<T(Owner::*)> {};
+template <typename Owner, typename T, typename This>
+constexpr decltype(auto) invoke(T(Owner::*memptr), This&& self) INVOKE_BODY(self.*memptr);
 
 /// Overload (group) of member function pointers
 #define DECL_MEMFUN_INV(Qual)                                                                      \
-    template <typename Ret, typename Owner, typename... FuncArgs>                                  \
-    struct invoke_detail::invoker<Ret (Owner::*)(FuncArgs...) Qual> {                              \
-        static constexpr decltype(auto)                                                            \
-        invoke(Ret (Owner::*memfun)(FuncArgs...) Qual, auto&& self, auto&&... args)                \
-            INVOKE_BODY((NEO_FWD(self).*memfun)(NEO_FWD(args)...));                                \
-    };                                                                                             \
-    template <typename Ret, typename Owner, typename... FuncArgs>                                  \
-    struct invoke_detail::invoker<Ret (Owner::*&)(FuncArgs...) Qual>                               \
-        : invoker<Ret (Owner::*)(FuncArgs...) Qual> {};                                            \
-    template <typename Ret, typename Owner, typename... FuncArgs>                                  \
-    struct invoke_detail::invoker<Ret (Owner::*const&)(FuncArgs...) Qual>                          \
-        : invoker<Ret (Owner::*)(FuncArgs...) Qual> {}
+    template <typename Ret, typename Owner, typename... FunArgs, typename This, typename... Args>  \
+    constexpr decltype(auto) invoke(Ret (Owner::*memfun)(FunArgs...) Qual,                         \
+                                    This&& self,                                                   \
+                                    Args&&... args)                                                \
+        INVOKE_BODY((NEO_FWD(self).*memfun)(NEO_FWD(args)...))
 
 DECL_MEMFUN_INV();
 DECL_MEMFUN_INV(const);
@@ -99,6 +62,11 @@ DECL_MEMFUN_INV(volatile&& noexcept);
 DECL_MEMFUN_INV(const volatile&& noexcept);
 
 #undef DECL_MEMFUN_INV
+
+// Overload for reference-wrapper-like objects
+template <template <class> class RefWrapper, typename Inner, typename... Args>
+constexpr decltype(auto) invoke(RefWrapper<Inner> ref, Args&&... args)
+    INVOKE_BODY(neo::invoke(ref.get(), NEO_FWD(args)...));
 
 #undef INVOKE_BODY
 
