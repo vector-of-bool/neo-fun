@@ -20,7 +20,7 @@ struct invoker {
 };
 
 template <typename Func, typename... Args>
-constexpr static bool is_noexcept = requires(Func&& fn, Args&&... args) {
+concept is_noexcept = requires(Func&& fn, Args&&... args) {
     { invoker<Func>::invoke(NEO_FWD(fn), NEO_FWD(args)...) }
     noexcept;
 };
