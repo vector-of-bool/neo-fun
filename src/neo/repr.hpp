@@ -178,10 +178,10 @@ struct type_repr {
     constexpr friend void ufmt_append(std::string& out, type_repr) noexcept {
         repr_detail::repr_writer_impl<false, true> wr{out};
         if constexpr (repr_detail::has_adl_do_repr_exact<T>) {
-            do_repr(wr, (T*)(nullptr));
+            do_repr(wr, (const std::remove_reference_t<T>*)(nullptr));
         } else {
             using repr_detail::repr_builtin;
-            repr_builtin<T>::write(wr, (const T*)(0));
+            repr_builtin<T>::write(wr, (const std::remove_reference_t<T>*)(0));
         }
     }
 };
