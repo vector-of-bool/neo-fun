@@ -24,4 +24,6 @@ TEST_CASE("Custom format my_item") {
     my_item item;
     item.i = 52;
     CHECK(neo::ufmt("{}", item) == "52");
+
+    CHECK(neo::to_string(item) == "52");
 }
