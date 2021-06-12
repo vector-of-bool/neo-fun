@@ -13,7 +13,7 @@ TEST_CASE("Install a handler") {
     int emitted_value = 0;
 
     {
-        auto _ = neo::subscribe([&](int v) { emitted_value = v; });
+        auto _ = neo::subscribe([&](const int& v) { emitted_value = v; });
         neo::emit(12);
         CHECK(emitted_value == 12);
         neo::emit(3);
@@ -27,7 +27,7 @@ TEST_CASE("Install a handler") {
 
     {
         neo::emit(my_event{12});
-        auto sub = neo::subscribe([&](my_event ev) { emitted_value = ev.value; });
+        auto sub = neo::subscribe([&](const my_event ev) { emitted_value = ev.value; });
         CHECK(emitted_value == 3);
         neo::emit(my_event{42});
         CHECK(emitted_value == 42);
@@ -39,7 +39,7 @@ TEST_CASE("Install a handler") {
         CHECK(neo::repr_value(sub).string() == "{{active=false, tail=true}}");
 
         {
-            auto sub2 = neo::subscribe([](my_event) {});  // Do nothing
+            auto sub2 = neo::subscribe([](const my_event&) {});  // Do nothing
             neo::emit(my_event{7});
             CHECK(emitted_value == 42);
         }
