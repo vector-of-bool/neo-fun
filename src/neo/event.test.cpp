@@ -13,7 +13,7 @@ TEST_CASE("Install a handler") {
     int emitted_value = 0;
 
     {
-        auto _ = neo::subscribe([&](const int& v) { emitted_value = v; });
+        auto _ = neo::listen([&](const int& v) { emitted_value = v; });
         neo::emit(12);
         CHECK(emitted_value == 12);
         neo::emit(3);
@@ -27,19 +27,18 @@ TEST_CASE("Install a handler") {
 
     {
         neo::emit(my_event{12});
-        auto sub = neo::subscribe([&](const my_event ev) { emitted_value = ev.value; });
+        auto sub = neo::listen([&](const my_event ev) { emitted_value = ev.value; });
         CHECK(emitted_value == 3);
         neo::emit(my_event{42});
         CHECK(emitted_value == 42);
         neo::emit(44);  // Different type, differen subscribers
         CHECK(emitted_value == 42);
 
-        CHECK(neo::repr(sub).string()
-              == "tuple{neo::scoped_subscription<...>{active=false, tail=true}}");
-        CHECK(neo::repr_value(sub).string() == "{{active=false, tail=true}}");
+        CHECK(neo::repr(sub).string() == "neo::scoped_listener<...>{active=false, tail=true}");
+        CHECK(neo::repr_value(sub).string() == "{active=false, tail=true}");
 
         {
-            auto sub2 = neo::subscribe([](const my_event&) {});  // Do nothing
+            auto sub2 = neo::listen([](const my_event&) {});  // Do nothing
             neo::emit(my_event{7});
             CHECK(emitted_value == 42);
         }
@@ -54,7 +53,7 @@ TEST_CASE("Install a handler") {
         CHECK(emitted_value == 33);
 
         {
-            neo::subscription filter_sub = [](my_event e) {
+            neo::listener filter_sub = [](my_event e) {
                 // Only bubble-up the event if the value is odd
                 if (e.value % 2 == 1) {
                     neo::bubble_event(e);
@@ -74,26 +73,88 @@ static int S_emitted_value = 0;
 TEST_CASE("Optional handler") {
     int emitted_value = 0;
 
-    neo::opt_subscription sub = [&](my_event ev) { emitted_value = ev.value; };
+    neo::opt_listener sub = [&](my_event ev) { emitted_value = ev.value; };
     NEO_EMIT(my_event{23});
     CHECK(emitted_value == 0);  // Not active yet
-    sub.subscribe();
+    sub.start_listening();
     NEO_EMIT(my_event{42});
     CHECK(emitted_value == 42);  // Subscribed this time
-    sub.unsubscribe();
+    sub.stop_listening();
     NEO_EMIT(my_event{41});
     CHECK(emitted_value == 42);  // Did not change
 
-    neo::opt_subscription<decltype([](my_event ev) { S_emitted_value = ev.value; })> sub2;
+    neo::opt_listener<decltype([](my_event ev) { S_emitted_value = ev.value; })> sub2;
     CAPTURE(sub2);
     NEO_EMIT(my_event{5});
     CHECK(S_emitted_value == 0);  // Not fired
-    sub2.subscribe();
-    CHECK(sub2.is_subscribed());
+    sub2.start_listening();
+    CHECK(sub2.is_listening());
     NEO_EMIT(my_event{31});
     CHECK(S_emitted_value == 31);
-    sub2.unsubscribe();
-    CHECK_FALSE(sub2.is_subscribed());
+    sub2.stop_listening();
+    CHECK_FALSE(sub2.is_listening());
     NEO_EMIT(my_event{41});
     CHECK(S_emitted_value == 31);  // Didn't change
+}
+
+struct abstract_event_base {
+    virtual std::string_view name() const = 0;
+};
+
+template <typename T>
+struct event_impl : abstract_event_base {
+    using emit_as = abstract_event_base;
+
+    std::string_view name() const override {
+        static std::string type_name = neo::repr_type<T>().string();
+        return type_name;
+    }
+};
+
+TEST_CASE("Handle events with differing types") {
+    {
+        std::string_view saw_name;
+        neo::listener    l = [&](const abstract_event_base& ev) { saw_name = ev.name(); };
+        neo::emit(event_impl<std::int32_t>());
+        CHECK(saw_name == "int32");
+    }
+    {
+        std::string_view saw_name;
+        auto l = neo::listen([&](const abstract_event_base& ev) { saw_name = ev.name(); });
+        neo::emit(event_impl<double>{});
+        CHECK(saw_name == "double");
+    }
+    {
+        std::string_view saw_name;
+        auto l = neo::listen<abstract_event_base>([&](auto&& ev) { saw_name = ev.name(); });
+        neo::emit(event_impl<std::string>{});
+        CHECK(saw_name == "std::string");
+    }
+}
+
+struct event_with_return {
+    using emit_result = int;
+
+    int default_emit_result() const { return 42; }
+};
+
+TEST_CASE("Events that want a return type") {
+    {
+        auto l = neo::listen([](const event_with_return) { return 12; });
+        CHECK(neo::emit(event_with_return{}) == 12);
+    }
+    // There is no handler, so we have a default return type.
+    CHECK(neo::emit(event_with_return{}) == 42);
+    {
+        auto l = neo::listen([](event_with_return) {});
+        // The handler does not return a value, so we return the default
+        CHECK(neo::emit(event_with_return{}) == 42);
+    }
+    // Check that bubbling keeps the return value moving
+    {
+        auto l = neo::listen([](event_with_return const&) { return 88; });
+        CHECK(neo::emit(event_with_return{}) == 88);
+        auto l2 = neo::listen([](event_with_return ev) { return neo::bubble_event(ev) + 3; });
+        CHECK(neo::emit(event_with_return{}) == 91);
+    }
 }
