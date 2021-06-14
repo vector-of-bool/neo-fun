@@ -24,6 +24,17 @@ class scoped_listener;
 template <typename T>
 using scoped_subscriber [[deprecated("Use scoped_listener<T>")]] = scoped_listener<T>;
 
+template <typename Event>
+void cancel_bubbling(const Event&) noexcept;
+
+/**
+ * @brief Determine whether the event type 'Event' is an auto-bubbling event
+ */
+template <typename Event>
+concept event_bubbles = requires {
+    requires bool(std::remove_cvref_t<Event>::event_bubbles);
+};
+
 namespace event_detail {
 
 /// The top-most subscriber for events of type T, or null if no one is subscribed
@@ -36,7 +47,7 @@ thread_local opt_ref<scoped_listener<T>> tl_currently_running_handler;
 
 // helper for emit_as_t
 template <typename T>
-struct emits_as {
+struct emit_as {
     using type = T;
 };
 
@@ -44,7 +55,7 @@ template <typename T>
 requires requires {
     typename T::emit_as;
 }
-struct emits_as<T> {
+struct emit_as<T> {
     using type = T::emit_as;
 };
 
@@ -62,7 +73,8 @@ struct emit_result<T> {
     using type = T::emit_result;
 };
 
-/// Agent class to invoke and bubble events, as the invoke() and bubble_event() methods are private
+/// Agent class to invoke and bubble events, as the invoke() and bubble_event() methods are
+/// private
 class subscr_agent {
 public:
     template <typename S, typename Ev>
@@ -74,6 +86,8 @@ public:
     static decltype(auto) bubble_event(S&& s, Ev&& e) {
         return s.bubble_event(e);
     }
+
+    static void cancel_bubbling(auto&& s) { s.should_bubble = false; }
 };
 
 }  // namespace event_detail
@@ -96,11 +110,24 @@ using emit_result_t = event_detail::emit_result<T>::type;
  * event type should be able to bind to a const& of its emit_as type.
  */
 template <typename T>
-using emits_as_t = event_detail::emits_as<T>::type;
+using emit_as_t = event_detail::emit_as<T>::type;
+
+template <typename E>
+emit_result_t<E> get_default_emit_result(const E& ev) requires requires {
+    ev.default_emit_result();
+}
+{ return ev.default_emit_result(); }
+
+template <typename E>
+emit_result_t<E> get_default_emit_result(const E& ev) requires requires {
+    requires !requires { ev.default_emit_result(); };
+    requires std::default_initializable<emit_result_t<E>>;
+}
+{ return emit_result_t<E>(); }
 
 /**
- * @brief Obtain a reference to the current listener for the given event type, or 'null' if no one
- * is listening
+ * @brief Obtain a reference to the current listener for the given event type, or 'null' if no
+ * one is listening
  *
  * @tparam T The type of the event that is being listened for
  */
@@ -120,6 +147,8 @@ public:
     using emit_result = emit_result_t<T>;
 
 private:
+    bool should_bubble = false;
+
     /**
      * @brief Actually execute the event handler
      */
@@ -132,7 +161,18 @@ private:
         neo_defer { event_detail::tl_currently_running_handler<T> = prev_handler; };
         // Go!
         neo_assertion_breadcrumbs("Executing event handler", *this);
-        return do_invoke(v);
+        if constexpr (event_bubbles<T>) {
+            static_assert(
+                std::is_void_v<emit_result_t<T>>,
+                "Events cannot both specify a result type and also be 'event_bubbles==true'");
+            should_bubble = true;
+            do_invoke(v);
+            if (should_bubble) {
+                bubble_event(v);
+            }
+        } else {
+            return do_invoke(v);
+        }
     }
 
     /**
@@ -143,7 +183,7 @@ private:
             return _prev_ref->invoke(v);
         } else {
             if constexpr (!std::is_void_v<emit_result>) {
-                return v.default_emit_result();
+                return neo::get_default_emit_result(v);
             }
         }
     }
@@ -190,11 +230,11 @@ namespace event_detail {
 /// Emit a single instance of the given event
 template <typename Event>
 decltype(auto) emit_one(const Event& ev) {
-    using emit_type = emits_as_t<Event>;
+    using emit_type = emit_as_t<Event>;
     auto& handler   = event_detail::tl_tail_listener<emit_type>;
     static_assert(
         std::convertible_to<const Event&, const emit_type&>,
-        "The event type defines an emits_as alias, but the event object cannot bind to a reference "
+        "The event type defines an emit_as alias, but the event object cannot bind to a reference "
         "to that type. Check that the emit_as alias is an accessible base class of the event type "
         "or that the appropriate conversion operator is defined.");
     const emit_type& downcast_event = ev;
@@ -202,7 +242,7 @@ decltype(auto) emit_one(const Event& ev) {
         return subscr_agent::invoke(*handler, downcast_event);
     } else {
         if constexpr (!std::is_void_v<emit_result_t<emit_type>>) {
-            return downcast_event.default_emit_result();
+            return neo::get_default_emit_result(downcast_event);
         }
     }
 }
@@ -212,7 +252,7 @@ template <typename EventReturner>
 void emit_one(const EventReturner& func) requires(
     !std::is_void_v<neo::invoke_result_t<EventReturner>>) {
     // The actual event type:
-    using EventType = emits_as_t<neo::invoke_result_t<EventReturner>>;
+    using EventType = emit_as_t<neo::invoke_result_t<EventReturner>>;
     // If we have a handler, invoke the factory and emit the event
     if (!!event_detail::tl_tail_listener<std::remove_cvref_t<EventType>>) {
         emit_one(neo::invoke(func));
@@ -222,6 +262,16 @@ void emit_one(const EventReturner& func) requires(
 /// Check that the given handler function is valid to be used as a handler type
 template <typename Handler>
 concept listen_handler_check = fixed_invocable<Handler>&& invocable_arity_v<Handler> == 1;
+
+/// A "handler" for events which does nothing with them and stops them from propagating
+struct event_block_handler {
+    template <typename E>
+    void operator()(const E& e [[maybe_unused]]) const noexcept {
+        if constexpr (event_bubbles<E>) {
+            cancel_bubbling(e);
+        }
+    }
+};
 
 }  // namespace event_detail
 
@@ -244,11 +294,6 @@ requires invocable<Handler, const ListenEvent&>  //
 
     using typename listener::scoped_listener::emit_result;
 
-    static emit_result listener_default_return() requires requires {
-        ListenEvent::default_handle_result();
-    }
-    { return ListenEvent::default_handle_result(); }
-
     emit_result do_invoke(const ListenEvent& event) const override {
         using GivenHandlerRetType = neo::invoke_result_t<Handler&, const ListenEvent&>;
         if constexpr (std::convertible_to<GivenHandlerRetType, emit_result>) {
@@ -259,7 +304,7 @@ requires invocable<Handler, const ListenEvent&>  //
             return neo::invoke(_handler, event);
         } else if constexpr (std::is_void_v<GivenHandlerRetType>) {
             neo::invoke(_handler, event);
-            return event.default_emit_result();
+            return neo::get_default_emit_result(event);
         } else {
             static_assert(std::is_void_v<GivenHandlerRetType>,
                           "The event handler's return type cannot convert to the type that is "
@@ -287,7 +332,8 @@ using subscription [[deprecated("Use listener<Handler>")]]
 /**
  * @brief Declare an event subscription in the current scope
  */
-#define NEO_SUBSCRIBE ::neo::listener NEO_CONCAT(_local_neo_subscr_, __COUNTER__) = [&]
+#define NEO_LISTEN ::neo::listener NEO_CONCAT(_local_neo_subscr_, __COUNTER__) = [&]
+#define NEO_SUBSCRIBE NEO_LISTEN
 
 /**
  * @brief Subscribe to one or more thread-local events.
@@ -312,6 +358,13 @@ template <event_detail::listen_handler_check... Funcs>
     }
 }
 
+/**
+ * @brief Create a listener that listens for type 'Event', regardless of the invocation signature of
+ * the handler
+ *
+ * @tparam EventType The event type to listen for
+ * @param fn The handler. Should be invocable with a 'const EventType&'
+ */
 template <typename EventType, typename Handler>
 [[nodiscard]] auto listen(Handler&& fn) noexcept {
     static_assert(
@@ -371,6 +424,8 @@ decltype(auto) bubble_event(const Event& ev) {
                !!cur_handler,
                "bubble_event() must only be called during the execution of an event handler of the "
                "same type");
+    static_assert(!event_bubbles<Event>,
+                  "bubble_event() should not be called for an event that bubbles by default");
     return event_detail::subscr_agent::bubble_event(*cur_handler, ev);
 }
 
@@ -457,6 +512,36 @@ using opt_subscription [[deprecated("Use opt_listener<T>")]]
 template <typename Event>
 [[nodiscard]] bool has_listener() noexcept {
     return !!event_detail::tl_tail_listener<Event>;
+}
+
+/**
+ * @brief While in scope, prevent events of 'Event' type from propagating to any listeners in a
+ * parent scope. Also prevents auto-bubbling events.
+ *
+ * @tparam Event
+ */
+template <typename Event>
+class [[nodiscard]] event_blocker {
+    listener<event_detail::event_block_handler, Event> _listener;
+
+public:
+    event_blocker() = default;
+    explicit event_blocker(const Event&) {}
+};
+
+/**
+ * @brief Stop an auto-bubbling event from bubbling-up after the current handler finishes executing
+ */
+template <typename Event>
+void cancel_bubbling(const Event&) noexcept {
+    auto cur_handler = event_detail::tl_currently_running_handler<Event>;
+    static_assert(event_bubbles<Event>,
+                  "cancel_bubbling() should only be called for events that bubble by default");
+    neo_assert(expects,
+               !!cur_handler,
+               "cancel_bubbling() must only be called during the execution of an event handler of "
+               "the same type");
+    event_detail::subscr_agent::cancel_bubbling(*cur_handler);
 }
 
 }  // namespace neo

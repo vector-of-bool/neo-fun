@@ -9,7 +9,7 @@ struct my_event {
     int value;
 };
 
-TEST_CASE("Install a handler") {
+TEST_CASE("Basic event handling") {
     int emitted_value = 0;
 
     {
@@ -59,11 +59,22 @@ TEST_CASE("Install a handler") {
                     neo::bubble_event(e);
                 }
             };
-            NEO_SUBSCRIBE(my_event ev) { neo::bubble_event(ev); };
+            NEO_LISTEN(my_event ev) { neo::bubble_event(ev); };
             neo::emit(my_event{312});
             CHECK(emitted_value == 33);  // Didn't change
             NEO_EMIT(my_event{311});
             CHECK(emitted_value == 311);  // Changed!
+        }
+    }
+
+    {
+        NEO_LISTEN(my_event ev) { emitted_value = ev.value; };
+        neo::emit(my_event{33});
+        CHECK(emitted_value == 33);
+        {
+            neo::event_blocker<my_event> block;
+            neo::emit(my_event{61});
+            CHECK(emitted_value == 33);  // Blocked!
         }
     }
 }
@@ -95,6 +106,38 @@ TEST_CASE("Optional handler") {
     CHECK_FALSE(sub2.is_listening());
     NEO_EMIT(my_event{41});
     CHECK(S_emitted_value == 31);  // Didn't change
+}
+
+struct bubbling_event {
+    int value = 44;
+    enum { event_bubbles = true };
+};
+
+TEST_CASE("Auto-bubbling event") {
+    static_assert(neo::event_bubbles<bubbling_event>);
+    int saw_value = 0;
+    {
+        // Write the seen value
+        NEO_LISTEN(bubbling_event ev) { saw_value = ev.value; };
+        neo::emit(bubbling_event{3});
+        CHECK(saw_value == 3);
+        // Write the seen value + 22
+        NEO_LISTEN(bubbling_event ev) { saw_value = ev.value + 22; };
+        neo::emit(bubbling_event{61});
+        // Even though we added 22, we still bubbled up to the prior handler
+        CHECK(saw_value == 61);
+        // Set the seen value to 42, and stop event bubbling
+        {
+            NEO_LISTEN(bubbling_event ev) {
+                neo::cancel_bubbling(ev);
+                saw_value = 42;
+            };
+            neo::emit(bubbling_event{7});
+            CHECK(saw_value == 42);
+        }
+        neo::emit(bubbling_event{71});
+        CHECK(saw_value == 71);
+    }
 }
 
 struct abstract_event_base {
