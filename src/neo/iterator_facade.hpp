@@ -81,6 +81,16 @@ concept iter_is_single_pass = bool(T::single_pass_iterator);
 
 // clang-format on
 
+template <typename T>
+concept noexcept_incrementable = requires(T& iter) {
+    { iter.increment() }
+    noexcept;
+}
+|| requires(T& item) {
+    { item += 1 }
+    noexcept;
+};
+
 template <typename T, typename Iter>
 concept iter_diff = std::is_convertible_v<T, infer_difference_type_t<Iter>>;
 
@@ -142,7 +152,7 @@ struct iterator_facade_base {
      * `.increment()`, if present, otherwise `*this += 1`
      */
     template <iter_self Self>
-    constexpr friend Self& operator++(Self& s) noexcept {
+    constexpr friend Self& operator++(Self& s) noexcept(noexcept_incrementable<Self>) {
         if constexpr (can_increment<Self>) {
             // If there is an increment(), assume it is the most efficient way to
             // advance, even if we have an advance()
@@ -159,7 +169,7 @@ struct iterator_facade_base {
     }
 
     template <iter_self Self>
-    constexpr friend auto operator++(Self& self, int) noexcept {
+    constexpr friend auto operator++(Self& self, int) noexcept(noexcept_incrementable<Self>) {
         if constexpr (detail::iter_is_single_pass<Self>) {
             // The iterator is a single-pass iterator. It isn't safe to make and
             // return an old copy.
@@ -306,7 +316,7 @@ public:
      * If the return type is a reference type, returns a pointer to the returned
      * object.
      */
-    constexpr decltype(auto) operator->() const noexcept {
+    constexpr decltype(auto) operator->() const noexcept(noexcept(**this)) {
         decltype(auto) deref = **this;
         if constexpr (std::is_reference_v<decltype(deref)>) {
             // If operator*() returns a reference, just return that address
