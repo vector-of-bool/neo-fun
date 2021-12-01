@@ -331,8 +331,7 @@ public:
     [[nodiscard]] constexpr decltype(auto) operator[](D pos) const noexcept {
         return *(_self() + pos);
     }
-
-};  // namespace neo
+};
 
 template <typename Derived, typename InnerIterator>
 class iterator_wrapper_facade : public iterator_facade<Derived> {
