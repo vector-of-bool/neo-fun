@@ -43,10 +43,9 @@ TEST_CASE("Create a shared state object") {
     auto cref = neo::ref_to_const(rect);
     // cref->width = 3;  // Will not compile
 
-    // const shared_rectangle& r = cref;
     // We cannot copy using a ref-to-const
-    // shared_rectangle r2 = r;  // Will not compile
-    // r->width                  = 8;
+    // const shared_rectangle& r = cref;
+    // shared_rectangle r2 = cref;  // Will not compile
 
     auto const_weak = neo::weak_ref(neo::ref_to_const(rect));
     auto const_ref  = *const_weak.lock();

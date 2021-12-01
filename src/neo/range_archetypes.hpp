@@ -19,7 +19,7 @@ struct make_weakly_incrementable : movable {
 
 template <typename Reference>
 struct make_indirectly_readable {
-    Reference operator*() const&;
+    Reference operator*() const;
     using value_type = std::remove_cvref_t<Reference>;
 };
 

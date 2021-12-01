@@ -35,10 +35,13 @@ public:
 
 }  // namespace
 
+static_assert(std::random_access_iterator<iota_iterator>);
+
 TEST_CASE("Create an iota_iterator") {
     iota_iterator it;
     iota_iterator stop{44};
     CHECK((stop - it) == 44);
+    CHECK(*(stop - 4) == 40);
     CHECK(it < stop);
     CHECK(it <= stop);
     CHECK_FALSE(it > stop);
