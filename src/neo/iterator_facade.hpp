@@ -316,7 +316,7 @@ public:
      * If the return type is a reference type, returns a pointer to the returned
      * object.
      */
-    constexpr decltype(auto) operator->() const noexcept(noexcept(**this)) {
+    constexpr decltype(auto) operator->() const noexcept(noexcept(_self().dereference())) {
         decltype(auto) deref = **this;
         if constexpr (std::is_reference_v<decltype(deref)>) {
             // If operator*() returns a reference, just return that address
