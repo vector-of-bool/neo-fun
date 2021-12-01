@@ -6,7 +6,7 @@
 #include <charconv>
 #include <cinttypes>
 #include <concepts>
-#include <ostream>
+#include <iosfwd>
 #include <ranges>
 #include <string>
 #include <tuple>
@@ -157,25 +157,30 @@ public:
     }
 };
 
+struct item_repr_base {
+    virtual std::string string() const noexcept = 0;
+
+private:
+    void write_ostream(std::ostream& o) const noexcept;
+
+    friend std::ostream& operator<<(std::ostream& out, const item_repr_base& self) noexcept {
+        self.write_ostream(out);
+        return out;
+    }
+};
+
 /**
  * @brief Return type of repr_type(). Formats and streams into a representation of the given type
  *
  * @tparam T The type to represent
  */
 template <reprable_impl T>
-struct type_repr {
+struct type_repr : item_repr_base {
     /// Realize the type's repr() as a std::string
-    constexpr std::string string() const noexcept { return neo::ufmt("{}", *this); }
-
-    /// Serialize the repr() of the type to an output stream
-    friend std::ostream& operator<<(std::ostream& out, type_repr self) noexcept {
-        auto str = self.string();
-        out.write(str.data(), str.size());
-        return out;
-    }
+    std::string string() const noexcept override { return neo::ufmt("{}", *this); }
 
     /// Serialize the repr() of the type to a ufmt() string
-    constexpr friend void ufmt_append(std::string& out, type_repr) noexcept {
+    friend void ufmt_append(std::string& out, type_repr) noexcept {
         repr_detail::repr_writer_impl<false, true> wr{out};
         if constexpr (repr_detail::has_adl_do_repr_exact<T>) {
             do_repr(wr, (const std::remove_reference_t<T>*)(nullptr));
@@ -194,18 +199,15 @@ struct type_repr {
  * @tparam WantType Whether we should include type information in the representation
  */
 template <reprable_impl T, bool WantType>
-struct value_repr {
+struct value_repr : item_repr_base {
     /// The value that is being repr()'d
     const T& value;
-    /// Realize the repr() of the given value as a string
-    std::string string() const noexcept { return neo::ufmt("{}", *this); }
 
-    /// Write the repr() of the value to the given stream
-    friend std::ostream& operator<<(std::ostream& out, value_repr self) noexcept {
-        auto str = self.string();
-        out.write(str.data(), str.size());
-        return out;
-    }
+    explicit value_repr(const T& r) noexcept
+        : value(r) {}
+
+    /// Realize the repr() of the given value as a string
+    std::string string() const noexcept override { return neo::ufmt("{}", *this); }
 
     /// Append the repr() of the value to the given ufmt() string
     constexpr friend void ufmt_append(std::string& out, value_repr self) noexcept {
@@ -242,7 +244,7 @@ constexpr auto repr_type() noexcept {
 }
 
 template <reprable T>
-constexpr auto repr_type(const T& t) noexcept {
+constexpr auto repr_type(const T&) noexcept {
     return repr_type<T>();
 }
 
@@ -460,10 +462,15 @@ requires(!std::is_pointer_v<Integral> && std::same_as<Integral, std::remove_cvre
 #undef DECL_REPR_TYPE_CASE
 
 template <typename T>
+requires std::is_class_v<T>
+struct inherit_from : std::remove_cvref_t<T> {
+};
+
+template <typename T>
 concept detect_vector = requires(T vec, std::ranges::range_value_t<T> item) {
     typename T::value_type;
     typename T::allocator_type;
-    requires std::same_as<T, typename T::vector>;
+    requires std::same_as<T, typename inherit_from<T>::vector>;
     vec.push_back(std::move(item));
     vec.pop_back();
 };
@@ -480,7 +487,7 @@ concept detect_map = std::ranges::forward_range<T>  //
 template <typename T>
 concept detect_std_array = requires(T arr, std::ranges::range_value_t<T> item) {
     arr.data();
-    requires std::same_as<T, typename T::array>;
+    requires std::same_as<T, typename inherit_from<T>::array>;
 };
 
 template <typename Tuple>
@@ -494,12 +501,12 @@ concept detect_tuple = requires {
 };
 
 template <typename Pair>
-concept detect_pair = detect_tuple<Pair>&& requires(std::remove_cvref_t<Pair>& p,
-                                                    typename Pair::first_type  f,
-                                                    typename Pair::second_type s) {
+concept detect_pair = detect_tuple<Pair> && requires(std::remove_cvref_t<Pair>& p,
+                                                     typename Pair::first_type  f,
+                                                     typename Pair::second_type s) {
     typename Pair::first_type;
     typename Pair::second_type;
-    requires std::same_as<Pair, typename Pair::pair>;
+    requires std::same_as<Pair, typename inherit_from<Pair>::pair>;
     requires alike<decltype(p.first), typename Pair::first_type>;
     requires alike<decltype(p.second), typename Pair::second_type>;
 };
@@ -515,8 +522,8 @@ concept detect_optional = requires(Opt opt) {
 
 template <typename Path>
 concept detect_path = requires(Path path) {
-    typename Path::path;
-    std::same_as<typename Path::path, Path>;
+    typename inherit_from<Path>::path;
+    std::same_as<typename inherit_from<Path>::path, Path>;
     path.native();
     path.generic_string();
     path.make_preferred();
@@ -540,8 +547,8 @@ struct repr_builtin<Path> {
 
 template <detect_pair Pair>
 struct repr_builtin<Pair> {
-    using first  = Pair::first_type;
-    using second = Pair::second_type;
+    using first  = typename Pair::first_type;
+    using second = typename Pair::second_type;
     constexpr static void write(auto out, auto* value) noexcept
         requires(reprable<first>&& reprable<second>) {
         if constexpr (out.just_type) {
@@ -558,7 +565,7 @@ struct repr_builtin<Pair> {
 
 template <detect_optional Optional>
 struct repr_builtin<Optional> {
-    using val_t = Optional::value_type;
+    using val_t = typename Optional::value_type;
     constexpr static void write(auto out, auto* value) noexcept requires reprable<val_t> {
         out.type("optional<{}>", repr_type<typename Optional::value_type>());
         if (value and *value) {

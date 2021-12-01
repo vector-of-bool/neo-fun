@@ -68,7 +68,7 @@ public:
      */
     template <std::ranges::input_range R>
     requires std::convertible_to<std::ranges::range_value_t<R>, value_type>  //
-        constexpr basic_fixed_string(R&& r)
+    constexpr basic_fixed_string(R&& r)
         : basic_fixed_string(std::ranges::begin(r), std::ranges::end(r)) {}
 
     /// Construct the string from an array of the appropriate size (Presumable a string literal)
@@ -78,9 +78,7 @@ public:
     /// Initialize the string with the given range defined by [first, last)
     template <std::input_iterator I, std::sentinel_for<I> S>
     requires std::convertible_to<std::iter_value_t<I>, value_type>  //
-        constexpr basic_fixed_string(I first, S last) {
-        assign(first, last);
-    }
+    constexpr basic_fixed_string(I first, S last) { assign(first, last); }
 
     /// Convert to a string_view implicitly
     constexpr operator string_view_type() const noexcept {
@@ -131,9 +129,7 @@ public:
      */
     template <std::ranges::input_range R>
     requires std::convertible_to<std::ranges::range_reference_t<R>, value_type>  //
-        constexpr void assign(R&& r) noexcept {
-        assign(std::ranges::cbegin(r), std::ranges::cend(r));
-    }
+    constexpr void assign(R&& r) noexcept { assign(std::ranges::cbegin(r), std::ranges::cend(r)); }
 
     /**
      * @brief Replace the contents of the string with the given range
@@ -141,9 +137,9 @@ public:
     template <std::input_iterator I, std::sentinel_for<I> S>
     constexpr void assign(I it, S stop) noexcept {
         if constexpr (std::forward_iterator<I>) {
-            assert(static_cast<size_type>(std::ranges::distance(it, stop)) == size());
+            assert(static_cast<size_type>(std::distance(it, stop)) == size());
         }
-        std::ranges::copy(it, stop, begin());
+        std::copy(it, stop, begin());
     }
 
     /**
@@ -193,12 +189,13 @@ public:
     template <size_type S>
     friend constexpr auto operator+(const basic_fixed_string&                left,
                                     const basic_fixed_string<value_type, S>& right) noexcept {
-        constexpr size_type new_size = left.size() + right.size();
-        using ret_type               = basic_fixed_string<value_type, new_size>;
+        constexpr size_type new_size = std::remove_cvref_t<decltype(left)>::size()
+            + std::remove_cvref_t<decltype(right)>::size();
+        using ret_type = basic_fixed_string<value_type, new_size>;
         ret_type ret;
         auto     out = ret.begin();
-        out          = std::ranges::copy(left, out).out;
-        std::ranges::copy(right, out);
+        out          = std::copy(left.begin(), left.end(), out);
+        std::copy(right.begin(), right.end(), out);
         return ret;
     }
 
@@ -253,7 +250,7 @@ template <std::size_t N>
 using fixed_string = basic_fixed_string<char, N>;
 
 /**
- * @brief Define a type that is parameterized by a constexpr basicfixed_string.
+ * @brief Define a type that is parameterized by a constexpr basic_fixed_string.
  */
 template <basic_fixed_string S>
 struct tstring {

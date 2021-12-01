@@ -160,7 +160,7 @@ inline constexpr struct to_string_fn {
      * supported by neo::ufmt
      */
     template <formattable T>
-    constexpr auto operator()(const T& item) const noexcept {
+    auto operator()(const T& item) const noexcept {
         std::string ret;
         to_string_into(ret, item);
         return ret;

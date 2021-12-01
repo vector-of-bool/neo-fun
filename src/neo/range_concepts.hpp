@@ -100,10 +100,10 @@ concept input_range =
     range<T> &&
     neo::input_iterator<iterator_t<T>>;
 
-template <typename T>
+template <typename T, typename V>
 concept output_range =
     range<T> &&
-    neo::output_iterator<iterator_t<T>>;
+    neo::output_iterator<iterator_t<T>, V>;
 
 template <typename T>
 concept common_range =

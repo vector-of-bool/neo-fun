@@ -16,7 +16,7 @@ public:
 
 private:
     // The type of the underlying state
-    using state_type = referred_type::state_type;
+    using state_type = typename referred_type::state_type;
 
     // Decide whether we are pointing-to-const or not
     using pointee_type
@@ -50,7 +50,7 @@ public:
     using referred_type = T;
 
     /// The shared-state type
-    using state_type = referred_type::state_type;
+    using state_type = typename referred_type::state_type;
 
 private:
     /// The value that we only expose via const
@@ -160,6 +160,10 @@ public:
     shared_state(_emplace_ptr_tag, std::shared_ptr<state_type>&& p) noexcept
         : _state(std::move(p)) {}
 
+    [[deprecated("Conversion would remove 'const' qualifier on reference")]]  //
+    shared_state(ref_to_const<T>)
+        = delete;
+
     /// Obtain a pointer-to the underlying shared state
     state_type* operator->() const noexcept { return _state.get(); }
 
@@ -195,5 +199,11 @@ public:
      */
     [[nodiscard]] long use_count() const noexcept { return _state->use_count(); }
 };
+
+template <typename Shared, typename State>
+weak_ref(const shared_state<Shared, State>&) -> weak_ref<Shared>;
+
+template <typename Shared, typename State>
+ref_to_const(const shared_state<Shared, State>&) -> ref_to_const<Shared>;
 
 }  // namespace neo

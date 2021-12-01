@@ -35,7 +35,7 @@ public:
  */
 template <typename Ref, typename Range>
 requires convertible_to<ranges::range_reference_t<Range>, Ref>  //
-    class erase_input_range : public erased_input_range<Ref> {
+class erase_input_range : public erased_input_range<Ref> {
     Range _range;
 
     any_input_iterator<Ref> do_begin() noexcept override { return ranges::begin(_range); }
@@ -55,11 +55,13 @@ public:
     explicit erase_input_range(Range&& r)
         : _range(NEO_FWD(r)) {}
 
-    std::unique_ptr<erased_input_range<Ref>> clone() const noexcept { return copy_unique(*this); }
+    std::unique_ptr<erased_input_range<Ref>> clone() const noexcept override {
+        return copy_unique(*this);
+    }
 };
 
 template <ranges::input_range Range>
-erase_input_range(Range &&) -> erase_input_range<ranges::range_reference_t<Range>, Range>;
+erase_input_range(Range&&) -> erase_input_range<ranges::range_reference_t<Range>, Range>;
 
 /**
  * @brief Type-erased storage of any input_range whose reference type is convertible to 'Ref'
@@ -89,7 +91,7 @@ public:
 };
 
 template <ranges::input_range R>
-any_input_range(R &&) -> any_input_range<ranges::range_reference_t<R>>;
+any_input_range(R&&) -> any_input_range<ranges::range_reference_t<R>>;
 
 template <typename Ref>
 any_input_range(const erased_input_range<Ref>&) -> any_input_range<Ref>;

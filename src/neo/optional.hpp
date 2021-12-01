@@ -1,21 +1,27 @@
 #pragma once
 
-#include <type_traits>
-
 #include "./attrib.hpp"
+#include "./declval.hpp"
+
+#include <type_traits>
 
 namespace neo {
 
-namespace detail {
+namespace opt_detail {
+
+template <typename T>
+requires std::is_class_v<T>
+struct inherit_from : T {
+};
 
 // Hack: A concept that matches a type T that is a in_place_t tag
 template <typename T>
 concept in_place_t_tag = requires {
     // Check for an injected-name matching in_place_t
-    typename T::in_place_t;
+    typename inherit_from<T>::in_place_t;
 }
 // And that the nested name is the same as the enclosing class
-&&std::is_same_v<T, typename T::in_place_t>;
+&&std::is_same_v<T, typename inherit_from<T>::in_place_t>;
 
 // A tiny in-place tag we can use
 struct opt_in_place_t {
@@ -23,7 +29,7 @@ struct opt_in_place_t {
 };
 // (This is all so we don't pull <utility>)
 
-}  // namespace detail
+}  // namespace opt_detail
 
 /**
  * @brief Provides storage for an object of type 'T'.
@@ -42,17 +48,23 @@ union nano_opt_storage {
      * @brief Construct a value in-place.
      */
     template <typename... Args>
-    constexpr explicit nano_opt_storage(detail::in_place_t_tag auto, Args&&... args)  //
-        noexcept(std::is_nothrow_constructible_v<T, Args...>)                         //
-        requires std::is_constructible_v<T, Args...>                                  //
+    constexpr explicit nano_opt_storage(opt_detail::in_place_t_tag auto, Args&&... args)  //
+        noexcept(std::is_nothrow_constructible_v<T, Args...>)                             //
+        requires std::is_constructible_v<T, Args...>                                      //
         : value((Args &&)(args)...) {}
 
     /// Default-construct as disenganged
     constexpr nano_opt_storage() = default;
     constexpr nano_opt_storage() requires(!std::is_trivially_default_constructible_v<T>) {}
 
+#if !NEO_COMPILER_IS_CLANG
+#define NEO_NANO_OPT_SUPPORTS_TRIVIAL_DESTRUCTIBILITY 1
     NEO_CONSTEXPR_DESTRUCTOR ~nano_opt_storage() = default;
     NEO_CONSTEXPR_DESTRUCTOR ~nano_opt_storage() requires(!std::is_trivially_destructible_v<T>) {}
+#else
+#define NEO_NANO_OPT_SUPPORTS_TRIVIAL_DESTRUCTIBILITY 0
+    NEO_CONSTEXPR_DESTRUCTOR ~nano_opt_storage() {}
+#endif
 };
 
 /**
@@ -79,12 +91,12 @@ public:
     // Construct as a new T
     template <typename Arg>
     requires std::is_same_v<std::remove_cvref_t<Arg>, T>  //
-        constexpr nano_opt(Arg&& arg)
-        : _storage(detail::opt_in_place_t{}, (Arg &&)(arg))
+    constexpr nano_opt(Arg&& arg)
+        : _storage(opt_detail::opt_in_place_t{}, (Arg &&)(arg))
         , _active(true) {}
 
     // Construct as a new T with the given arguments
-    template <detail::in_place_t_tag InPlace, typename... Args>
+    template <opt_detail::in_place_t_tag InPlace, typename... Args>
     constexpr explicit nano_opt(InPlace tag, Args&&... args)   //
         noexcept(std::is_nothrow_constructible_v<T, Args...>)  //
         requires std::is_constructible_v<T, Args...>           //
@@ -194,7 +206,7 @@ public:
     constexpr const T&& get() const&& noexcept { return (T &&) _storage.value; }
 
     friend constexpr void do_repr(auto out, const nano_opt* self) noexcept requires requires {
-        out.repr(self->get());
+        out.repr(NEO_DECLVAL(const T&));
     }
     {
         if constexpr (out.just_type) {

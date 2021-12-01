@@ -52,11 +52,9 @@ struct emit_as {
 };
 
 template <typename T>
-requires requires {
-    typename T::emit_as;
-}
+requires requires { typename T::emit_as; }
 struct emit_as<T> {
-    using type = T::emit_as;
+    using type = typename T::emit_as;
 };
 
 // helper for emit_result_t
@@ -66,11 +64,9 @@ struct emit_result {
 };
 
 template <typename T>
-requires requires {
-    typename T::emit_result;
-}
+requires requires { typename T::emit_result; }
 struct emit_result<T> {
-    using type = T::emit_result;
+    using type = typename T::emit_result;
 };
 
 /// Agent class to invoke and bubble events, as the invoke() and bubble_event() methods are
@@ -100,7 +96,7 @@ public:
  * default is 'void'.
  */
 template <typename T>
-using emit_result_t = event_detail::emit_result<T>::type;
+using emit_result_t = typename event_detail::emit_result<T>::type;
 
 /**
  * @brief Given an event type, find the type that is used for dispatch.
@@ -110,7 +106,7 @@ using emit_result_t = event_detail::emit_result<T>::type;
  * event type should be able to bind to a const& of its emit_as type.
  */
 template <typename T>
-using emit_as_t = event_detail::emit_as<T>::type;
+using emit_as_t = typename event_detail::emit_as<T>::type;
 
 template <typename E>
 emit_result_t<E> get_default_emit_result(const E& ev) requires requires {
@@ -261,7 +257,8 @@ void emit_one(const EventReturner& func) requires(
 
 /// Check that the given handler function is valid to be used as a handler type
 template <typename Handler>
-concept listen_handler_check = fixed_invocable<Handler>&& invocable_arity_v<Handler> == 1;
+concept listen_handler_check = fixed_invocable<Handler> && invocable_arity_v<Handler>
+== 1;
 
 /// A "handler" for events which does nothing with them and stops them from propagating
 struct event_block_handler {
@@ -288,7 +285,7 @@ using handler_listen_type_t = std::remove_cvref_t<sole_arg_type_t<Handler>>;
  */
 template <typename Handler, typename ListenEvent = handler_listen_type_t<Handler>>
 requires invocable<Handler, const ListenEvent&>  //
-    class listener : scoped_listener<ListenEvent> {
+class listener : scoped_listener<ListenEvent> {
 
     [[no_unique_address]] Handler _handler;
 
@@ -318,7 +315,7 @@ public:
         : _handler(NEO_FWD(h)) {}
 
     constexpr friend void do_repr(auto out, listener const* self) noexcept {
-        do_repr(out, static_cast<listener::scoped_listener const*>(self));
+        do_repr(out, static_cast<typename listener::scoped_listener const*>(self));
     }
 };
 
@@ -500,7 +497,7 @@ public:
 };
 
 template <typename Handler>
-opt_listener(Handler &&) -> opt_listener<Handler, handler_listen_type_t<Handler>>;
+opt_listener(Handler&&) -> opt_listener<Handler, handler_listen_type_t<Handler>>;
 
 template <typename H>
 using opt_subscription [[deprecated("Use opt_listener<T>")]]

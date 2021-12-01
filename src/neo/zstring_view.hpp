@@ -29,16 +29,14 @@ class basic_zstring_view : public std::basic_string_view<Char, Traits> {
 public:
     using string_view_type = std::basic_string_view<Char, Traits>;
 
-    using const_pointer = string_view_type::const_pointer;
-    using traits_type   = string_view_type::traits_type;
-    using size_type     = string_view_type::size_type;
-    using value_type    = string_view_type::value_type;
+    using const_pointer = typename string_view_type::const_pointer;
+    using traits_type   = typename string_view_type::traits_type;
+    using size_type     = typename string_view_type::size_type;
+    using value_type    = typename string_view_type::value_type;
 
 public:
     /// Default-construct with an empty string
     constexpr basic_zstring_view() noexcept = default;
-    /// Copy another zstring_view
-    constexpr basic_zstring_view(const basic_zstring_view&) noexcept = default;
 
     /**
      * @brief Construct a new zstring_view from the given pointer+length.
@@ -68,8 +66,8 @@ public:
      */
     template <std::contiguous_iterator Iter, std::sized_sentinel_for<Iter> Sent>
     requires std::same_as<std::iter_value_t<Iter>, value_type>  //
-        constexpr basic_zstring_view(Iter first, Sent sent) noexcept
-        : basic_zstring_view(std::to_address(first), (sent - first)) {}
+    constexpr basic_zstring_view(Iter first, Sent sent) noexcept
+        : basic_zstring_view(std::to_address(first), static_cast<std::size_t>(sent - first)) {}
 
     /**
      * @brief Construct from a contiguous range of the same character type.
@@ -78,7 +76,7 @@ public:
      */
     template <std::ranges::contiguous_range R>
     requires std::same_as<std::ranges::range_value_t<R>, value_type>  //
-        explicit constexpr basic_zstring_view(R&& r) noexcept
+    explicit constexpr basic_zstring_view(R&& r) noexcept
         : basic_zstring_view(std::ranges::begin(r), std::ranges::end(r)) {}
 
     /**

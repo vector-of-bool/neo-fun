@@ -21,7 +21,7 @@ constexpr tag<Ts...> tag_v;
  * Get the number of elements in a tag type.
  */
 template <typename Tag>
-constexpr std::size_t tag_size_v;
+constexpr std::size_t tag_size_v = 42;
 
 template <typename... Ts>
 constexpr std::size_t tag_size_v<tag<Ts...>> = sizeof...(Ts);

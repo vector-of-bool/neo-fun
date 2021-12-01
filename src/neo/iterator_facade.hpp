@@ -84,7 +84,136 @@ concept iter_is_single_pass = bool(T::single_pass_iterator);
 template <typename T, typename Iter>
 concept iter_diff = std::is_convertible_v<T, infer_difference_type_t<Iter>>;
 
-struct iterator_facade_base {};
+struct iterator_facade_base;
+
+template <typename T>
+concept iter_facade_type = std::is_base_of_v<iterator_facade_base, std::remove_cvref_t<T>>;
+
+template <typename T>
+concept iter_self = iter_facade_type<T>;
+
+template <typename T>
+concept random_access_iter_self = iter_self<T> && iter_is_random_access<T>;
+
+template <typename T>
+concept bidirectional_iter_self = iter_self<T> && iter_is_bidirectional<T>;
+
+struct iterator_facade_base {
+    /**
+     * If this is a random_access_iterator, returns the distance from the right
+     * to the left, i.e. how many times to apply ++right to reach `left`.
+     */
+    template <iter_self Self, sized_sentinel_of<Self> Sent>
+    [[nodiscard]] constexpr friend auto operator-(const Sent& sent, const Self& self) noexcept {
+        return self.distance_to(sent);
+    }
+
+    template <random_access_iter_self Self, iter_diff<Self> Diff>
+    [[nodiscard]] constexpr friend auto operator-(const Self& self, Diff off) noexcept {
+        using diff_type        = infer_difference_type_t<Self>;
+        using signed_diff_type = std::make_signed_t<diff_type>;
+        return self + -static_cast<signed_diff_type>(off);
+    }
+
+    template <random_access_iter_self Self, iter_diff<Self> Diff>
+    [[nodiscard]] constexpr friend auto operator+(const Self& self, Diff off) noexcept {
+        auto cp = self;
+        return cp += off;
+    }
+
+    template <random_access_iter_self Self, iter_diff<Self> Diff>
+    [[nodiscard]] constexpr friend auto operator+(Diff off, const Self& self) noexcept {
+        return self + off;
+    }
+
+    template <random_access_iter_self Self, iter_diff<Self> Diff>
+    constexpr friend Self& operator+=(Self& self, Diff off) noexcept {
+        self.advance(off);
+        return self;
+    }
+
+    template <random_access_iter_self Self, iter_diff<Self> Diff>
+    constexpr friend Self& operator-=(Self& self, Diff off) noexcept {
+        return self = self - off;
+    }
+
+    /**
+     * Advance the iterator one position forward. Implemented as a call to
+     * `.increment()`, if present, otherwise `*this += 1`
+     */
+    template <iter_self Self>
+    constexpr friend Self& operator++(Self& s) noexcept {
+        if constexpr (can_increment<Self>) {
+            // If there is an increment(), assume it is the most efficient way to
+            // advance, even if we have an advance()
+            s.increment();
+        } else if constexpr (iter_is_random_access<Self>) {
+            // Just offset by one
+            s += 1;
+        } else {
+            // Bad!
+            static_assert(iter_is_random_access<Self> || can_increment<Self>,
+                          "Iterator subclass must provide an `increment` or `advance(n)` method");
+        }
+        return s;
+    }
+
+    template <iter_self Self>
+    constexpr friend auto operator++(Self& self, int) noexcept {
+        if constexpr (detail::iter_is_single_pass<Self>) {
+            // The iterator is a single-pass iterator. It isn't safe to make and
+            // return an old copy.
+            ++self;
+        } else {
+            auto cp = self;
+            ++self;
+            return cp;
+        }
+    }
+
+    template <bidirectional_iter_self Self>
+    constexpr friend Self& operator--(Self& self) noexcept {
+        if constexpr (can_decrement<Self>) {
+            self.decrement();
+        } else {
+            self -= 1;
+        }
+        return self;
+    }
+
+    template <bidirectional_iter_self Self>
+    constexpr friend auto operator--(Self& self, int) noexcept {
+        auto cp = self;
+        --self;
+        return cp;
+    }
+
+    /**
+     * With three-way comparison, we can get away with much simpler comparison/equality
+     * operators, since we can also rely on synthesized rewrites
+     */
+    template <random_access_iter_self Self, detail::sized_sentinel_of<Self> S>
+    [[nodiscard]] constexpr friend auto operator<=>(const Self& self, const S& right) noexcept {
+        auto dist = self - right;
+        auto rel  = dist <=> 0;
+        return rel;
+    }
+
+    /**
+     * With three-way comparison, we can get away with much simpler comparison/equality
+     * operators, since we can also rely on synthesized rewrites
+     */
+    template <random_access_iter_self Self, detail::sized_sentinel_of<Self> S>
+    [[nodiscard]] constexpr friend auto operator<(const Self& self, const S& right) noexcept {
+        auto dist = self - right;
+        auto rel  = dist < 0;
+        return rel;
+    }
+
+#if !__cpp_impl_three_way_comparison
+#error "neo/iterator_facade.hpp requires three-way-comparison support"
+#endif
+};
 
 }  // namespace detail
 
@@ -163,7 +292,8 @@ public:
     /**
      * Implement operator* in terms of `.dereference()`
      */
-    [[nodiscard]] constexpr decltype(auto) operator*() const noexcept {
+    [[nodiscard]] constexpr decltype(auto) operator*() const
+        noexcept(noexcept(_self().dereference())) {
         return _self().dereference();
     }
 
@@ -187,122 +317,11 @@ public:
         }
     }
 
-    /**
-     * If this is a random_access_iterator, returns the distance from the right
-     * to the left, i.e. how many times to apply ++right to reach `left`.
-     */
-    [[nodiscard]] constexpr friend auto operator-(const self_type& left,
-                                                  const self_type& right) noexcept
-        requires detail::iter_is_random_access<self_type> {
-        return right.distance_to(left);
-    }
-
-    /**
-     * Advance the iterator one position forward. Implemented as a call to
-     * `.increment()`, if present, otherwise `*this += 1`
-     */
-    constexpr self_type& operator++() noexcept {
-        if constexpr (detail::can_increment<self_type>) {
-            // If there is an increment(), assume it is the most efficient way to
-            // advance, even if we have an advance()
-            _self().increment();
-        } else if constexpr (detail::iter_is_random_access<self_type>) {
-            // Just offset by one
-            _self() += 1;
-        } else {
-            // Bad!
-            static_assert(detail::iter_is_random_access<self_type>,
-                          "Iterator subclass must provide an `increment` or `advance(n)` method");
-        }
-        return _self();
-    }
-
-    constexpr auto operator++(int) noexcept {
-        if constexpr (detail::iter_is_single_pass<self_type>) {
-            // The iterator is a single-pass iterator. It isn't safe to make and
-            // return an old copy.
-            ++*this;
-        } else {
-            auto cp = _self();
-            ++*this;
-            return cp;
-        }
-    }
-
-    constexpr self_type& operator--() noexcept requires detail::iter_is_bidirectional<self_type> {
-        if constexpr (detail::can_decrement<self_type>) {
-            _self().decrement();
-        } else {
-            _self() -= 1;
-        }
-        return _self();
-    }
-
-    constexpr auto operator--(int) noexcept requires detail::iter_is_bidirectional<self_type> {
-        auto cp = _self();
-        --*this;
-        return cp;
-    }
-
-    template <detail::iter_diff<self_type> Diff>
-    [[nodiscard]] constexpr friend auto operator+(const self_type& left, Diff off) noexcept
-        requires detail::iter_is_random_access<self_type> {
-        auto cp = left;
-        return cp += off;
-    }
-
     template <detail::iter_diff<self_type> D>
-    [[nodiscard]] constexpr friend auto operator+(D off, const self_type& self) noexcept
-        requires detail::iter_is_random_access<self_type> {
-        return self + off;
-    }
-
-    template <detail::iter_diff<self_type> D>
-    [[nodiscard]] constexpr friend auto operator-(const self_type& self, D off) noexcept
-        requires detail::iter_is_random_access<self_type> {
-        using diff_type        = detail::infer_difference_type_t<self_type>;
-        using signed_diff_type = std::make_signed_t<diff_type>;
-        return self + -static_cast<signed_diff_type>(off);
-    }
-
-    template <detail::sized_sentinel_of<self_type> S>
-    [[nodiscard]] constexpr friend auto operator-(const S& s, const self_type& self) noexcept {
-        return self.distance_to(s);
-    }
-
-    template <detail::iter_diff<self_type> D>
-    constexpr friend self_type& operator+=(self_type& self, D off) noexcept
-        requires detail::iter_is_random_access<self_type> {
-        self.advance(off);
-        return self;
-    }
-
-    template <detail::iter_diff<self_type> D>
-    constexpr friend self_type& operator-=(self_type& self, D off) noexcept
-        requires detail::iter_is_random_access<self_type> {
-        return self = self - off;
-    }
-
-    template <detail::iter_diff<self_type> D>
-    [[nodiscard]] constexpr decltype(auto) operator[](D pos) const noexcept
-        requires detail::iter_is_random_access<self_type> {
+    [[nodiscard]] constexpr decltype(auto) operator[](D pos) const noexcept {
         return *(_self() + pos);
     }
 
-#if !__cpp_impl_three_way_comparison
-#error "neo/iterator_facade.hpp requires three-way-comparison support"
-#endif
-
-    /**
-     * With three-way comparison, we can get away with much simpler comparison/equality
-     * operators, since we can also rely on synthesized rewrites
-     */
-    template <convertible_to<const self_type&> Self, detail::sized_sentinel_of<Self> S>
-    [[nodiscard]] constexpr friend auto operator<=>(const Self& self, const S& right) noexcept {
-        auto dist = self - right;
-        auto rel  = dist <=> 0;
-        return rel;
-    }
 };  // namespace neo
 
 template <typename Derived, typename InnerIterator>
@@ -332,8 +351,8 @@ public:
     }
     // clang-format on
 
-    constexpr bool operator==(const self_type& other) const noexcept {
-        return wrapped_iterator == other.wrapped_iterator;
+    constexpr friend bool operator==(const self_type& left, const self_type& other) noexcept {
+        return left.wrapped_iterator == other.wrapped_iterator;
     }
 };
 
@@ -344,7 +363,7 @@ namespace std {
 template <typename Derived>
 requires std::is_base_of_v<neo::detail::iterator_facade_base,
                            Derived>  //
-    struct iterator_traits<Derived> {
+struct iterator_traits<Derived> {
     static const Derived& _const_it;
     using reference       = decltype(*_const_it);
     using pointer         = decltype(_const_it.operator->());

@@ -23,8 +23,10 @@ struct nontrivial {
     ~nontrivial() {}
 };
 
+#if NEO_NANO_OPT_SUPPORTS_TRIVIAL_DESTRUCTIBILITY
 NEO_TEST_CONCEPT(std::is_trivially_destructible_v<neo::nano_opt_storage<trivial>>);
 NEO_TEST_CONCEPT(std::is_trivially_default_constructible_v<neo::nano_opt_storage<trivial>>);
+#endif
 
 /// XXX: Bug in language/compilers sees a non-trivial destructor as invalidating
 /// trivial_default_constructible. As such, these checks will fail:

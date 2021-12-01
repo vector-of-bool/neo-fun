@@ -43,7 +43,8 @@ public:
 };
 
 template <std::input_or_output_iterator Iter>
-requires std::sentinel_for<Iter, Iter> struct common_erased_sentinel_compare {
+requires std::sentinel_for<Iter, Iter>
+struct common_erased_sentinel_compare {
     Iter           iter;
     constexpr bool operator()(const erased_iterator_base& other) const noexcept {
         return iter == other.get<Iter>();
@@ -94,11 +95,11 @@ public:
 };
 
 template <invocable<const erased_iterator_base&> Func>
-explicit erase_sentinel(Func &&) -> erase_sentinel<Func>;
+explicit erase_sentinel(Func&&) -> erase_sentinel<Func>;
 
 template <forward_iterator Iter>
-requires sentinel_for<Iter, Iter> explicit erase_sentinel(const Iter&)
-    -> erase_sentinel<common_erased_sentinel_compare<Iter>>;
+requires sentinel_for<Iter, Iter>
+explicit erase_sentinel(const Iter&)->erase_sentinel<common_erased_sentinel_compare<Iter>>;
 
 /**
  * @brief A type-erased sentinel object.
@@ -158,11 +159,11 @@ public:
  */
 template <typename RefType, typename Iter>
 requires convertible_to<iter_reference_t<Iter>, RefType>  //
-    class erase_input_iterator : public erased_input_iterator<RefType> {
+class erase_input_iterator : public erased_input_iterator<RefType> {
     // The actual iterator:
     Iter _it;
 
-    void* do_void_ptr() noexcept { return std::addressof(_it); }
+    void* do_void_ptr() noexcept override { return std::addressof(_it); }
 
 public:
     erase_input_iterator() = default;
@@ -240,8 +241,8 @@ public:
     // clang-format off
     template <typename Iter>
     requires (!std::is_base_of_v<erased_iterator_base, Iter>)
-          && input_iterator<Iter>
           && unalike<Iter, any_input_iterator>  // (Exclude our own type to not grab copy/move)
+          && input_iterator<Iter>
           && convertible_to<iter_reference_t<Iter>, reference>
     any_input_iterator(Iter it)
         : any_input_iterator(erase_input_iterator<reference, Iter>(it)) {}
