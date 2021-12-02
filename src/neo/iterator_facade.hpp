@@ -77,7 +77,14 @@ concept iter_is_bidirectional =
     can_decrement<T>;
 
 template <typename T>
-concept iter_is_single_pass = bool(T::single_pass_iterator);
+concept iter_is_single_pass = requires {
+    requires bool(T::single_pass_iterator);
+};
+
+template <typename T>
+concept iter_is_forward = !iter_is_single_pass<T> && requires(const T& item) {
+    { item == item };
+};
 
 // clang-format on
 
@@ -392,11 +399,11 @@ struct iterator_traits<Derived> {
             // Noh
             std::conditional_t<
                 // Is it single-pass?
-                neo::detail::iter_is_single_pass<Derived>,
-                // Than means it is an input iterator
-                std::input_iterator_tag,
+                neo::detail::iter_is_forward<Derived>,
                 // Otherwise it is a forward iterator
-                std::forward_iterator_tag>>>;
+                std::forward_iterator_tag,
+                // Than means it is an input iterator
+                std::input_iterator_tag>>>;
 
     using iterator_concept = iterator_category;
 };
