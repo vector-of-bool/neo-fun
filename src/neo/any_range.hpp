@@ -40,13 +40,14 @@ class erase_input_range : public erased_input_range<Ref> {
 
     any_input_iterator<Ref> do_begin() noexcept override { return ranges::begin(_range); }
     any_sentinel            do_end() noexcept override {
-        return any_sentinel([end = ranges::end(_range)](const erased_iterator_base& iter) {
-            using iter_t = ranges::iterator_t<Range>;
-            neo_assert(expects,
-                       iter.type_tag() == type_tag_v<iter_t>,
-                       "Comparison of range sentinel to iterator of different range type");
-            return iter.get<iter_t>() == end;
-        });
+        return any_sentinel(
+            [end = ranges::end(_range)](const iter_detail::erased_iface_base& iter) {
+                using iter_t = ranges::iterator_t<Range>;
+                neo_assert(expects,
+                           iter.type_tag() == type_tag_v<iter_t>,
+                           "Comparison of range sentinel to iterator of different range type");
+                return iter.get<iter_t>() == end;
+            });
     }
 
 public:
