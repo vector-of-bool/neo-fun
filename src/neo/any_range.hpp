@@ -1,100 +1,124 @@
 #pragma once
 
+#include "./any_range_fwd.hpp"
+
 #include "./any_iterator.hpp"
-#include "./concepts.hpp"
-#include "./iterator_facade.hpp"
-#include "./memory.hpp"
-#include "./range_concepts.hpp"
+#include "./assert.hpp"
+#include "./fwd.hpp"
+#include "./ref.hpp"
+
+#include <memory>
+#include <ranges>
 
 namespace neo {
 
-/**
- * @brief Abstract base class of erased input ranges for reference type 'Ref'
- */
-template <typename Ref>
-class erased_input_range {
-public:
-    virtual ~erased_input_range() = default;
+namespace range_detail {
 
+// Type-erased storage for an any_range
+template <typename Ref, typename Category>
+class erased_range_base {
 private:
-    virtual any_input_iterator<Ref> do_begin() noexcept = 0;
-    virtual any_sentinel            do_end() noexcept   = 0;
+    using iterator = any_iterator<Ref, Category>;
+    using sentinel = std::conditional_t<std::derived_from<Category, std::forward_iterator_tag>,
+                                        iterator,
+                                        any_sentinel>;
+    virtual iterator do_begin() = 0;
+    virtual sentinel do_end()   = 0;
 
 public:
-    auto begin() noexcept { return do_begin(); }
-    auto end() noexcept { return do_end(); }
+    virtual ~erased_range_base() = default;
 
-    virtual std::unique_ptr<erased_input_range> clone() const noexcept = 0;
+    iterator begin() { return do_begin(); }
+    sentinel end() { return do_end(); }
 };
 
-/**
- * @brief Implementation of erased input ranges for type 'Ref', erasing type 'Range'
- *
- * Prefer any_input_range. This class supports CTAD. The reference type of 'Range' must be
- * convertible to 'Ref'.
- */
-template <typename Ref, typename Range>
-requires convertible_to<ranges::range_reference_t<Range>, Ref>  //
-class erase_input_range : public erased_input_range<Ref> {
-    Range _range;
+template <typename Ref, typename Cat, typename Range>
+class erased_range_impl : public erased_range_base<Ref, Cat> {
+private:
+    using iterator = any_iterator<Ref, Cat>;
+    using sentinel = std::
+        conditional_t<std::derived_from<Cat, std::forward_iterator_tag>, iterator, any_sentinel>;
 
-    any_input_iterator<Ref> do_begin() noexcept override { return ranges::begin(_range); }
-    any_sentinel            do_end() noexcept override {
-        return any_sentinel(
-            [end = ranges::end(_range)](const iter_detail::erased_iface_base& iter) {
-                using iter_t = ranges::iterator_t<Range>;
-                neo_assert(expects,
-                           iter.type_tag() == type_tag_v<iter_t>,
-                           "Comparison of range sentinel to iterator of different range type");
-                return iter.get<iter_t>() == end;
-            });
+    using wrapped_iter = std::ranges::iterator_t<std::unwrap_reference_t<Range>>;
+    wrap_refs_t<Range> _range;
+
+    iterator do_begin() override { return std::ranges::begin(neo::unref(_range)); }
+    sentinel do_end() override {
+        if constexpr (std::same_as<sentinel, any_sentinel>) {
+            return any_sentinel{neo::tag_v<wrapped_iter>, std::ranges::end(neo::unref(_range))};
+        } else {
+            return std::ranges::end(neo::unref(_range));
+        }
     }
 
 public:
-    erase_input_range() = default;
-
-    explicit erase_input_range(Range&& r)
+    template <typename R>
+    explicit erased_range_impl(R&& r)
         : _range(NEO_FWD(r)) {}
-
-    std::unique_ptr<erased_input_range<Ref>> clone() const noexcept override {
-        return copy_unique(*this);
-    }
 };
 
-template <ranges::input_range Range>
-erase_input_range(Range&&) -> erase_input_range<ranges::range_reference_t<Range>, Range>;
+}  // namespace range_detail
 
-/**
- * @brief Type-erased storage of any input_range whose reference type is convertible to 'Ref'
- */
-template <typename Ref>
-class any_input_range {
-    using erased_type = erased_input_range<Ref>;
+template <typename Ref, typename Category>
+class any_range {
+    using erased_type = range_detail::erased_range_base<Ref, Category>;
 
-public:
-    using reference = Ref;
-
-private:
     std::unique_ptr<erased_type> _impl;
 
-public:
-    // clang-format off
     template <typename R>
-    requires ranges::input_range<R>
-        && convertible_to<ranges::range_reference_t<R>, reference>
-        && unalike<R, any_input_range>
-    any_input_range(R&& r)
-        : _impl(std::make_unique<erase_input_range<reference, R>>(NEO_FWD(r))) {}
+    std::unique_ptr<erased_type> _make_impl(R&& r) {
+        if constexpr (alike<R, any_range>) {
+            return std::move(r._impl);
+        } else {
+            return std::make_unique<
+                range_detail::erased_range_impl<Ref, Category, std::remove_cvref_t<R>>>(NEO_FWD(r));
+        }
+    }
+
+public:
+    using iterator = any_iterator<Ref, Category>;
+    using sentinel = std::conditional_t<std::derived_from<Category, std::forward_iterator_tag>,
+                                        iterator,
+                                        any_sentinel>;
+
+    // clang-format off
+    template <std::ranges::range R>
+    requires requires {
+        requires alike<R, any_range>;
+        requires std::is_rvalue_reference_v<R&&>;
+    } || requires {
+        requires !alike<R, any_range>;
+        requires std::convertible_to<
+            std::ranges::iterator_t<R>,
+            iterator>;
+    }
+    any_range(R&& r)
+        : _impl(_make_impl(NEO_FWD(r))) {}
+
+    template <std::ranges::range R>
+        requires std::convertible_to<std::ranges::iterator_t<R>, iterator>
+    any_range(std::reference_wrapper<R> ref) noexcept
+        : _impl(_make_impl(ref)) {}
     // clang-format on
 
-    any_input_iterator<Ref> begin() noexcept { return _impl->begin(); }
-    any_sentinel            end() noexcept { return _impl->end(); }
+    iterator begin() {
+        neo_assert(expects, _impl != nullptr, "Invalid use of an empty/moved-from any_range");
+        return _impl->begin();
+    }
+    sentinel end() {
+        neo_assert(expects, _impl != nullptr, "Invalid use of an empty/moved-from any_range");
+        return _impl->end();
+    }
 };
 
-template <ranges::input_range R>
-any_input_range(R&&) -> any_input_range<ranges::range_reference_t<R>>;
+template <std::ranges::range Range>
+any_range(Range&& r)
+    -> any_range<std::ranges::range_reference_t<Range>,
+                 typename std::iterator_traits<std::ranges::iterator_t<Range>>::iterator_category>;
 
-template <typename Ref>
-any_input_range(const erased_input_range<Ref>&) -> any_input_range<Ref>;
+template <std::ranges::range Range>
+any_range(std::reference_wrapper<Range>)
+    -> any_range<std::ranges::range_reference_t<Range>,
+                 typename std::iterator_traits<std::ranges::iterator_t<Range>>::iterator_category>;
 
 }  // namespace neo

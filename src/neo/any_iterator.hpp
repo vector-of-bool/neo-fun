@@ -2,15 +2,31 @@
 
 #include "./any_iterator_fwd.hpp"
 
-#include "./range_concepts.hpp"
-
 #include "./assert.hpp"
 #include "./iterator_facade.hpp"
+#include "./range_concepts.hpp"
 #include "./tag.hpp"
 
+#include <iterator>
 #include <memory>
 
 namespace neo {
+
+class any_iterator_base {
+    virtual neo::type_tag do_type_tag() const noexcept  = 0;
+    virtual const void*   do_cvoid_ptr() const noexcept = 0;
+
+public:
+    neo::type_tag type_tag() const noexcept { return do_type_tag(); }
+
+    template <typename T>
+    const T& get() const noexcept {
+        neo_assert(expects,
+                   type_tag() == type_tag_v<T>,
+                   "Invalid any_iterator::get<T>() of incorrect 'T'");
+        return *static_cast<const T*>(do_cvoid_ptr());
+    }
+};
 
 namespace iter_detail {
 
@@ -23,10 +39,16 @@ private:
     virtual neo::type_tag do_type_tag() const noexcept = 0;
 
 public:
+    virtual ~erased_iface_base() = default;
     /**
      * @brief Get a tag identifying the actually underlying type of the object
      */
     neo::type_tag type_tag() const noexcept { return do_type_tag(); }
+
+    void*       void_ptr() noexcept { return do_void_ptr(); }
+    const void* void_ptr() const noexcept {
+        return const_cast<erased_iface_base*>(this)->do_void_ptr();
+    }
 
     /**
      * @brief Obtain a reference to the erased object, which MUST be of type T
@@ -48,11 +70,10 @@ public:
 /**
  * @brief Partially applied callable object that compares two common iterators
  */
-template <std::input_or_output_iterator Iter>
-requires std::sentinel_for<Iter, Iter>
+template <std::forward_iterator Iter>
 struct common_erased_sentinel_compare_parts {
     Iter           iter;
-    constexpr bool operator()(const erased_iface_base& other) const noexcept {
+    constexpr bool operator()(const any_iterator_base& other) const noexcept {
         return iter == other.get<Iter>();
     }
 };
@@ -61,12 +82,14 @@ struct common_erased_sentinel_compare_parts {
  * @brief Base class of erased range sentinels
  */
 class erased_sentinel_parts {
-    virtual bool do_compare_equal(const erased_iface_base& iter) const noexcept = 0;
+    virtual bool do_compare_equal(const any_iterator_base& iter) const noexcept = 0;
 
 public:
     virtual ~erased_sentinel_parts() = default;
 
-    bool operator==(const erased_iface_base& iter) const noexcept { return do_compare_equal(iter); }
+    bool compare_equal(const any_iterator_base& iter) const noexcept {
+        return do_compare_equal(iter);
+    }
 };
 
 /**
@@ -79,11 +102,11 @@ public:
  *
  * Use this class with CTAD.
  */
-template <invocable<const erased_iface_base&> Func>
+template <invocable<const any_iterator_base&> Func>
 class erase_sentinel : public erased_sentinel_parts {
     Func _fn;
 
-    bool do_compare_equal(const erased_iface_base& iter) const noexcept override {
+    bool do_compare_equal(const any_iterator_base& iter) const noexcept override {
         return _fn(iter);
     }
 
@@ -93,14 +116,10 @@ public:
     explicit erase_sentinel(Func&& fn)
         : _fn(NEO_FWD(fn)) {}
 
-    template <forward_iterator Iter>
+    template <std::forward_iterator Iter>
     explicit erase_sentinel(const Iter& it)
         : _fn{it} {}
 };
-
-}  // namespace iter_detail
-
-namespace iter_detail {
 
 /**
  * @brief Abstract base class types for type-erased iterator classes.
@@ -167,8 +186,6 @@ public:
 template <typename Ref>
 struct erased_iface<std::input_iterator_tag, Ref> : erased_iface_base {
     enum { single_pass_iterator = true };
-
-    virtual ~erased_iface() = default;
 
     // Every impl will have its own clone()
     std::unique_ptr<erased_iface> clone() const noexcept {
@@ -359,7 +376,7 @@ concept iter_ref_convertible_to
 }  // namespace iter_detail
 
 template <typename Ref, typename Category>
-class any_iterator : public iterator_facade<any_iterator<Ref, Category>> {
+class any_iterator : public any_iterator_base, public iterator_facade<any_iterator<Ref, Category>> {
 public:
     using reference         = Ref;
     using iterator_category = Category;
@@ -373,13 +390,11 @@ private:
 
     template <typename FromIter>
     static std::unique_ptr<iface_type> _make_impl(const FromIter& arg) {
-        if constexpr (is_any_iterator_v<FromIter>  //
-                      and std::same_as<iter_reference_t<FromIter>, reference>) {
-            return arg._iter ? arg._iter->clone() : nullptr;
-        } else {
-            return std::make_unique<iter_detail::erase_iterator<reference, FromIter>>(arg);
-        }
+        return std::make_unique<iter_detail::erase_iterator<reference, FromIter>>(arg);
     }
+
+    neo::type_tag do_type_tag() const noexcept override { return impl().type_tag(); }
+    const void*   do_cvoid_ptr() const noexcept override { return impl().void_ptr(); }
 
 public:
     // We are single-pass (input_iterator)
@@ -391,7 +406,7 @@ public:
     any_iterator() = default;
 
     // Simple copy:
-    any_iterator(const any_iterator& other)
+    any_iterator(const any_iterator& other) noexcept
         : _iter(other._iter ? other.impl().clone() : nullptr) {}
 
     // Simple assign:
@@ -414,7 +429,7 @@ public:
     template <typename Iter>
     requires derived_from<typename std::iterator_traits<Iter>::iterator_category,
                           iterator_category>
-          && iter_detail::iter_ref_convertible_to<iter_reference_t<Iter>, reference>
+          && iter_detail::iter_ref_convertible_to<std::iter_reference_t<Iter>, reference>
     any_iterator(const Iter& it)
         : _iter(_make_impl(it)) {}
     // clang-format on
@@ -446,29 +461,35 @@ public:
         requires derived_from<iterator_category, std::forward_iterator_tag> {
         return left.impl() == right.impl();
     }
-
-    // Use 'alike' to inhibit conversions from any_iterator -> any_sentinel
-    bool operator==(alike<any_sentinel> auto const& s) const noexcept { return s == *_iter; }
-
-    neo::type_tag type_tag() const noexcept { return impl().type_tag(); }
 };
+
+template <std::input_or_output_iterator It>
+any_iterator(It) -> any_iterator<std::iter_reference_t<It>,
+                                 typename std::iterator_traits<It>::iterator_category>;
 
 class any_sentinel {
     std::shared_ptr<iter_detail::erased_sentinel_parts> _impl;
 
-public:
-    any_sentinel() = default;
-
-    template <invocable<const iter_detail::erased_iface_base&> Func>
+    template <std::invocable<const any_iterator_base&> Func>
     explicit any_sentinel(Func&& fn)
         : _impl(std::make_shared<iter_detail::erase_sentinel<Func>>(NEO_FWD(fn))) {}
 
+public:
+    any_sentinel() = default;
+
     template <std::forward_iterator Iter>
-    requires std::sentinel_for<Iter, Iter> any_sentinel(const Iter& it)
+    any_sentinel(const Iter& it)
         : any_sentinel(iter_detail::common_erased_sentinel_compare_parts<Iter>{it}) {}
 
-    bool operator==(const iter_detail::erased_iface_base& iter) const noexcept {
-        return *_impl == iter;
+    template <std::input_or_output_iterator Iter, std::sentinel_for<Iter> S>
+    any_sentinel(neo::tag<Iter>, S sentinel)
+        : any_sentinel([sentinel = std::move(sentinel)](const any_iterator_base& it) {
+            auto iter = it.get<Iter>();
+            return iter == sentinel;
+        }) {}
+
+    bool operator==(const any_iterator_base& iter) const noexcept {
+        return _impl->compare_equal(iter);
     }
 };
 

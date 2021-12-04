@@ -14,10 +14,6 @@ namespace neo {
 template <typename Reference, typename Category>
 class any_iterator;
 
-template <std::input_or_output_iterator It>
-any_iterator(It) -> any_iterator<std::iter_reference_t<It>,
-                                 typename std::iterator_traits<It>::iterator_category>;
-
 template <typename Ref>
 using any_input_iterator = any_iterator<Ref, std::input_iterator_tag>;
 
@@ -29,13 +25,6 @@ using any_bidirectional_iterator = any_iterator<Ref, std::bidirectional_iterator
 
 template <typename Ref>
 using any_random_access_iterator = any_iterator<Ref, std::random_access_iterator_tag>;
-
-/** Determine whether the given type is a specialization of neo::any_iterator */
-template <typename T>
-constexpr bool is_any_iterator_v = false;
-
-template <typename Ref, typename Cat>
-constexpr bool is_any_iterator_v<any_iterator<Ref, Cat>> = true;
 
 /**
  * @brief A type-erased sentinel object.
