@@ -2,10 +2,8 @@
 
 #include "./version.hpp"
 
-#ifdef __cpp_lib_concepts
 #include <concepts>
 #include <iterator>
-#endif
 
 namespace neo {
 
@@ -20,13 +18,8 @@ namespace neo {
  * @tparam Iter The type of the iterator
  * @tparam Sentinel The type of the sentinel, or another iterator
  */
-
-#if __cpp_lib_concepts
 template <std::input_or_output_iterator Iter, std::sentinel_for<Iter> Sentinel>
-#else
-template <typename Iter, typename Sentinel>
-#endif
-class ad_hoc_range {
+class [[deprecated("Use std::ranges::subrange")]] ad_hoc_range {
     [[no_unique_address]] Iter     _iter;
     [[no_unique_address]] Sentinel _end;
 
@@ -44,8 +37,6 @@ public:
     constexpr Sentinel end() const noexcept { return _end; }
 };
 
-#if __cpp_lib_concepts
-
 template <std::input_or_output_iterator Iter, std::sentinel_for<Iter> Sentinel>
 explicit ad_hoc_range(Iter, Sentinel) -> ad_hoc_range<Iter, Sentinel>;
 
@@ -57,15 +48,5 @@ template <std::input_or_output_iterator Iter>
     }
 explicit ad_hoc_range(Iter) -> ad_hoc_range<Iter, typename Iter::sentinel_type>;
 // clang-format on
-
-#else
-
-template <typename Iter, typename Sentinel>
-explicit ad_hoc_range(Iter, Sentinel) -> ad_hoc_range<Iter, Sentinel>;
-
-template <typename Iter, typename Sentinel = typename Iter::sentinel_type>
-explicit ad_hoc_range(Iter) -> ad_hoc_range<Iter, Sentinel>;
-
-#endif
 
 }  // namespace neo

@@ -1,3 +1,7 @@
+#include "./platform.hpp"
+
+NEO_GNU_LIKE_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations");
+
 #include <neo/ad_hoc_range.hpp>
 
 #include <catch2/catch.hpp>
