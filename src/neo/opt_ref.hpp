@@ -1,75 +1,148 @@
 #pragma once
 
+#include "./opt_ref_fwd.hpp"
+
 #include <cassert>
+#include <compare>
+#include <concepts>
+#include <memory>
 #include <optional>
-#include <type_traits>
 
 namespace neo {
 
 using std::nullopt;
 using std::nullopt_t;
 
-template <typename T>
-class opt_ref;
-
-template <typename T>
-struct is_opt_ref : std::false_type {};
-
-template <typename T>
-struct is_opt_ref<opt_ref<T>> : std::true_type {};
-
-template <typename T>
-constexpr bool is_opt_ref_v = is_opt_ref<T>::value;
-
+/**
+ * @brief An optional reference type.
+ *
+ * Either contains a reference to a T, or is null
+ *
+ * @tparam T The referred-to type. May be cv-qualified.
+ */
 template <typename T>
 class opt_ref {
     T* _ptr = nullptr;
 
 public:
-    constexpr opt_ref() = default;
-    constexpr opt_ref(T& reference)
+    /// Default-construct to null
+    constexpr opt_ref() noexcept = default;
+    /// Bind to the given object
+    constexpr opt_ref(T& reference) noexcept
         : _ptr(std::addressof(reference)) {}
-    constexpr opt_ref(T* ptr)
+    /// Bind to a pointer to the object (may be nullptr)
+    constexpr opt_ref(T* ptr) noexcept
         : _ptr(ptr) {}
-    constexpr opt_ref(std::nullopt_t)
+    /// Explicitly construct as a null reference
+    constexpr opt_ref(std::nullopt_t) noexcept
         : _ptr(nullptr) {}
 
+    /// Determine whether the reference is bound or not
     constexpr explicit operator bool() const noexcept { return _ptr != nullptr; }
 
+    /**
+     * @brief Obtain a reference to the referred-to object. Asserts to be non-NULL
+     */
     constexpr T& operator*() const noexcept {
         assert(_ptr != nullptr && "Dereferencing null opt_ref");
         return *_ptr;
     }
 
+    /**
+     * @brief Access members of the pointed-to objects. Asserts to be non-NULL
+     */
     constexpr T* operator->() const noexcept {
         assert(_ptr != nullptr && "Dereferencing null opt_ref");
         return _ptr;
     }
 
+    // clang-format off
+    /**
+     * @brief Convert to an object that is constructible from either a T or a nullopt
+     */
     template <typename U>
-    constexpr operator U() const noexcept
-        requires(std::is_convertible_v<T&, U>&& std::is_convertible_v<std::nullopt_t, U>) {
+    requires std::constructible_from<U, T&>
+          && std::constructible_from<U, nullopt_t>
+    explicit(!std::convertible_to<T&, U>
+          || !std::convertible_to<nullopt_t, U>)
+    constexpr operator U() const
+        noexcept(std::is_nothrow_constructible_v<U, T&>  //
+              && std::is_nothrow_constructible_v<U, nullptr_t>)
+    {
+        // clang-format on
         if (*this) {
-            return **this;
+            return static_cast<U>(**this);
         }
-        return nullopt;
+        return static_cast<U>(nullopt);
     }
 
+    /**
+     * @brief Obtain a possibly-null pointer to the referred-to object
+     */
     constexpr T* pointer() const noexcept { return _ptr; }
 
     // Compare with nullopt
     constexpr friend bool operator==(opt_ref lhs, nullopt_t) noexcept { return !bool(lhs); }
-    constexpr friend bool operator==(nullopt_t, opt_ref rhs) noexcept { return !bool(rhs); }
-    constexpr friend bool operator!=(opt_ref lhs, nullopt_t) noexcept { return bool(lhs); }
-    constexpr friend bool operator!=(nullopt_t, opt_ref rhs) noexcept { return bool(rhs); }
-    constexpr friend bool operator<(opt_ref, nullopt_t) noexcept { return false; }
-    constexpr friend bool operator<(nullopt_t, opt_ref rhs) noexcept { return bool(rhs); }
-    constexpr friend bool operator<=(opt_ref lhs, nullopt_t) noexcept { return !bool(lhs); }
-    constexpr friend bool operator<=(nullopt_t, opt_ref) noexcept { return true; }
-    constexpr friend bool operator>(opt_ref lhs, nullopt_t) noexcept { return bool(lhs); }
-    constexpr friend bool operator>(nullopt_t, opt_ref) noexcept { return false; }
-    constexpr friend bool operator>=(opt_ref, nullopt_t) noexcept { return true; }
-    constexpr friend bool operator>=(nullopt_t, opt_ref rhs) noexcept { return !rhs; }
+    constexpr friend std::strong_ordering operator<=>(opt_ref lhs, nullopt_t) noexcept {
+        if (lhs) {
+            return std::strong_ordering::greater;
+        }
+        return std::strong_ordering::equal;
+    }
+
+    // Compare with another opt_ref
+    template <std::equality_comparable_with<T> Other>
+    constexpr friend bool operator==(opt_ref lhs, opt_ref<Other> rhs) noexcept {
+        if (bool(lhs) != bool(rhs)) {
+            return false;
+        }
+        return bool(lhs) ? (*lhs == *rhs) : true;
+    }
+    template <std::totally_ordered_with<T> Other>
+    constexpr friend auto operator<=>(opt_ref left, opt_ref<Other> right) noexcept {
+        using cat = std::compare_three_way_result_t<T, Other>;
+        if (bool(left) != bool(right)) {
+            if (left) {
+                // engaged > null
+                return cat::greater;
+            } else {
+                // null < enganged
+                return cat::less;
+            }
+        }
+        if (!left) {
+            // both null
+            return cat::equal;
+        }
+        // Compare the referred
+        return std::compare_three_way{}(*left, *right);
+    }
+
+    // clang-format off
+    // Compare with a value
+    template <typename Other>
+    requires (!is_opt_ref_v<Other>)
+          && std::equality_comparable_with<T, Other>
+    constexpr friend bool operator==(opt_ref lhs, const Other& value) noexcept {
+        // clang-format on
+        if (!lhs) {
+            return false;
+        }
+        return *lhs == value;
+    }
+    // clang-format off
+    template <typename Other>
+    requires (!is_opt_ref_v<Other>)
+          && std::totally_ordered_with<T, Other>
+    constexpr friend auto operator<=>(opt_ref lhs, const Other& value) noexcept {
+        using cat = std::compare_three_way_result_t<T, Other>;
+        // clang-format on
+        if (!lhs) {
+            return cat::less;
+        }
+        return std::compare_three_way{}(*lhs, value);
+    }
+    // clang-format on
 
     constexpr friend void do_repr(auto out, opt_ref const* self) noexcept {
         if constexpr (decltype(out)::template can_repr<T>) {
@@ -87,54 +160,6 @@ public:
             out.value("nullopt");
         }
     }
-
-#define DECL_OPT(Op)                                                                               \
-    template <typename Other>                                                                      \
-    constexpr friend bool operator Op(opt_ref lhs, opt_ref<Other> rhs) noexcept {                  \
-        if (!lhs) {                                                                                \
-            return nullopt Op rhs;                                                                 \
-        } else if (!rhs) {                                                                         \
-            return lhs Op nullopt;                                                                 \
-        } else {                                                                                   \
-            return *lhs Op * rhs;                                                                  \
-        }                                                                                          \
-    }                                                                                              \
-    static_assert(true)
-
-    DECL_OPT(==);
-    DECL_OPT(!=);
-    DECL_OPT(<);
-    DECL_OPT(<=);
-    DECL_OPT(>);
-    DECL_OPT(>=);
-#undef DECL_OPT
-
-#define DECL_OPT(Op, NullLeftValue, NullRightValue)                                                \
-    template <typename Other, typename = std::enable_if_t<!is_opt_ref<Other>::value>>              \
-    constexpr friend bool operator Op(opt_ref lhs, const Other& rhs) noexcept {                    \
-        if (!lhs) {                                                                                \
-            return NullLeftValue;                                                                  \
-        } else {                                                                                   \
-            return *lhs Op rhs;                                                                    \
-        }                                                                                          \
-    }                                                                                              \
-    template <typename Other, typename = std::enable_if_t<!is_opt_ref<Other>::value>>              \
-    constexpr friend bool operator Op(const Other& lhs, opt_ref rhs) noexcept {                    \
-        if (!rhs) {                                                                                \
-            return NullRightValue;                                                                 \
-        } else {                                                                                   \
-            return lhs Op * rhs;                                                                   \
-        }                                                                                          \
-    }                                                                                              \
-    static_assert(true)
-
-    DECL_OPT(==, false, false);
-    DECL_OPT(!=, true, true);
-    DECL_OPT(<, true, false);
-    DECL_OPT(<=, true, false);
-    DECL_OPT(>, false, true);
-    DECL_OPT(>=, false, true);
-#undef DECL_OPT
 };
 
 template <typename T>
