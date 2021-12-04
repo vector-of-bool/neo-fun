@@ -11,9 +11,12 @@
 NEO_TEST_CONCEPT(neo::ranges::range<neo::any_input_range<int>>);
 NEO_TEST_CONCEPT(neo::ranges::input_range<neo::any_input_range<int>>);
 
-void foo(neo::erased_input_range<const int&>&& range) {
-    int counter = 0;
-    for (auto v : range) {
+void foo(neo::any_input_range<const int&>&& range) {
+    int  counter = 0;
+    auto it      = range.begin();
+    auto end     = range.end();
+    for (; it != end; ++it) {
+        auto v = *it;
         CHECK(v > 0);
         CHECK(v < 5);
         ++counter;
@@ -23,12 +26,12 @@ void foo(neo::erased_input_range<const int&>&& range) {
 
 TEST_CASE("Erase a range") {
     const std::vector<int> vec = {1, 2, 3, 4};
-    foo(neo::erase_input_range(vec));
+    foo(neo::any_range(vec));
 }
 
 TEST_CASE("Create an any_range for vector<int>") {
-    std::vector<int>          vec = {1, 2, 3, 4};
-    neo::any_input_range<int> r{vec};
+    std::vector<int>                  vec = {1, 2, 3, 4};
+    neo::any_bidirectional_range<int> r{vec};
 
     int counter = 0;
     for (auto v : r) {
@@ -38,12 +41,11 @@ TEST_CASE("Create an any_range for vector<int>") {
     }
     CHECK(counter == 4);
 
-    auto v = neo::erase_input_range(vec);
-
-    neo::any_input_range v2 = v;
+    neo::any_forward_range<int> v2  = std::move(r);
+    neo::any_input_range<int>   ref = std::ref(v2);
 
     // Convert the range of ints to a range of doubles
-    neo::any_input_range<double> d_r = r;
+    neo::any_input_range<double> d_r = std::ref(v2);
 
     double d_counter = 0;
     for (auto d : d_r) {
@@ -69,8 +71,8 @@ TEST_CASE("Create an any_range for an uncommon range") {
         auto end() { return until_7_iter::sentinel_type(); }
     };
 
-    seven_range          svn;
-    neo::any_input_range any_svn = svn;
+    seven_range    svn;
+    neo::any_range any_svn = svn;
 
     auto plus_two = any_svn | std::views::transform([](auto i) { return i + 2; });
     auto it       = plus_two.begin();

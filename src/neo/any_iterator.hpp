@@ -1,52 +1,79 @@
 #pragma once
 
-#include "./range_concepts.hpp"
+#include "./any_iterator_fwd.hpp"
 
 #include "./assert.hpp"
 #include "./iterator_facade.hpp"
-#include "./memory.hpp"
+#include "./range_concepts.hpp"
 #include "./tag.hpp"
 
+#include <iterator>
+#include <memory>
+
 namespace neo {
+
+class any_iterator_base {
+    virtual neo::type_tag do_type_tag() const noexcept  = 0;
+    virtual const void*   do_cvoid_ptr() const noexcept = 0;
+
+public:
+    neo::type_tag type_tag() const noexcept { return do_type_tag(); }
+
+    template <typename T>
+    const T& get() const noexcept {
+        neo_assert(expects,
+                   type_tag() == type_tag_v<T>,
+                   "Invalid any_iterator::get<T>() of incorrect 'T'");
+        return *static_cast<const T*>(do_cvoid_ptr());
+    }
+};
+
+namespace iter_detail {
 
 /**
  * @brief Base class of all erased iterators
  */
-class erased_iterator_base {
-protected:
-    erased_iterator_base()  = default;
-    ~erased_iterator_base() = default;
-
-    virtual void* do_void_ptr() noexcept = 0;
+class erased_iface_base {
+private:
+    virtual void*         do_void_ptr() noexcept       = 0;
+    virtual neo::type_tag do_type_tag() const noexcept = 0;
 
 public:
+    virtual ~erased_iface_base() = default;
     /**
      * @brief Get a tag identifying the actually underlying type of the object
      */
-    virtual neo::type_tag type_tag() const noexcept = 0;
+    neo::type_tag type_tag() const noexcept { return do_type_tag(); }
+
+    void*       void_ptr() noexcept { return do_void_ptr(); }
+    const void* void_ptr() const noexcept {
+        return const_cast<erased_iface_base*>(this)->do_void_ptr();
+    }
 
     /**
-     * @brief Obtain a reference to the erased object, which must be of type T
+     * @brief Obtain a reference to the erased object, which MUST be of type T
      */
     template <typename T>
     T& get() noexcept {
         neo_assert(expects,
                    type_tag() == type_tag_v<T>,
-                   "erased_iterator_base::get() was given the wrong type");
+                   "erased_iface_base::get() was given the wrong type");
         return *static_cast<T*>(do_void_ptr());
     }
 
     template <typename T>
     const T& get() const noexcept {
-        return const_cast<erased_iterator_base*>(this)->get<T>();
+        return const_cast<erased_iface_base*>(this)->get<T>();
     }
 };
 
-template <std::input_or_output_iterator Iter>
-requires std::sentinel_for<Iter, Iter>
-struct common_erased_sentinel_compare {
+/**
+ * @brief Partially applied callable object that compares two common iterators
+ */
+template <std::forward_iterator Iter>
+struct common_erased_sentinel_compare_parts {
     Iter           iter;
-    constexpr bool operator()(const erased_iterator_base& other) const noexcept {
+    constexpr bool operator()(const any_iterator_base& other) const noexcept {
         return iter == other.get<Iter>();
     }
 };
@@ -54,13 +81,13 @@ struct common_erased_sentinel_compare {
 /**
  * @brief Base class of erased range sentinels
  */
-class erased_sentinel {
-    virtual bool do_compare_equal(const erased_iterator_base& iter) const noexcept = 0;
+class erased_sentinel_parts {
+    virtual bool do_compare_equal(const any_iterator_base& iter) const noexcept = 0;
 
 public:
-    virtual ~erased_sentinel() = default;
+    virtual ~erased_sentinel_parts() = default;
 
-    bool operator==(const erased_iterator_base& iter) const noexcept {
+    bool compare_equal(const any_iterator_base& iter) const noexcept {
         return do_compare_equal(iter);
     }
 };
@@ -69,17 +96,17 @@ public:
  * @brief Implementation of erased sentinels.
  *
  * An erased sentinel contains an invocable object accepting an
- * `erased_iterator_base`. The invocable should return a boolean indicating
+ * `erased_iface_base`. The invocable should return a boolean indicating
  * whether the given iterator is at the end of the range. Prefer any_sentinel
  * for most cases.
  *
  * Use this class with CTAD.
  */
-template <invocable<const erased_iterator_base&> Func>
-class erase_sentinel : public erased_sentinel {
+template <invocable<const any_iterator_base&> Func>
+class erase_sentinel : public erased_sentinel_parts {
     Func _fn;
 
-    bool do_compare_equal(const erased_iterator_base& iter) const noexcept override {
+    bool do_compare_equal(const any_iterator_base& iter) const noexcept override {
         return _fn(iter);
     }
 
@@ -89,59 +116,225 @@ public:
     explicit erase_sentinel(Func&& fn)
         : _fn(NEO_FWD(fn)) {}
 
-    template <forward_iterator Iter>
+    template <std::forward_iterator Iter>
     explicit erase_sentinel(const Iter& it)
         : _fn{it} {}
 };
 
-template <invocable<const erased_iterator_base&> Func>
-explicit erase_sentinel(Func&&) -> erase_sentinel<Func>;
-
-template <forward_iterator Iter>
-requires sentinel_for<Iter, Iter>
-explicit erase_sentinel(const Iter&)->erase_sentinel<common_erased_sentinel_compare<Iter>>;
+/**
+ * @brief Abstract base class types for type-erased iterator classes.
+ *
+ * @tparam Category The category of the erased iterator. Determines which interfaces are available
+ * @tparam Ref The reference type of the iterator (returned by operator*)
+ *
+ * For any 'tag', the `erased_iface<tag, R>` will inherit from the
+ * `erased_iface<PT, R>` where 'PT' is the next iterator in the heirarchy.
+ *
+ * (e.g. an erased_iface<random_access_iterator_tag> inherits from
+ * erased_iface<bidirectional_iterator_tag>.)
+ *
+ * This inheritance allows binding references to more restricted iterators to
+ * names of more capable iterators (i.e. you can bind a ref to a forward iterator to a
+ * random access iterator, but not the other way around.)
+ *
+ * Each `erased_iface` in the chain declares pure virtuals of the methods that can be given
+ * to `iterator_facade`.
+ */
+template <typename Category, typename Ref>
+struct erased_iface;
 
 /**
- * @brief A type-erased sentinel object.
+ * @brief Implementation class for the corresponding erased_iface
  *
- * Should be constructed with an invocable that acts as a boolean predicate on an
- * `erased_iterator_base const&`, returning `true` iff the iterator has reached the end denoted by
- * this sentinel.
+ * @tparam Category The part that is implemented by this class
+ * @tparam Ref The reference type of the interface
+ * @tparam Iter The actual type of iterator being erased
+ * @tparam Interface The actual base class interface. This might be different from the erased_iface
+ * of 'Category', since we may ourselves inherit from a more-expressive category
  */
-class any_sentinel {
-    std::shared_ptr<erased_sentinel> _impl;
+template <typename Category, typename Ref, typename Iter, typename Interface>
+struct erased_impl;
+
+// Base impl for iterator storage and dereference
+template <typename Ref, typename Iter, typename Interface>
+struct erased_impl<void, Ref, Iter, Interface> : Interface {
+private:
+    Iter _iter;
+
+    void*         do_void_ptr() noexcept override { return std::addressof(_iter); }
+    neo::type_tag do_type_tag() const noexcept override { return type_tag_v<Iter>; }
 
 public:
-    any_sentinel() = default;
+    using void_part        = erased_impl;
+    erased_impl() noexcept = default;
 
-    template <invocable<const erased_iterator_base&> Func>
-    explicit any_sentinel(Func&& fn)
-        : _impl(std::make_shared<erase_sentinel<Func>>(NEO_FWD(fn))) {}
-
-    template <std::forward_iterator Iter>
-    requires std::sentinel_for<Iter, Iter> any_sentinel(const Iter& it)
-        : any_sentinel(common_erased_sentinel_compare<Iter>{it}) {}
-
-    bool operator==(const erased_iterator_base& iter) const noexcept { return *_impl == iter; }
+    explicit erased_impl(Iter it) noexcept
+        : _iter(it) {}
 };
 
-/**
- * @brief Base class of erased input iterators with the given reference type. Can only be
- * incremented, dereferenced, and compared to iterators/sentinels. The type parameter is the
- * iter_reference_t type.
- */
-template <typename RefType>
-class erased_input_iterator : public erased_iterator_base,
-                              public iterator_facade<erased_input_iterator<RefType>> {
-public:
+/*
+#### ##    ## ########  ##     ## ########
+ ##  ###   ## ##     ## ##     ##    ##
+ ##  ####  ## ##     ## ##     ##    ##
+ ##  ## ## ## ########  ##     ##    ##
+ ##  ##  #### ##        ##     ##    ##
+ ##  ##   ### ##        ##     ##    ##
+#### ##    ## ##         #######     ##
+*/
+
+/// Specialized for input iterators
+template <typename Ref>
+struct erased_iface<std::input_iterator_tag, Ref> : erased_iface_base {
     enum { single_pass_iterator = true };
 
-    virtual ~erased_input_iterator() = default;
+    // Every impl will have its own clone()
+    std::unique_ptr<erased_iface> clone() const noexcept {
+        return std::unique_ptr<erased_iface>(do_clone());
+    }
 
-    virtual void    increment()                  = 0;
-    virtual RefType dereference() const noexcept = 0;
-    // Type-erased copy of the impl
-    virtual std::unique_ptr<erased_input_iterator<RefType>> clone() const noexcept = 0;
+    void increment() { do_increment(); }
+    Ref  dereference() const { return do_dereference(); }
+
+private:
+    // input iterators are requires to be incrementable
+    virtual void do_increment() = 0;
+    // And dereferencable
+    virtual Ref do_dereference() const = 0;
+
+    // The private virtual that will copy the erased iterator
+    virtual erased_iface* do_clone() const noexcept = 0;
+};
+
+template <typename Ref, typename Iter, typename Interface>
+struct erased_impl<std::input_iterator_tag, Ref, Iter, Interface>
+    : erased_impl<void, Ref, Iter, Interface> {
+    using input_part = erased_impl;
+    using input_part::void_part::void_part;
+
+    void do_increment() override { ++this->template get<Iter>(); }
+    Ref  do_dereference() const override { return *this->template get<Iter>(); }
+};
+
+/*
+########  #######  ########  ##      ##    ###    ########  ########
+##       ##     ## ##     ## ##  ##  ##   ## ##   ##     ## ##     ##
+##       ##     ## ##     ## ##  ##  ##  ##   ##  ##     ## ##     ##
+######   ##     ## ########  ##  ##  ## ##     ## ########  ##     ##
+##       ##     ## ##   ##   ##  ##  ## ######### ##   ##   ##     ##
+##       ##     ## ##    ##  ##  ##  ## ##     ## ##    ##  ##     ##
+##        #######  ##     ##  ###  ###  ##     ## ##     ## ########
+*/
+
+template <typename Ref>
+struct erased_iface<std::forward_iterator_tag, Ref> : erased_iface<std::input_iterator_tag, Ref> {
+    enum { single_pass_iterator = false };
+
+    std::unique_ptr<erased_iface> clone() const noexcept {
+        return std::unique_ptr<erased_iface>(do_clone());
+    }
+
+    friend bool operator==(const erased_iface& left, const erased_iface& right) noexcept {
+        return left.do_compare_equal(right);
+    }
+
+private:
+    virtual erased_iface* do_clone() const noexcept                                  = 0;
+    virtual bool          do_compare_equal(const erased_iface& right) const noexcept = 0;
+};
+
+template <typename Ref, typename Iter, typename Interface>
+struct erased_impl<std::forward_iterator_tag, Ref, Iter, Interface>
+    : erased_impl<std::input_iterator_tag, Ref, Iter, Interface> {
+    using forward_part = erased_impl;
+    using forward_part::input_part::input_part;
+
+private:
+    bool do_compare_equal(
+        const erased_iface<std::forward_iterator_tag, Ref>& other) const noexcept override {
+        return this->type_tag() == other.type_tag()
+            && this->template get<Iter>() == other.template get<Iter>();
+    }
+};
+
+/*
+########  #### ########  #### ########
+##     ##  ##  ##     ##  ##  ##     ##
+##     ##  ##  ##     ##  ##  ##     ##
+########   ##  ##     ##  ##  ########
+##     ##  ##  ##     ##  ##  ##   ##
+##     ##  ##  ##     ##  ##  ##    ##
+########  #### ########  #### ##     ##
+*/
+
+template <typename Ref>
+struct erased_iface<std::bidirectional_iterator_tag, Ref>
+    : erased_iface<std::forward_iterator_tag, Ref> {
+    std::unique_ptr<erased_iface> clone() const noexcept {
+        return std::unique_ptr<erased_iface>(do_clone());
+    }
+
+    void decrement() noexcept { do_decrement(); }
+
+private:
+    virtual erased_iface* do_clone() const noexcept = 0;
+    virtual void          do_decrement() noexcept   = 0;
+};
+
+template <typename Ref, typename Iter, typename Interface>
+struct erased_impl<std::bidirectional_iterator_tag, Ref, Iter, Interface>
+    : erased_impl<std::forward_iterator_tag, Ref, Iter, Interface> {
+    using bidirectional_part = erased_impl;
+    using bidirectional_part::forward_part::forward_part;
+
+private:
+    void do_decrement() noexcept override { --this->template get<Iter>(); }
+};
+
+/*
+########     ###    ##    ## ########   #######  ##     ##
+##     ##   ## ##   ###   ## ##     ## ##     ## ###   ###
+##     ##  ##   ##  ####  ## ##     ## ##     ## #### ####
+########  ##     ## ## ## ## ##     ## ##     ## ## ### ##
+##   ##   ######### ##  #### ##     ## ##     ## ##     ##
+##    ##  ##     ## ##   ### ##     ## ##     ## ##     ##
+##     ## ##     ## ##    ## ########   #######  ##     ##
+*/
+
+template <typename Ref>
+struct erased_iface<std::random_access_iterator_tag, Ref>
+    : erased_iface<std::bidirectional_iterator_tag, Ref> {
+    std::unique_ptr<erased_iface> clone() const noexcept {
+        return std::unique_ptr<erased_iface>(do_clone());
+    }
+
+    void           advance(std::ptrdiff_t offset) { do_advance(offset); }
+    std::ptrdiff_t distance_to(erased_iface const& other) const { return do_distance_to(other); }
+
+private:
+    virtual erased_iface*  do_clone() const noexcept                       = 0;
+    virtual void           do_advance(std::ptrdiff_t)                      = 0;
+    virtual std::ptrdiff_t do_distance_to(erased_iface const& other) const = 0;
+};
+
+template <typename Ref, typename Iter, typename Interface>
+struct erased_impl<std::random_access_iterator_tag, Ref, Iter, Interface>
+    : erased_impl<std::bidirectional_iterator_tag, Ref, Iter, Interface> {
+    using random_access_part = erased_impl;
+    using random_access_part::bidirectional_part::bidirectional_part;
+
+private:
+    void do_advance(std::ptrdiff_t off) override {
+        auto diff = static_cast<std::iter_difference_t<Iter>>(off);
+        this->template get<Iter>() += diff;
+    }
+
+    std::ptrdiff_t
+    do_distance_to(const erased_iface<std::random_access_iterator_tag, Ref>& other) const override {
+        neo_assert(expects,
+                   this->type_tag() == other.type_tag(),
+                   "Comparison with random_access_iterators with different underlying types");
+        return other.template get<Iter>() - this->template get<Iter>();
+    }
 };
 
 /**
@@ -157,119 +350,147 @@ public:
  * @tparam RefType The reference type to be returned by the erased iterator.
  * @tparam Iter The iterator type that has been erased.
  */
-template <typename RefType, typename Iter>
-requires convertible_to<iter_reference_t<Iter>, RefType>  //
-class erase_input_iterator : public erased_input_iterator<RefType> {
-    // The actual iterator:
-    Iter _it;
+template <typename Ref,
+          std::input_or_output_iterator Iter,
+          typename Cat = typename std::iterator_traits<Iter>::iterator_category>
+struct erase_iterator : erased_impl<Cat, Ref, Iter, erased_iface<Cat, Ref>>,
+                        iterator_facade<erase_iterator<Ref, Iter>> {
+    erase_iterator() = default;
 
-    void* do_void_ptr() noexcept override { return std::addressof(_it); }
-
-public:
-    erase_input_iterator() = default;
-
-    explicit erase_input_iterator(Iter it)
-        : _it(it) {}
-
-    // Advance the iterator:
-    void increment() override { ++_it; }
-    // Dereference the iterator, of course
-    RefType dereference() const noexcept override { return *_it; }
-
-    // Return the type tag of the underlying iterator
-    neo::type_tag type_tag() const noexcept override { return type_tag_v<Iter>; }
-
-    // Clone this object:
-    std::unique_ptr<erased_input_iterator<RefType>> clone() const noexcept override {
-        return copy_unique(*this);
-    }
-};
-
-template <typename It>
-explicit erase_input_iterator(const It&) -> erase_input_iterator<iter_reference_t<It>, It>;
-
-/**
- * @brief Type-erased input_iterator whose iter_reference_t is 'Ref' or convertible to 'Ref'
- *
- * Can be constructed with CTAD. The reference type of the erased iterator must be convertible to
- * 'Ref'.
- */
-template <typename Ref>
-class any_input_iterator : public iterator_facade<any_input_iterator<Ref>> {
-public:
-    using reference = Ref;
+    explicit erase_iterator(Iter it) noexcept
+        : erase_iterator::erased_impl(it) {}
 
 private:
-    using erased_iter_type = erased_input_iterator<reference>;
-    std::unique_ptr<erased_iter_type> _iter;
+    erase_iterator* do_clone() const noexcept { return new erase_iterator(*this); }
+};
+
+template <typename From, typename To>
+concept iter_ref_conversion_is_safe
+    = (!std::is_reference_v<To> ||  //
+       requires(std::add_pointer_t<To> dest, std::add_pointer_t<From> src) { dest = src; });
+
+template <typename From, typename To>
+concept iter_ref_convertible_to
+    = std::convertible_to<From, To> && iter_ref_conversion_is_safe<From, To>;
+
+}  // namespace iter_detail
+
+template <typename Ref, typename Category>
+class any_iterator : public any_iterator_base, public iterator_facade<any_iterator<Ref, Category>> {
+public:
+    using reference         = Ref;
+    using iterator_category = Category;
+
+    template <typename, typename>
+    friend class any_iterator;
+
+private:
+    using iface_type = iter_detail::erased_iface<iterator_category, reference>;
+    std::unique_ptr<iface_type> _iter;
+
+    template <typename FromIter>
+    static std::unique_ptr<iface_type> _make_impl(const FromIter& arg) {
+        return std::make_unique<iter_detail::erase_iterator<reference, FromIter>>(arg);
+    }
+
+    neo::type_tag do_type_tag() const noexcept override { return impl().type_tag(); }
+    const void*   do_cvoid_ptr() const noexcept override { return impl().void_ptr(); }
 
 public:
     // We are single-pass (input_iterator)
-    enum { single_pass_iterator = true };
+    enum {
+        single_pass_iterator = !std::derived_from<iterator_category, std::forward_iterator_tag>
+    };
 
     // Default-construct (required for std::regular)
-    any_input_iterator() = default;
+    any_iterator() = default;
 
     // Simple copy:
-    any_input_iterator(const any_input_iterator& other)
+    any_iterator(const any_iterator& other) noexcept
         : _iter(other._iter ? other.impl().clone() : nullptr) {}
 
     // Simple assign:
-    any_input_iterator& operator=(const any_input_iterator& other) {
+    any_iterator& operator=(const any_iterator& other) {
         _iter = other._iter ? other.impl().clone() : nullptr;
         return *this;
     }
 
     // Default-move
-    any_input_iterator(any_input_iterator&&) = default;
-    any_input_iterator& operator=(any_input_iterator&&) = default;
-
-    /**
-     * @brief Convert from some erased_input_iterator<reference>
-     *
-     * @param it The erased iterator
-     */
-    any_input_iterator(const erased_iter_type& it)
-        : _iter(it.clone()) {}
+    any_iterator(any_iterator&&) = default;
+    any_iterator& operator=(any_iterator&&) = default;
 
     /**
      * @brief Construct from any input_iterator whose reference_type is convertible to our own
      *
      * Excludes our own type as not to grab the copy/move constructors. Excludes
-     * erased_iterator types, to prevent recursing on this. infinitely.
+     * erased_iface types, to prevent recursing on this. infinitely.
      */
     // clang-format off
     template <typename Iter>
-    requires (!std::is_base_of_v<erased_iterator_base, Iter>)
-          && unalike<Iter, any_input_iterator>  // (Exclude our own type to not grab copy/move)
-          && input_iterator<Iter>
-          && convertible_to<iter_reference_t<Iter>, reference>
-    any_input_iterator(Iter it)
-        : any_input_iterator(erase_input_iterator<reference, Iter>(it)) {}
+    requires derived_from<typename std::iterator_traits<Iter>::iterator_category,
+                          iterator_category>
+          && iter_detail::iter_ref_convertible_to<std::iter_reference_t<Iter>, reference>
+    any_iterator(const Iter& it)
+        : _iter(_make_impl(it)) {}
     // clang-format on
 
-    /**
-     * @brief Convert from an erased input_iterator of a different return type
-     * that is able to convert to our own reference_type.
-     */
-    template <unalike<reference> U>
-    requires(convertible_to<U, reference>) any_input_iterator(const erased_input_iterator<U>& it)
-        : any_input_iterator(any_input_iterator<U>(it)) {}
-
     auto& impl() const noexcept {
-        neo_assert(expects, _iter != nullptr, "Dereference of null any_input_iterator");
+        neo_assert(expects, _iter != nullptr, "Dereference of null any_iterator");
         return *_iter;
     }
 
     reference dereference() const { return impl().dereference(); }
     void      increment() { impl().increment(); }
 
-    bool operator==(const any_sentinel& s) const noexcept { return s == *_iter; }
+    void decrement() requires derived_from<iterator_category, std::bidirectional_iterator_tag> {
+        impl().decrement();
+    }
 
-    neo::type_tag type_tag() const noexcept { return impl().type_tag(); }
+    void advance(std::ptrdiff_t off) requires
+        derived_from<iterator_category, std::random_access_iterator_tag> {
+        impl().advance(off);
+    }
+
+    std::ptrdiff_t distance_to(const any_iterator& other) const requires
+        derived_from<iterator_category, std::random_access_iterator_tag> {
+        return impl().distance_to(other.impl());
+    }
+
+    // Compare two any_iterators iff they are forward iterators
+    friend bool operator==(const any_iterator& left, const any_iterator& right) noexcept  //
+        requires derived_from<iterator_category, std::forward_iterator_tag> {
+        return left.impl() == right.impl();
+    }
 };
 
-template <input_iterator It>
-any_input_iterator(It) -> any_input_iterator<iter_reference_t<It>>;
+template <std::input_or_output_iterator It>
+any_iterator(It) -> any_iterator<std::iter_reference_t<It>,
+                                 typename std::iterator_traits<It>::iterator_category>;
+
+class any_sentinel {
+    std::shared_ptr<iter_detail::erased_sentinel_parts> _impl;
+
+    template <std::invocable<const any_iterator_base&> Func>
+    explicit any_sentinel(Func&& fn)
+        : _impl(std::make_shared<iter_detail::erase_sentinel<Func>>(NEO_FWD(fn))) {}
+
+public:
+    any_sentinel() = default;
+
+    template <std::forward_iterator Iter>
+    any_sentinel(const Iter& it)
+        : any_sentinel(iter_detail::common_erased_sentinel_compare_parts<Iter>{it}) {}
+
+    template <std::input_or_output_iterator Iter, std::sentinel_for<Iter> S>
+    any_sentinel(neo::tag<Iter>, S sentinel)
+        : any_sentinel([sentinel = std::move(sentinel)](const any_iterator_base& it) {
+            auto iter = it.get<Iter>();
+            return iter == sentinel;
+        }) {}
+
+    bool operator==(const any_iterator_base& iter) const noexcept {
+        return _impl->compare_equal(iter);
+    }
+};
 
 }  // namespace neo
