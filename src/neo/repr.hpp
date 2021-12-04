@@ -22,10 +22,6 @@ namespace neo {
 // First declare the basic interface of a repr()-able type
 namespace repr_detail {
 
-// Tag dispatch helper for certain types
-template <typename>
-struct tag {};
-
 // Type that is passed to the repr() extension points
 class repr_writer;
 
