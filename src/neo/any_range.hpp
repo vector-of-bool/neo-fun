@@ -5,7 +5,8 @@
 #include "./any_iterator.hpp"
 #include "./assert.hpp"
 #include "./fwd.hpp"
-#include "./ref.hpp"
+#include "./ref_member.hpp"
+#include "./unref.hpp"
 
 #include <memory>
 #include <ranges>
@@ -39,13 +40,13 @@ private:
     using sentinel = std::
         conditional_t<std::derived_from<Cat, std::forward_iterator_tag>, iterator, any_sentinel>;
 
-    using wrapped_iter = std::ranges::iterator_t<std::unwrap_reference_t<Range>>;
-    wrap_refs_t<Range> _range;
+    using wrapped_iter = std::ranges::iterator_t<neo::unref_t<Range>>;
+    Range _range;
 
     iterator do_begin() override { return std::ranges::begin(neo::unref(_range)); }
     sentinel do_end() override {
         if constexpr (std::same_as<sentinel, any_sentinel>) {
-            return any_sentinel{neo::tag_v<wrapped_iter>, std::ranges::end(neo::unref(_range))};
+            return any_sentinel(neo::tag_v<wrapped_iter>, std::ranges::end(neo::unref(_range)));
         } else {
             return std::ranges::end(neo::unref(_range));
         }

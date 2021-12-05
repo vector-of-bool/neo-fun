@@ -72,4 +72,10 @@ constexpr decltype(auto) unref(T&& t) noexcept {
     }                                                                                              \
     static_assert(true)
 
+/**
+ * @brief Obtain the reference type returned by neo::unref(T)
+ */
+template <typename T>
+using unref_t = decltype(unref(((T(*)())(void*)(nullptr))()));
+
 }  // namespace neo
