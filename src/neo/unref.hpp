@@ -4,9 +4,6 @@ namespace neo {
 
 namespace unref_detail {
 
-template <typename T>
-struct inherit_from : T {};
-
 template <typename T, typename U>
 constexpr bool same_type_v = false;
 
@@ -15,13 +12,13 @@ constexpr bool same_type_v<T, T> = true;
 
 // clang-format off
 template <typename R>
-constexpr bool check_call_convert =
+concept check_call_convert =
     requires(R const ref, void (&func)(typename R::type&) noexcept) {
         { func(ref) } noexcept;
     };
 
 template <typename R>
-constexpr bool like_a_reference_wrapper =
+concept like_a_reference_wrapper =
     requires(R const ref, R mref) {
         typename R::type;
         requires !same_type_v<R, typename R::type>;
@@ -33,13 +30,16 @@ constexpr bool like_a_reference_wrapper =
     };
 
 template <typename T>
-constexpr bool like_a_reference_wrapper<T&> = like_a_reference_wrapper<T>;
+constexpr bool like_a_reference_wrapper_v = like_a_reference_wrapper<T>;
 
 template <typename T>
-constexpr bool like_a_reference_wrapper<const T&> = like_a_reference_wrapper<T>;
+constexpr bool like_a_reference_wrapper_v<T&> = like_a_reference_wrapper_v<T>;
 
 template <typename T>
-constexpr bool like_a_reference_wrapper<const T&&> = like_a_reference_wrapper<T>;
+constexpr bool like_a_reference_wrapper_v<const T&> = like_a_reference_wrapper_v<T>;
+
+template <typename T>
+constexpr bool like_a_reference_wrapper_v<const T&&> = like_a_reference_wrapper_v<T>;
 
 }  // namespace unref_detail
 
@@ -50,7 +50,7 @@ constexpr bool like_a_reference_wrapper<const T&&> = like_a_reference_wrapper<T>
  */
 template <typename T>
 constexpr decltype(auto) unref(T&& t) noexcept {
-    if constexpr (unref_detail::like_a_reference_wrapper<T>) {
+    if constexpr (unref_detail::like_a_reference_wrapper_v<T>) {
         return t.get();
     } else {
         return static_cast<T&&>(t);
