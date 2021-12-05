@@ -15,6 +15,12 @@ constexpr bool same_type_v<T, T> = true;
 
 // clang-format off
 template <typename R>
+constexpr bool check_call_convert =
+    requires(R const ref, void (&func)(typename R::type&) noexcept) {
+        { func(ref) } noexcept;
+    };
+
+template <typename R>
 constexpr bool like_a_reference_wrapper =
     requires(R const ref, R mref) {
         typename R::type;
@@ -23,9 +29,7 @@ constexpr bool like_a_reference_wrapper =
         { ref.get() } noexcept;
         { static_cast<typename R::type&>(ref) } noexcept;
         requires same_type_v<decltype(ref.get()), typename R::type&>;
-        requires requires (void (&func)(typename R::type&) noexcept) {
-            { func(ref) } noexcept;
-        };
+        requires check_call_convert<R>;
     };
 
 template <typename T>
