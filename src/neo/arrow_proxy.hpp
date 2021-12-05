@@ -1,9 +1,8 @@
 #pragma once
 
-#include <neo/fwd.hpp>
-#include <neo/ref.hpp>
-
-#include <memory>
+#include "./addressof.hpp"
+#include "./ref_member.hpp"
+#include "./unref.hpp"
 
 namespace neo {
 
@@ -14,20 +13,20 @@ namespace neo {
  */
 template <typename T>
 class arrow_proxy {
-    wrap_refs_t<T> _value;
+    wrap_ref_member_t<T> _value;
 
 public:
     explicit constexpr arrow_proxy(T&& t) noexcept
-        : _value(NEO_FWD(t)) {}
+        : _value(static_cast<T&&>(t)) {}
 
     constexpr auto& operator*() noexcept { return unref(_value); }
     constexpr auto& operator*() const noexcept { return unref(_value); }
 
-    constexpr auto operator->() noexcept { return std::addressof(**this); }
-    constexpr auto operator->() const noexcept { return std::addressof(**this); }
+    constexpr auto operator->() noexcept { return neo::addressof(**this); }
+    constexpr auto operator->() const noexcept { return neo::addressof(**this); }
 };
 
 template <typename T>
-arrow_proxy(T &&) -> arrow_proxy<T>;
+arrow_proxy(T&&) -> arrow_proxy<T>;
 
 }  // namespace neo
