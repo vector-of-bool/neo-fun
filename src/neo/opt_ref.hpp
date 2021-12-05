@@ -2,10 +2,11 @@
 
 #include "./opt_ref_fwd.hpp"
 
+#include "./addressof.hpp"
+
 #include <cassert>
 #include <compare>
 #include <concepts>
-#include <memory>
 #include <optional>
 
 namespace neo {
@@ -91,16 +92,16 @@ public:
     }
 
     // Compare with another opt_ref
-    template <std::equality_comparable_with<T> Other>
-    constexpr friend bool operator==(opt_ref lhs, opt_ref<Other> rhs) noexcept {
+    constexpr friend bool operator==(opt_ref lhs, opt_ref rhs) noexcept  //
+        requires std::equality_comparable<T> {
         if (bool(lhs) != bool(rhs)) {
             return false;
         }
         return bool(lhs) ? (*lhs == *rhs) : true;
     }
-    template <std::totally_ordered_with<T> Other>
-    constexpr friend auto operator<=>(opt_ref left, opt_ref<Other> right) noexcept {
-        using cat = std::compare_three_way_result_t<T, Other>;
+    constexpr friend auto operator<=>(opt_ref left, opt_ref right) noexcept  //
+        requires std::three_way_comparable<T> {
+        using cat = std::compare_three_way_result_t<T>;
         if (bool(left) != bool(right)) {
             if (left) {
                 // engaged > null
@@ -118,8 +119,8 @@ public:
         return std::compare_three_way{}(*left, *right);
     }
 
-    constexpr friend bool operator==(opt_ref  lhs,
-                                     const T& value) noexcept  //
+    constexpr friend bool operator==(const opt_ref& lhs,
+                                     const T&       value) noexcept  //
         requires std::equality_comparable<T> {
         if (!lhs) {
             return false;
@@ -127,8 +128,8 @@ public:
         return *lhs == value;
     }
 
-    constexpr friend auto operator<=>(opt_ref  lhs,
-                                      const T& rhs) noexcept  //
+    constexpr friend auto operator<=>(const opt_ref& lhs,
+                                      const T&       rhs) noexcept  //
         requires std::three_way_comparable<T> {
         using cat = std::compare_three_way_result_t<T>;
         if (!lhs) {
