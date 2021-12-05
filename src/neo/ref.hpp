@@ -36,7 +36,8 @@ using wrap_refs_t [[deprecated("Use wrap_ref_member_t and ref_member")]] =
     typename wrap_refs<T>::type;
 
 template <typename T>
-using wrap_if_reference_t [[deprecated("Use wrap_ref_member_t and ref_member")]] = wrap_refs_t<T>;
+using wrap_if_reference_t [[deprecated("Use wrap_ref_member_t and ref_member")]] =
+    typename wrap_refs<T>::type;
 
 /**
  * @brief Declare a method 'FuncName' that rebinds a reference-wrapper member 'MemName'
