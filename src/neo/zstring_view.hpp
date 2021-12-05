@@ -84,7 +84,8 @@ public:
      * terminator
      */
     template <typename Alloc>
-    constexpr basic_zstring_view(const std::basic_string<value_type, traits_type, Alloc>& str)
+    constexpr basic_zstring_view(
+        const std::basic_string<value_type, traits_type, Alloc>& str) noexcept
         : _base(str) {}
 
     /**
