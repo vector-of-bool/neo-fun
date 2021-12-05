@@ -1,6 +1,7 @@
 #include "./any_range.hpp"
 
 #include "./iterator_facade.hpp"
+#include "./pipe.hpp"
 #include "./range_concepts.hpp"
 #include "./test_concept.hpp"
 
@@ -10,6 +11,15 @@
 
 NEO_TEST_CONCEPT(neo::ranges::range<neo::any_input_range<int>>);
 NEO_TEST_CONCEPT(neo::ranges::input_range<neo::any_input_range<int>>);
+
+static_assert(!std::copyable<neo::any_input_range<int>>);
+static_assert(std::movable<neo::any_input_range<int>>);
+
+struct with_any_range {
+    neo::any_input_range<int> r;
+};
+
+static_assert(std::movable<with_any_range>);
 
 void foo(neo::any_input_range<const int&>&& range) {
     int  counter = 0;
@@ -83,4 +93,13 @@ TEST_CASE("Create an any_range for an uncommon range") {
     ++it;
     ++it;
     CHECK(it == plus_two.end());
+}
+
+TEST_CASE("A transform_view as an input_range") {
+    auto                              arr = std::array{1, 2, 3, 4};
+    neo::any_input_range<std::string> as_strings
+        = arr | std::views::transform([](auto i) { return std::to_string(i); });
+    auto tr2 = as_strings | std::views::transform([](auto s) { return s.length(); });
+    neo::any_input_iterator<std::string::size_type> iv(tr2.begin());
+    neo::any_input_range<std::string::size_type>    as_lengths = tr2;
 }

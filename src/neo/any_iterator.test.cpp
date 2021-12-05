@@ -16,31 +16,31 @@ TEST_CASE("Create an erased input_iterator") {
     std::forward_list<int> fl = {1, 2, 3, 4};
 
     neo::any_iterator fit{fl.cbegin()};
-    // CHECK(*fit == 1);
-    // (void)fit;
+    CHECK(*fit == 1);
+    (void)fit;
 
-    // std::vector<int>  vec = {1, 2, 3, 4};
-    // neo::any_iterator it{vec.cbegin()};
-    // CHECK(it == it);
-    // neo::any_sentinel end{vec.cend()};
-    // CHECK(it != end);
-    // auto it2 = it;
-    // CHECK(it2 == it);
-    // CHECK(it2 != end);
-    // ++it2;
-    // CHECK(it != it2);
-    // CHECK((it2 - it) == 1);
+    std::vector<int>  vec = {1, 2, 3, 4};
+    neo::any_iterator it{vec.cbegin()};
+    CHECK(it == it);
+    neo::any_sentinel end{vec.cend()};
+    CHECK(it != end);
+    auto it2 = it;
+    CHECK(it2 == it);
+    CHECK(it2 != end);
+    ++it2;
+    CHECK(it != it2);
+    CHECK((it2 - it) == 1);
 
-    // CHECK(*it == 1);
-    // ++it;
-    // CHECK(*it == 2);
-    // CHECK(it != end);
-    // ++it;
-    // ++it;
-    // ++it;
-    // CHECK(it == end);
+    CHECK(*it == 1);
+    ++it;
+    CHECK(*it == 2);
+    CHECK(it != end);
+    ++it;
+    ++it;
+    ++it;
+    CHECK(it == end);
 
-    // static_assert(neo::detail::sized_sentinel_of<decltype(it), decltype(it)>);
+    static_assert(neo::detail::sized_sentinel_of<decltype(it), decltype(it)>);
 }
 
 NEO_TEST_CONCEPT(neo::input_iterator<neo::any_random_access_iterator<int>>);

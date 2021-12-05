@@ -3,6 +3,7 @@
 #include "./any_iterator_fwd.hpp"
 
 #include "./assert.hpp"
+#include "./iterator.hpp"
 #include "./iterator_facade.hpp"
 #include "./range_concepts.hpp"
 #include "./tag.hpp"
@@ -337,6 +338,23 @@ private:
     }
 };
 
+template <typename Ref>
+struct erased_iface<std::contiguous_iterator_tag, Ref>
+    : erased_iface<std::random_access_iterator_tag, Ref> {
+    std::unique_ptr<erased_iface> clone() const noexcept {
+        return std::unique_ptr<erased_iface>(do_clone());
+    }
+
+private:
+    virtual erased_iface* do_clone() const noexcept = 0;
+};
+
+template <typename Ref, typename Iter, typename Interface>
+struct erased_impl<std::contiguous_iterator_tag, Ref, Iter, Interface>
+    : erased_impl<std::random_access_iterator_tag, Ref, Iter, Interface> {
+    using erased_impl::random_access_part::random_access_part;
+};
+
 /**
  * @brief Implementation class of erased input iterators.
  *
@@ -350,9 +368,7 @@ private:
  * @tparam RefType The reference type to be returned by the erased iterator.
  * @tparam Iter The iterator type that has been erased.
  */
-template <typename Ref,
-          std::input_or_output_iterator Iter,
-          typename Cat = typename std::iterator_traits<Iter>::iterator_category>
+template <typename Ref, std::input_or_output_iterator Iter, typename Cat = iter_concept_t<Iter>>
 struct erase_iterator : erased_impl<Cat, Ref, Iter, erased_iface<Cat, Ref>> {
     erase_iterator() = default;
 
@@ -421,13 +437,11 @@ public:
     /**
      * @brief Construct from any input_iterator whose reference_type is convertible to our own
      *
-     * Excludes our own type as not to grab the copy/move constructors. Excludes
-     * erased_iface types, to prevent recursing on this. infinitely.
+     * Excludes our own type as not to grab the copy/move constructors.
      */
     // clang-format off
-    template <typename Iter>
-    requires derived_from<typename std::iterator_traits<Iter>::iterator_category,
-                          iterator_category>
+    template <unalike<any_iterator> Iter>
+    requires derived_from<iter_concept_t<Iter>, iterator_category>
           && iter_detail::iter_ref_convertible_to<std::iter_reference_t<Iter>, reference>
     any_iterator(const Iter& it)
         : _iter(_make_impl(it)) {}
@@ -463,31 +477,37 @@ public:
 };
 
 template <std::input_or_output_iterator It>
-any_iterator(It) -> any_iterator<std::iter_reference_t<It>,
-                                 typename std::iterator_traits<It>::iterator_category>;
+any_iterator(It) -> any_iterator<std::iter_reference_t<It>, iter_concept_t<It>>;
 
 class any_sentinel {
     std::shared_ptr<iter_detail::erased_sentinel_parts> _impl;
 
+    struct from_fn {};
+
     template <std::invocable<const any_iterator_base&> Func>
-    explicit any_sentinel(Func&& fn)
+    explicit any_sentinel(Func&& fn, from_fn)
         : _impl(std::make_shared<iter_detail::erase_sentinel<Func>>(NEO_FWD(fn))) {}
 
 public:
     any_sentinel() = default;
 
+    any_sentinel(const any_sentinel&) noexcept = default;
+
     template <std::forward_iterator Iter>
     any_sentinel(const Iter& it)
-        : any_sentinel(iter_detail::common_erased_sentinel_compare_parts<Iter>{it}) {}
+        : any_sentinel(iter_detail::common_erased_sentinel_compare_parts<Iter>{it}, from_fn{}) {}
 
     template <std::input_or_output_iterator Iter, std::sentinel_for<Iter> S>
     any_sentinel(neo::tag<Iter>, S sentinel)
-        : any_sentinel([sentinel = std::move(sentinel)](const any_iterator_base& it) {
-            auto iter = it.get<Iter>();
-            return iter == sentinel;
-        }) {}
+        : any_sentinel(
+            [sentinel = std::move(sentinel)](const any_iterator_base& it) {
+                auto iter = it.get<Iter>();
+                return iter == sentinel;
+            },
+            from_fn{}) {}
 
-    bool operator==(const any_iterator_base& iter) const noexcept {
+    // Inhibit conversions with 'derived_from'
+    bool operator==(std::derived_from<any_iterator_base> auto const& iter) const noexcept {
         return _impl->compare_equal(iter);
     }
 };
