@@ -118,31 +118,24 @@ public:
         return std::compare_three_way{}(*left, *right);
     }
 
-    // clang-format off
-    // Compare with a value
-    template <typename Other>
-    requires (!is_opt_ref_v<Other>)
-          && std::equality_comparable_with<T, Other>
-    constexpr friend bool operator==(opt_ref lhs, const Other& value) noexcept {
-        // clang-format on
+    constexpr friend bool operator==(opt_ref  lhs,
+                                     const T& value) noexcept  //
+        requires std::equality_comparable<T> {
         if (!lhs) {
             return false;
         }
         return *lhs == value;
     }
-    // clang-format off
-    template <typename Other>
-    requires (!is_opt_ref_v<Other>)
-          && std::totally_ordered_with<T, Other>
-    constexpr friend auto operator<=>(opt_ref lhs, const Other& value) noexcept {
-        using cat = std::compare_three_way_result_t<T, Other>;
-        // clang-format on
+
+    constexpr friend auto operator<=>(opt_ref  lhs,
+                                      const T& rhs) noexcept  //
+        requires std::three_way_comparable<T> {
+        using cat = std::compare_three_way_result_t<T>;
         if (!lhs) {
             return cat::less;
         }
-        return std::compare_three_way{}(*lhs, value);
+        return std::compare_three_way{}(*lhs, rhs);
     }
-    // clang-format on
 
     constexpr friend void do_repr(auto out, opt_ref const* self) noexcept {
         if constexpr (decltype(out)::template can_repr<T>) {

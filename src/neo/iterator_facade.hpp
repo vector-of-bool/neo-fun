@@ -126,20 +126,20 @@ struct iterator_facade_base {
     }
 
     template <random_access_iter_self Self, iter_diff<Self> Diff>
-    [[nodiscard]] constexpr friend auto operator-(const Self& self, Diff off) noexcept {
+    [[nodiscard]] constexpr friend Self operator-(const Self& self, Diff off) noexcept {
         using diff_type        = infer_difference_type_t<Self>;
         using signed_diff_type = std::make_signed_t<diff_type>;
         return self + -static_cast<signed_diff_type>(off);
     }
 
     template <random_access_iter_self Self, iter_diff<Self> Diff>
-    [[nodiscard]] constexpr friend auto operator+(const Self& self, Diff off) noexcept {
+    [[nodiscard]] constexpr friend Self operator+(const Self& self, Diff off) noexcept {
         auto cp = self;
         return cp += off;
     }
 
     template <random_access_iter_self Self, iter_diff<Self> Diff>
-    [[nodiscard]] constexpr friend auto operator+(Diff off, const Self& self) noexcept {
+    [[nodiscard]] constexpr friend Self operator+(Diff off, const Self& self) noexcept {
         return self + off;
     }
 
@@ -175,8 +175,15 @@ struct iterator_facade_base {
         return s;
     }
 
+    // clang-format off
     template <iter_self Self>
-    constexpr friend auto operator++(Self& self, int) noexcept(noexcept_incrementable<Self>) {
+    constexpr friend
+    std::conditional_t<
+        detail::iter_is_single_pass<Self>,
+            void,
+            std::remove_cvref_t<Self>>
+    operator++(Self& self, int) noexcept(noexcept_incrementable<Self>) {
+        // clang-format on
         if constexpr (detail::iter_is_single_pass<Self>) {
             // The iterator is a single-pass iterator. It isn't safe to make and
             // return an old copy.
@@ -199,7 +206,7 @@ struct iterator_facade_base {
     }
 
     template <bidirectional_iter_self Self>
-    constexpr friend auto operator--(Self& self, int) noexcept {
+    constexpr friend std::remove_cvref_t<Self> operator--(Self& self, int) noexcept {
         auto cp = self;
         --self;
         return cp;
@@ -210,7 +217,8 @@ struct iterator_facade_base {
      * operators, since we can also rely on synthesized rewrites
      */
     template <random_access_iter_self Self, detail::sized_sentinel_of<Self> S>
-    [[nodiscard]] constexpr friend auto operator<=>(const Self& self, const S& right) noexcept {
+    [[nodiscard]] constexpr friend std::strong_ordering operator<=>(const Self& self,
+                                                                    const S&    right) noexcept {
         auto dist = self - right;
         auto rel  = dist <=> 0;
         return rel;
@@ -221,15 +229,11 @@ struct iterator_facade_base {
      * operators, since we can also rely on synthesized rewrites
      */
     template <random_access_iter_self Self, detail::sized_sentinel_of<Self> S>
-    [[nodiscard]] constexpr friend auto operator<(const Self& self, const S& right) noexcept {
+    [[nodiscard]] constexpr friend bool operator<(const Self& self, const S& right) noexcept {
         auto dist = self - right;
         auto rel  = dist < 0;
         return rel;
     }
-
-#if !__cpp_impl_three_way_comparison
-#error "neo/iterator_facade.hpp requires three-way-comparison support"
-#endif
 };
 
 }  // namespace detail

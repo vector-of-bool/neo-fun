@@ -353,8 +353,7 @@ private:
 template <typename Ref,
           std::input_or_output_iterator Iter,
           typename Cat = typename std::iterator_traits<Iter>::iterator_category>
-struct erase_iterator : erased_impl<Cat, Ref, Iter, erased_iface<Cat, Ref>>,
-                        iterator_facade<erase_iterator<Ref, Iter>> {
+struct erase_iterator : erased_impl<Cat, Ref, Iter, erased_iface<Cat, Ref>> {
     erase_iterator() = default;
 
     explicit erase_iterator(Iter it) noexcept
