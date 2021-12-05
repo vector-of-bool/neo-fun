@@ -1,6 +1,7 @@
 #include "./range_archetypes.hpp"
 
 #include <ranges>
+#include <string>
 
 using namespace neo::arch;
 namespace sr = std::ranges;

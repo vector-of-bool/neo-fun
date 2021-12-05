@@ -11,8 +11,16 @@
 
 #include <catch2/catch.hpp>
 
+template <neo::basic_fixed_string S>
+struct inner;
+
 template <neo::basic_fixed_string String>
-struct test_nttp_string {};
+struct test_nttp_string {
+    using b = inner<String>;
+};
+
+template <>
+struct test_nttp_string<"howdy do"> {};
 
 TEST_CASE("Create a basic fixed string") {
     neo::basic_fixed_string fstr = "I am another fixed string";

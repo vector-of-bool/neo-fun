@@ -1,5 +1,6 @@
 #pragma once
 
+#include "./declval.hpp"
 #include <neo/fwd.hpp>
 #include <neo/opt_ref.hpp>
 
@@ -30,7 +31,7 @@ public:
     constexpr operator T&() const noexcept { return _dest; }
 
     friend constexpr void do_repr(auto out, const output* self) noexcept requires requires {
-        out.repr(self->get());
+        out.repr(NEO_DECLVAL(const T&));
     }
     {
         out.type("neo::output");
@@ -78,9 +79,9 @@ public:
 
     constexpr explicit operator bool() const noexcept { return bool(_dest); }
 
-    friend constexpr void do_repr(auto out, const optional_output* self) noexcept
-        requires requires {
-        out.repr(**self);
+    friend constexpr void do_repr(auto                   out,
+                                  const optional_output* self) noexcept requires requires {
+        out.repr(NEO_DECLVAL(const T&));
     }
     {
         out.type("neo::optional_output<{}>", out.template repr_type<T>());

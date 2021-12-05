@@ -20,9 +20,9 @@ using std::ranges::iterator_t;
 using std::ranges::range;
 using std::ranges::range_difference_t;
 using std::ranges::range_reference_t;
+using std::ranges::range_size_t;
 using std::ranges::range_value_t;
 using std::ranges::sentinel_t;
-using std::ranges::sized_range;
 using std::ranges::view;
 
 template <range T>
@@ -30,13 +30,13 @@ struct range_index {
     using type = std::make_unsigned_t<range_difference_t<T>>;
 };
 
-template <sized_range T>
+template <std::ranges::sized_range T>
 struct range_index<T> {
-    using type = std::ranges::range_size_t<T>;
+    using type = range_size_t<T>;
 };
 
 template <std::ranges::range T>
-using range_index_t = range_index<T>::type;
+using range_index_t = typename range_index<T>::type;
 
 // clang-format off
 /**
@@ -68,7 +68,7 @@ struct to_vector_fn : pipable {
             return vec_type{std::ranges::begin(range), std::ranges::end(range)};
         } else {
             vec_type ret;
-            if constexpr (sized_range<R>) {
+            if constexpr (std::ranges::sized_range<R>) {
                 ret.reserve(std::ranges::size(range));
             }
             for (auto&& elem : range) {
@@ -114,8 +114,8 @@ class enumerate_view : public std::ranges::view_interface<enumerate_view<R>> {
             : _base_sentinel(s) {}
 
         constexpr _sentinel_t(_sentinel_t<!Const> o)  //
-            requires Const&& std::convertible_to<sentinel_t<R>, BaseSentinel>
-            : _base_sentinel(o.base()) {}
+            requires Const
+            && std::convertible_to<sentinel_t<R>, BaseSentinel> : _base_sentinel(o.base()) {}
 
         constexpr auto base() const noexcept { return _base_sentinel; }
 
@@ -145,9 +145,9 @@ class enumerate_view : public std::ranges::view_interface<enumerate_view<R>> {
             : _base_iter(it)
             , _pos(pos) {}
 
-        constexpr _iter_t(_iter_t<!Const> o)  //
-            requires Const&& std::convertible_to<iterator_t<R>, BaseIter> : _base_iter(o.base()),
-                                                                            _pos(o.position()) {}
+        constexpr _iter_t(_iter_t<!Const> o)                                //
+            requires Const && std::convertible_to<iterator_t<R>, BaseIter>  //
+            : _base_iter(o.base()), _pos(o.position()) {}
 
         using reference = enumerator_reference<Base>;
 
@@ -171,12 +171,12 @@ class enumerate_view : public std::ranges::view_interface<enumerate_view<R>> {
 
         constexpr auto dereference() const noexcept { return reference{_pos, *_base_iter}; }
 
-        constexpr bool operator==(const _iter_t& other) const noexcept
+        constexpr bool operator==(const _iter_t& other) const noexcept  //
             requires std::equality_comparable<BaseIter> {
             return _base_iter == other._base_iter;
         }
 
-        constexpr auto distance_to(const _iter_t& other) const noexcept
+        constexpr auto distance_to(const _iter_t& other) const noexcept  //
             requires std::random_access_iterator<BaseIter> {
             return _base_iter - other._base_iter;
         }
@@ -203,7 +203,7 @@ public:
     }
 
     // Case: A non-const common_range with a known size, uses non-const iterator as its end type
-    constexpr auto end() requires std::ranges::common_range<R>&& sized_range<R> {
+    constexpr auto end() requires std::ranges::common_range<R> && std::ranges::sized_range<R> {
         return _iter_t<false>{std::ranges::end(_range), static_cast<range_index_t<R>>(size())};
     }
 
@@ -213,19 +213,20 @@ public:
     }
 
     // Case: Const common_range with a known size uses a non-const iterator
-    constexpr auto end() const requires std::ranges::common_range<const R>&& sized_range<R>  //
+    constexpr auto
+    end() const requires std::ranges::common_range<const R> && std::ranges::sized_range<R>  //
     {
         return _iter_t<true>{std::ranges::end(_range), static_cast<range_index_t<R>>(size())};
     }
 
-    constexpr auto size() requires sized_range<R> { return std::ranges::size(_range); }
+    constexpr auto size() requires std::ranges::sized_range<R> { return std::ranges::size(_range); }
     // Obtain the underlying range:
     constexpr R base() const& requires std::copy_constructible<R> { return _range; }
     constexpr R base() && { return NEO_MOVE(_range); }
 };
 
 template <typename R>
-enumerate_view(R &&) -> enumerate_view<std::views::all_t<R>>;
+enumerate_view(R&&) -> enumerate_view<std::views::all_t<R>>;
 
 struct enumerate_fn : pipable {
     /**
@@ -268,9 +269,9 @@ public:
         : _fn(NEO_FWD(fn)) {}
 
     template <std::ranges::range Range>
-    requires neo::invocable<Func&, range_reference_t<Range>>  //
-        constexpr void
-        operator()(Range&& range) noexcept(nothrow_invocable<Func&, range_reference_t<Range>>) {
+    requires neo::invocable2<Func&, range_reference_t<Range>>  //
+    constexpr void
+    operator()(Range&& range) noexcept(nothrow_invocable<Func&, range_reference_t<Range>>) {
         for (auto&& elem : range) {
             neo::invoke(_fn, NEO_FWD(elem));
         }
@@ -290,22 +291,23 @@ struct each_fn {
 inline constexpr each_fn each;
 
 template <typename R, typename T>
-concept range_of = range<R>&& std::same_as<range_value_t<R>, T>;
+concept range_of = range<R> && std::same_as<range_value_t<R>, T>;
 
 template <typename R, typename T>
-concept input_range_of = range_of<R, T>&& std::ranges::input_range<R>;
+concept input_range_of = range_of<R, T> && std::ranges::input_range<R>;
 
 template <typename R, typename T>
-concept forward_range_of = input_range_of<R, T>&& std::ranges::input_range<R>;
+concept forward_range_of = input_range_of<R, T> && std::ranges::input_range<R>;
 
 template <typename R, typename T>
-concept bidirectional_range_of = forward_range_of<R, T>&& std::ranges::bidirectional_range<R>;
+concept bidirectional_range_of = forward_range_of<R, T> && std::ranges::bidirectional_range<R>;
 
 template <typename R, typename T>
-concept random_access_range_of = bidirectional_range_of<R, T>&& std::ranges::random_access_range<R>;
+concept random_access_range_of
+    = bidirectional_range_of<R, T> && std::ranges::random_access_range<R>;
 
 template <typename R, typename T>
-concept contiguous_range_of = random_access_range_of<R, T>&& std::ranges::contiguous_range<R>;
+concept contiguous_range_of = random_access_range_of<R, T> && std::ranges::contiguous_range<R>;
 
 }  // namespace neo::ranges
 

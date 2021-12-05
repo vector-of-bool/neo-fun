@@ -23,12 +23,3 @@ static_assert(is_same_v<decltype(mref_v<int&&>), int&&>);
 static_assert(is_same_v<decltype(mref_v<const int&&>), int&&>);
 static_assert(is_same_v<decltype(mref_v<int&>), int&>);
 static_assert(is_same_v<decltype(mref_v<const int&>), int&>);
-
-void foo(neo::mutref<int> i) { *i += 2; }
-
-TEST_CASE("Create a mutref") {
-    int val = 33;
-    foo(val);
-    CHECK(val == 35);
-    foo(5);  // Allows rvalues
-}

@@ -70,6 +70,11 @@ constexpr decltype(auto) invoke(RefWrapper<Inner> ref, Args&&... args)
 
 #undef INVOKE_BODY
 
+template <typename Fn, typename... Args>
+concept invocable2 = requires(Fn&& fn, Args&&... args) {
+    neo::invoke(NEO_FWD(fn), NEO_FWD(args)...);
+};
+
 template <typename Func, typename... Args>
 using invoke_result_t = decltype(neo::invoke(NEO_DECLVAL(Func), NEO_DECLVAL(Args)...));
 

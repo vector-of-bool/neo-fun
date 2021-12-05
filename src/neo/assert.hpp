@@ -5,8 +5,6 @@
 #include <neo/pp.hpp>
 #include <neo/repr.hpp>
 
-#include <array>
-#include <initializer_list>
 #include <iterator>
 #include <ostream>
 #include <string_view>
@@ -284,11 +282,10 @@ template <typename... Ts>
 fire_assertion(assertion_info info,
                detail::assertion_expression_impl<Ts>... exprs) NEO_NOEXCEPT_ASSERTS {
     // Create an array of pointers on the stack, each referring to one of the captured expressions.
-    std::array<const assertion_expression*, sizeof...(Ts)> expressions = {(&exprs)...};
+    const assertion_expression* expressions[] = {(&exprs)..., nullptr};
     // Fire!
     fire_assertion(info,
-                   assertion_expression_list(expressions.data(),
-                                             expressions.data() + sizeof...(exprs)));
+                   assertion_expression_list(expressions + 0, expressions + sizeof...(exprs)));
 }
 
 /**
@@ -420,11 +417,8 @@ public:
 
     template <typename... Ts>
     void render_into(std::ostream& out, int, const Ts&... exprs) const noexcept {
-        std::array<const ::neo::assertion_expression*, sizeof...(exprs)> expressions
-            = {(&exprs)...};
-        _render(out,
-                assertion_expression_list(expressions.data(),
-                                          expressions.data() + sizeof...(exprs)));
+        const ::neo::assertion_expression* expressions[] = {(&exprs)..., nullptr};
+        _render(out, assertion_expression_list(expressions + 0, expressions + sizeof...(exprs)));
     }
 
     static void render_all(std::ostream& out) noexcept;
