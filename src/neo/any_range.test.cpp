@@ -1,10 +1,10 @@
 #include "./any_range.hpp"
 
 #include "./iterator_facade.hpp"
-#include "./pipe.hpp"
 #include "./range_archetypes.hpp"
 #include "./range_concepts.hpp"
 #include "./test_concept.hpp"
+#include "./ranges.hpp"
 
 #include <catch2/catch.hpp>
 
@@ -100,12 +100,15 @@ TEST_CASE("Create an any_range for an uncommon range") {
 }
 
 TEST_CASE("A transform_view as an input_range") {
-    auto                              arr = std::array{1, 2, 3, 4};
+    auto                              arr = std::array{1, 21, 37, 4};
     neo::any_input_range<std::string> as_strings
         = arr | std::views::transform([](auto i) { return std::to_string(i); });
     auto tr2 = as_strings | std::views::transform([](auto s) { return s.length(); });
     neo::any_input_iterator<std::string::size_type> iv(tr2.begin());
     neo::any_input_range<std::string::size_type>    as_lengths = tr2;
+
+    auto vec = neo::to_vector(as_lengths);
+    CHECK(vec == std::vector<std::string::size_type>({1, 2, 2, 1}));
 }
 
 TEMPLATE_TEST_CASE("Various combinations",
