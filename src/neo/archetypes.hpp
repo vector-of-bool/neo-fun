@@ -56,9 +56,6 @@ struct pathological : irregular {
     pathological(T&&) = delete;
 
     template <typename T>
-    operator T() = delete;
-
-    template <typename T>
     friend void operator,(const pathological&, const T&) = delete;
 
     template <typename T>
@@ -145,8 +142,11 @@ struct derived_from : T, pathological {};
 
 template <typename T>
 struct convertible_to : pathological {
-    operator T();
-    operator T() const;
+    operator T() &;
+    operator T() const&;
+
+    template <typename U>
+    operator U() const& = delete;
 };
 
 template <typename T>

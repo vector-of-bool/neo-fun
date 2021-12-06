@@ -69,7 +69,7 @@ class any_range {
     template <typename R>
     std::unique_ptr<erased_type> _make_impl(R&& r) {
         if constexpr (alike<R, any_range>) {
-            return std::move(r._impl);
+            return NEO_FWD(r)._impl;
         } else {
             return std::make_unique<
                 range_detail::erased_range_impl<Ref, Category, std::remove_cvref_t<R>>>(NEO_FWD(r));
@@ -82,17 +82,12 @@ public:
                                         iterator,
                                         any_sentinel>;
 
+    any_range(any_range&&) noexcept = default;
+    any_range& operator=(any_range&&) noexcept = default;
+
     // clang-format off
     template <std::ranges::range R>
-    requires requires {
-        requires alike<R, any_range>;
-        requires std::is_rvalue_reference_v<R&&>;
-    } || requires {
-        requires !alike<R, any_range>;
-        requires std::convertible_to<
-            std::ranges::iterator_t<R>,
-            iterator>;
-    }
+        requires std::convertible_to<std::ranges::iterator_t<R>, iterator>
     any_range(R&& r)
         : _impl(_make_impl(NEO_FWD(r))) {}
 
