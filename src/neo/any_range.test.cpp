@@ -2,11 +2,15 @@
 
 #include "./iterator_facade.hpp"
 #include "./pipe.hpp"
+#include "./range_archetypes.hpp"
 #include "./range_concepts.hpp"
 #include "./test_concept.hpp"
 
 #include <catch2/catch.hpp>
 
+#include <deque>
+#include <forward_list>
+#include <list>
 #include <ranges>
 
 NEO_TEST_CONCEPT(neo::ranges::range<neo::any_input_range<int>>);
@@ -102,4 +106,51 @@ TEST_CASE("A transform_view as an input_range") {
     auto tr2 = as_strings | std::views::transform([](auto s) { return s.length(); });
     neo::any_input_iterator<std::string::size_type> iv(tr2.begin());
     neo::any_input_range<std::string::size_type>    as_lengths = tr2;
+}
+
+TEMPLATE_TEST_CASE("Various combinations",
+                   "",
+                   std::vector<int>,
+                   std::vector<double>,
+                   std::deque<int>,
+                   std::deque<double>,
+                   std::list<int>,
+                   std::list<double>,
+                   std::forward_list<int>,
+                   std::forward_list<double>,
+                   neo::arch::input_range<neo::arch::pathological&>,
+                   (std::ranges::transform_view<
+                       std::ranges::ref_view<neo::arch::input_range<neo::arch::pathological&>>,
+                       std::function<double(neo::arch::pathological&)>>)) {
+    using container = TestType;
+
+    using container_tag = neo::iter_concept_t<std::ranges::iterator_t<container>>;
+    using ref_type      = std::ranges::range_reference_t<container&>;
+
+    static_assert(std::convertible_to<container, neo::any_range<ref_type, container_tag>>);
+
+    if constexpr (std::ranges::random_access_range<container>) {
+        static_assert(std::convertible_to<container, neo::any_random_access_range<ref_type>>);
+    } else {
+        static_assert(!std::convertible_to<container, neo::any_random_access_range<ref_type>>);
+    }
+
+    if constexpr (std::ranges::bidirectional_range<container>) {
+        static_assert(std::convertible_to<container, neo::any_bidirectional_range<ref_type>>);
+    } else {
+        static_assert(!std::convertible_to<container, neo::any_bidirectional_range<ref_type>>);
+    }
+
+    if constexpr (std::ranges::forward_range<container>) {
+        static_assert(std::convertible_to<container, neo::any_forward_range<ref_type>>);
+        static_assert(std::convertible_to<container, neo::any_forward_range<ref_type>>);
+    } else {
+        static_assert(!std::convertible_to<container, neo::any_forward_range<ref_type>>);
+    }
+
+    if constexpr (std::ranges::input_range<container>) {
+        static_assert(std::convertible_to<container, neo::any_input_range<ref_type>>);
+    } else {
+        static_assert(!std::convertible_to<container, neo::any_input_range<ref_type>>);
+    }
 }

@@ -10,7 +10,7 @@ NEO_MSVC_PRAGMA(warning(disable : 4624));
 namespace neo::arch {
 
 template <typename Derived>
-struct make_weakly_incrementable : movable {
+struct make_weakly_incrementable : semiregular {
     make_weakly_incrementable();
     Derived& operator++() &;
     void     operator++(int) &;

@@ -379,10 +379,19 @@ private:
     erase_iterator* do_clone() const noexcept { return new erase_iterator(*this); }
 };
 
+// clang-format off
 template <typename From, typename To>
-concept iter_ref_conversion_is_safe
-    = (!std::is_reference_v<To> ||  //
-       requires(std::add_pointer_t<To> dest, std::add_pointer_t<From> src) { dest = src; });
+concept iter_ref_conversion_is_safe =
+       // Converting to a value is always safe
+       (!std::is_reference_v<To>)
+    || requires (std::add_pointer_t<From> from, std::add_pointer_t<To> to) {
+        // If 'from' is a value type and the 'to' is a reference type, thas is never safe:
+        requires std::is_reference_v<From>;
+        // Only valid if rebinding those as pointers is safe (i.e. no conversion operators occur:
+        // Such would leave the resulting reference bound to a temporary)
+        to = from;
+    };
+// clang-format on
 
 template <typename From, typename To>
 concept iter_ref_convertible_to
