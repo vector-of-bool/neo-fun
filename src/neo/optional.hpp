@@ -146,7 +146,7 @@ public:
             }
         } else {
             if (other.has_value()) {
-                emplace(get());
+                emplace(other.get());
             } else {
                 // Nothing to do.
             }
@@ -168,7 +168,7 @@ public:
             }
         } else {
             if (other.has_value()) {
-                emplace((T &&)(get()));
+                emplace((T &&)(other.get()));
             } else {
                 // Nothing to do
             }
