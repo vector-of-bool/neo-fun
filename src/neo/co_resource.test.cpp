@@ -1,16 +1,16 @@
 #if __cpp_impl_coroutine
 
-#include "./scoped_resource.hpp"
+#include "./co_resource.hpp"
 
 #include <catch2/catch.hpp>
 
-neo::scoped_resource<int> with_integer(int& out) {
+neo::co_resource<int> with_integer(int& out) {
     out = 42;
     co_yield 12;
     out = 1729;
 }
 
-neo::scoped_resource<int&> with_iref(int& out) {
+neo::co_resource<int&> with_iref(int& out) {
     int inner = 64;
     out       = 42;
     co_yield inner;
@@ -18,7 +18,7 @@ neo::scoped_resource<int&> with_iref(int& out) {
     assert(inner == 7);
 }
 
-neo::scoped_resource<void> with_void(int& out) {
+neo::co_resource<void> with_void(int& out) {
     out = 42;
     co_yield 0;
     out = 1729;
@@ -53,7 +53,7 @@ TEST_CASE("Yield void") {
     CHECK(v == 1729);
 }
 
-neo::scoped_resource<void> with_throws() {
+neo::co_resource<void> with_throws() {
     throw std::runtime_error("oof");
     co_return;
 }

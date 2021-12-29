@@ -1,10 +1,10 @@
 #pragma once
 
 #if !__cpp_impl_coroutine
-#error "<neo/scoped_resource.hpp> requires coroutine support"
+#error "<neo/co_resource.hpp> requires coroutine support"
 #endif
 
-#include "./scoped_resource_fwd.hpp"
+#include "./co_resource_fwd.hpp"
 
 #include "./addressof.hpp"
 
@@ -12,12 +12,12 @@
 
 namespace neo {
 
-namespace sr_detail {
+namespace cor_detail {
 
 template <typename T>
 struct promise;
 
-/// Conversion helper for the resource, lets it intercept exceptions on startup
+/// Conversion helper for the resource, lets us properly intercept exceptions on startup
 template <typename T>
 struct init {
     std::coroutine_handle<promise<T>> coro;
@@ -54,10 +54,10 @@ struct promise<void> : promise_base<void> {
     auto yield_value(decltype(nullptr)) noexcept { return std::suspend_always{}; }
 };
 
-void assert_coro_yield_once(std::coroutine_handle<>);
-void assert_coro_did_yield(std::coroutine_handle<>, const void*);
+[[noreturn]] void assert_coro_yield_once(std::coroutine_handle<>) noexcept;
+[[noreturn]] void assert_coro_did_yield(std::coroutine_handle<>, const void*) noexcept;
 
-}  // namespace sr_detail
+}  // namespace cor_detail
 
 /**
  * @brief Implement a coroutine-based scope-base resource management.
@@ -66,16 +66,17 @@ void assert_coro_did_yield(std::coroutine_handle<>, const void*);
  * resource management around a 'co_yield' expression.
  *
  * @tparam T The type of object that is accessible through this managed resource.
+ *
+ * @note If the coroutine has a co_resource<void> return type, the co_yield should
+ * yield a literal zero '0'.
  */
 template <typename T>
-class [[nodiscard]] scoped_resource {
+class [[nodiscard]] co_resource {
 public:
-    using promise_type = sr_detail::promise<T>;
+    using promise_type = cor_detail::promise<T>;
 
 private:
-    using coroutine_handle_type = std::coroutine_handle<promise_type>;
-
-    coroutine_handle_type _coro{};
+    std::coroutine_handle<promise_type> _coro{};
 
     void _finish() noexcept {
         if (!_coro) {
@@ -83,24 +84,24 @@ private:
         }
         _coro.resume();
         if (!_coro.done()) {
-            sr_detail::assert_coro_yield_once(_coro);
+            cor_detail::assert_coro_yield_once(_coro);
         }
         _coro.destroy();
         _coro = nullptr;
     }
 
 public:
-    explicit scoped_resource(sr_detail::init<T> c) noexcept
+    co_resource(cor_detail::init<T> c) noexcept
         : _coro(c.coro) {}
 
-    ~scoped_resource() { _finish(); }
+    ~co_resource() { _finish(); }
 
-    scoped_resource(scoped_resource&& o) noexcept
+    co_resource(co_resource&& o) noexcept
         : _coro{o._coro} {
         o._coro = nullptr;
     }
 
-    scoped_resource& operator=(scoped_resource&& o) noexcept {
+    co_resource& operator=(co_resource&& o) noexcept {
         _finish();
         _coro   = o._coro;
         o._coro = nullptr;
@@ -111,7 +112,7 @@ public:
 
     auto&& operator*() const noexcept {
         if (_coro.done() || !_coro.promise().value_ptr) {
-            sr_detail::assert_coro_did_yield(_coro, _coro.promise().value_ptr);
+            cor_detail::assert_coro_did_yield(_coro, _coro.promise().value_ptr);
         }
         return *_coro.promise().value_ptr;
     }

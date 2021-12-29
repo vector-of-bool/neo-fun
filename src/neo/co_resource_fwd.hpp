@@ -3,6 +3,6 @@
 namespace neo {
 
 template <typename T>
-class scoped_resource;
+class co_resource;
 
 }  // namespace neo
