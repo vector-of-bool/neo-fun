@@ -9,7 +9,6 @@
 #include "./addressof.hpp"
 
 #include <coroutine>
-#include <stdexcept>
 
 namespace neo {
 
@@ -27,37 +26,32 @@ struct init {
 /// Common base of the promise type
 template <typename T>
 struct promise_base {
-    std::exception_ptr exc{};
-
     auto get_return_object() noexcept {
         return init<T>{
             std::coroutine_handle<promise<T>>::from_promise(static_cast<promise<T>&>(*this))};
     }
     auto initial_suspend() const noexcept { return std::suspend_never{}; }
     auto final_suspend() const noexcept { return std::suspend_always{}; }
-    void unhandled_exception() noexcept { exc = std::current_exception(); }
-    void return_void() const noexcept {}
-    void await_transform() = delete;
+    auto unhandled_exception() { throw; }
+    auto return_void() const noexcept {}
+    auto await_transform() = delete;
 };
 
 /// Specialization for non-void:
 template <typename T>
 struct promise : promise_base<T> {
-private:
-    std::remove_reference_t<const T>* _value_ptr;
-    friend neo::scoped_resource<T>;
+    std::remove_reference_t<const T>* value_ptr;
 
-public:
-    std::suspend_always yield_value(std::remove_reference_t<const T>& value) noexcept {
-        _value_ptr = neo::addressof(value);
-        return {};
+    auto yield_value(std::remove_reference_t<const T>& value) noexcept {
+        value_ptr = neo::addressof(value);
+        return std::suspend_always{};
     }
 };
 
 /// Specialization for void:
 template <>
 struct promise<void> : promise_base<void> {
-    std::suspend_always yield_value(decltype(nullptr)) noexcept { return {}; }
+    auto yield_value(decltype(nullptr)) noexcept { return std::suspend_always{}; }
 };
 
 void assert_coro_yield_once(std::coroutine_handle<>);
@@ -78,40 +72,26 @@ class [[nodiscard]] scoped_resource {
 public:
     using promise_type = sr_detail::promise<T>;
 
+private:
     using coroutine_handle_type = std::coroutine_handle<promise_type>;
 
-private:
-    friend promise_type;
-    friend sr_detail::promise_base<T>;
-
-    coroutine_handle_type _coro;
+    coroutine_handle_type _coro{};
 
     void _finish() noexcept {
         if (!_coro) {
             return;
         }
-        if (!_coro.promise().exc) {
-            _coro.resume();
-            if (!_coro.done()) {
-                sr_detail::assert_coro_yield_once(_coro);
-            }
-            if (_coro.promise().exc) {
-                // This will always terminate, which is the correct behavior during cleanup:
-                std::rethrow_exception(_coro.promise().exc);
-            }
+        _coro.resume();
+        if (!_coro.done()) {
+            sr_detail::assert_coro_yield_once(_coro);
         }
         _coro.destroy();
         _coro = nullptr;
     }
 
 public:
-    scoped_resource(sr_detail::init<T> init)
-        : _coro{init.coro} {
-        auto& pr = init.coro.promise();
-        if (pr.exc) {
-            std::rethrow_exception(pr.exc);
-        }
-    }
+    explicit scoped_resource(sr_detail::init<T> c) noexcept
+        : _coro(c.coro) {}
 
     ~scoped_resource() { _finish(); }
 
@@ -127,16 +107,13 @@ public:
         return *this;
     }
 
-    auto operator->() const noexcept {
-        return neo::addressof(**this);
-        return _coro.promise()._value_ptr;
-    }
+    auto operator->() const noexcept { return neo::addressof(**this); }
 
     auto&& operator*() const noexcept {
-        if (_coro.done() || !_coro.promise()._value_ptr) {
-            sr_detail::assert_coro_did_yield(_coro, _coro.promise()._value_ptr);
+        if (_coro.done() || !_coro.promise().value_ptr) {
+            sr_detail::assert_coro_did_yield(_coro, _coro.promise().value_ptr);
         }
-        return *_coro.promise()._value_ptr;
+        return *_coro.promise().value_ptr;
     }
 };
 
