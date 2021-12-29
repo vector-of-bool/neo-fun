@@ -5,6 +5,12 @@
 #include <concepts>
 #include <iterator>
 
+#ifdef __dds_header_check
+#include "./platform.hpp"
+NEO_GNU_LIKE_PRAGMA(GCC diagnostic ignored "-Wdeprecated-declarations");
+NEO_MSVC_PRAGMA(warning(disable : 4996));
+#endif
+
 namespace neo {
 
 /**
