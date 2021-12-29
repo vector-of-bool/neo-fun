@@ -3,12 +3,10 @@
 #include "./fwd.hpp"
 #include "./pp.hpp"
 
-#include <type_traits>
-
 namespace neo {
 
 template <typename Func>
-requires std::is_invocable_v<Func> class scope_exit {
+class scope_exit {
     Func fn;
 
     scope_exit(const scope_exit&) = delete;
@@ -25,7 +23,7 @@ public:
 };
 
 template <typename Func>
-scope_exit(Func &&) -> scope_exit<Func>;
+scope_exit(Func&&) -> scope_exit<Func>;
 
 #define neo_defer                                                                                  \
     ::neo::scope_exit NEO_CONCAT_3(_neo_scope_exiter_, __LINE__, __COUNTER__)                      \
