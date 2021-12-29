@@ -1,10 +1,12 @@
 #pragma once
 
+#include "./assert.hpp"
 #include "./concepts.hpp"
 #include "./fwd.hpp"
 #include "./invoke.hpp"
 #include "./iterator_facade.hpp"
 #include "./returns.hpp"
+#include "./tl.hpp"
 #include "./version.hpp"
 
 #include <concepts>
@@ -323,6 +325,55 @@ concept random_access_range_of
 
 template <typename R, typename T>
 concept contiguous_range_of = random_access_range_of<R, T> && std::ranges::contiguous_range<R>;
+
+template <typename Dest>
+struct write_into {
+    Dest _dest;
+
+    template <typename Arg>
+    void operator()(Arg&& arg) requires requires {
+        *_dest = NEO_FWD(arg);
+    }
+    { *_dest = NEO_FWD(arg); }
+};
+
+template <typename Selector, typename... Handlers>
+class distribute : public pipable {
+private:
+    Selector                _select;
+    std::tuple<Handlers...> _handlers;
+
+    template <std::size_t... Is>
+    void _dist(auto&& elem, std::integral auto select, std::index_sequence<Is...>) {
+        bool did_select
+            = ((static_cast<std::size_t>(select) == Is
+                && (static_cast<void>(neo::invoke(std::get<Is>(_handlers), NEO_FWD(elem))), 1))
+               || ...);
+        neo_assert(expects,
+                   did_select,
+                   "Invalid returned integral select index in neo::ranges::distribute()",
+                   select,
+                   sizeof...(Handlers));
+    }
+
+public:
+    distribute(Selector&& sel, Handlers&&... hs)
+        : _select(NEO_FWD(sel))
+        , _handlers(NEO_FWD(hs)...) {}
+
+    // clang-format off
+    template <std::ranges::input_range R>
+    requires
+            neo::invocable2<Selector, std::ranges::range_reference_t<R>>
+        && (neo::invocable2<Handlers, std::ranges::range_reference_t<R>> && ...)
+    constexpr void operator()(R&& r) noexcept(nothrow_range<R>) {
+        // clang-format on
+        for (auto&& elem : r) {
+            std::integral auto idx = _select(std::as_const(elem));
+            _dist(NEO_FWD(elem), idx, std::index_sequence_for<Handlers...>{});
+        }
+    }
+};
 
 }  // namespace neo::ranges
 
