@@ -58,9 +58,6 @@ neo::co_resource<void> with_throws() {
     co_return;
 }
 
-TEST_CASE("Throws in setup") {
-    CHECK_THROWS_AS(with_throws(), std::runtime_error);
-    // auto w = with_throws();
-}
+TEST_CASE("Throws in setup") { CHECK_THROWS_AS(with_throws(), std::runtime_error); }
 
 #endif
