@@ -32,6 +32,21 @@ jobs:
       - script: ./dds build -t tools/gcc-10.jsonc
         displayName: Build and Run Unit Tests
 
+  - job: linux_gcc11
+    displayName: Linux - GCC 11
+    pool:
+      vmImage: ubuntu-20.04
+    steps:
+      - script: sudo apt-get -y update && sudo apt-get -y install g++-11
+        displayName: Get GCC 11
+      - script: |
+          echo Downloading DDS executable
+          curl -L https://github.com/vector-of-bool/dds/releases/download/0.1.0-alpha.6/dds-linux-x64 -o dds
+          chmod +x dds
+        displayName: Get DDS
+      - script: ./dds build -t tools/gcc-11.jsonc
+        displayName: Build and Run Unit Tests
+
   - job: macos_gcc10
     displayName: macOS - GCC 10
     pool:
@@ -45,4 +60,19 @@ jobs:
           chmod +x dds
         displayName: Get DDS
       - script: ./dds build -t tools/gcc-10.jsonc
+        displayName: Build and Run Unit Tests
+
+  - job: macos_gcc11
+    displayName: macOS - GCC 11
+    pool:
+      vmImage: macOS-10.15
+    steps:
+      - script: brew install gcc@11
+        displayName: Get GCC 11
+      - script: |
+          set -eu
+          curl -L https://github.com/vector-of-bool/dds/releases/download/0.1.0-alpha.6/dds-macos-x64 -o dds
+          chmod +x dds
+        displayName: Get DDS
+      - script: ./dds build -t tools/gcc-11.jsonc
         displayName: Build and Run Unit Tests
