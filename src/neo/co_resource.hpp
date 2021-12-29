@@ -1,10 +1,14 @@
 #pragma once
 
+#include "./co_resource_fwd.hpp"
+
+#if __dds_header_check && !__cpp_impl_coroutine
+// Elide this file
+#else
+
 #if !__cpp_impl_coroutine
 #error "<neo/co_resource.hpp> requires coroutine support"
 #endif
-
-#include "./co_resource_fwd.hpp"
 
 #include "./addressof.hpp"
 
@@ -119,3 +123,5 @@ public:
 };
 
 }  // namespace neo
+
+#endif // __dds_header_check guard
