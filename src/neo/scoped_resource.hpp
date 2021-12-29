@@ -105,7 +105,7 @@ private:
     }
 
 public:
-    explicit scoped_resource(sr_detail::init<T> init)
+    scoped_resource(sr_detail::init<T> init)
         : _coro{init.coro} {
         auto& pr = init.coro.promise();
         if (pr.exc) {
