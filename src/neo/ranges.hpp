@@ -337,6 +337,9 @@ struct write_into {
     { *_dest = NEO_FWD(arg); }
 };
 
+template <typename D>
+explicit write_into(D&&) -> write_into<D>;
+
 template <typename Selector, typename... Handlers>
 class distribute : public pipable {
 private:
