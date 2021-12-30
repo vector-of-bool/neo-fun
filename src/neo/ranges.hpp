@@ -1,10 +1,12 @@
 #pragma once
 
+#include "./assert.hpp"
 #include "./concepts.hpp"
 #include "./fwd.hpp"
 #include "./invoke.hpp"
 #include "./iterator_facade.hpp"
 #include "./returns.hpp"
+#include "./tl.hpp"
 #include "./version.hpp"
 
 #include <concepts>
@@ -50,10 +52,20 @@ concept simple_view =
                  iterator_t<const Range>> &&
     std::same_as<sentinel_t<Range>,
                  sentinel_t<const Range>>;
+
+template <typename Range>
+concept nothrow_range =
+    range<Range> &&
+    requires (Range& r, std::ranges::iterator_t<Range> iter) {
+        { std::ranges::begin(r) } noexcept;
+        { std::ranges::end(r) } noexcept;
+        { ++iter } noexcept;
+        { *iter } noexcept;
+    };
 // clang-format on
 
 struct pipable {
-    template <typename Left, neo::invocable<Left> Right>
+    template <typename Left, neo::invocable2<Left> Right>
     constexpr friend decltype(auto)
     operator|(Left&& left, Right&& right) noexcept(nothrow_invocable<Right, Left>) {
         return neo::invoke(NEO_FWD(right), NEO_FWD(left));
@@ -62,7 +74,7 @@ struct pipable {
 
 struct to_vector_fn : pipable {
     template <std::ranges::range R>
-    auto operator()(R&& range) const noexcept {
+    auto operator()(R&& range) const noexcept(nothrow_range<R>) {
         using vec_type = std::vector<range_value_t<R>>;
         if constexpr (std::ranges::common_range<R>) {
             return vec_type{std::ranges::begin(range), std::ranges::end(range)};
@@ -169,7 +181,9 @@ class enumerate_view : public std::ranges::view_interface<enumerate_view<R>> {
             --_pos;
         }
 
-        constexpr auto dereference() const noexcept { return reference{_pos, *_base_iter}; }
+        constexpr auto dereference() const noexcept(noexcept(*_base_iter)) {
+            return reference{_pos, *_base_iter};
+        }
 
         constexpr bool operator==(const _iter_t& other) const noexcept  //
             requires std::equality_comparable<BaseIter> {
@@ -188,38 +202,41 @@ public:
         : _range(NEO_FWD(r)) {}
 
     // Non-const begin for non-simple views use non-const-iterators
-    constexpr auto begin() requires(!simple_view<R>) {
+    constexpr auto begin() noexcept(nothrow_range<R>) requires(!simple_view<R>) {
         return _iter_t<false>(std::ranges::begin(_range), 0);
     }
 
     // Begin for simple views are always const-iterators
-    constexpr auto begin() const requires simple_view<R> {
+    constexpr auto begin() const noexcept(nothrow_range<R>) requires simple_view<R> {
         return _iter_t<true>(std::ranges::begin(_range), 0);
     }
 
-    // Base case for end() uses a non-const sentinel:
-    constexpr auto end() requires(!simple_view<R>) {
-        return _sentinel_t<false>(std::ranges::end(_range));
+    constexpr auto end() noexcept {
+        if constexpr (!simple_view<R>) {
+            // Base case for end() uses a non-const sentinel:
+            return _sentinel_t<false>(std::ranges::end(_range));
+        } else if constexpr (std::ranges::common_range<R> && std::ranges::sized_range<R>) {
+            // Case: A non-const common_range with a known size, uses non-const iterator as its end
+            // type
+            return _iter_t<false>{std::ranges::end(_range), static_cast<range_index_t<R>>(size())};
+        } else {
+            return std::as_const(*this).end();
+        }
     }
 
-    // Case: A non-const common_range with a known size, uses non-const iterator as its end type
-    constexpr auto end() requires std::ranges::common_range<R> && std::ranges::sized_range<R> {
-        return _iter_t<false>{std::ranges::end(_range), static_cast<range_index_t<R>>(size())};
+    constexpr auto end() const noexcept {
+        if constexpr (range<const R>) {
+            // Case: Const with a const range uses a const-sentinel
+            return _sentinel_t<true>{std::ranges::end(_range)};
+        } else if constexpr (std::ranges::common_range<const R> && std::ranges::sized_range<R>) {
+            // Case: Const common_range with a known size uses a non-const iterator
+            return _iter_t<true>{std::ranges::end(_range), static_cast<range_index_t<R>>(size())};
+        }
     }
 
-    // Case: Const with a const range uses a const-sentinel
-    constexpr auto end() const requires range<const R> {
-        return _sentinel_t<true>{std::ranges::end(_range)};
+    constexpr auto size() const noexcept requires std::ranges::sized_range<R> {
+        return std::ranges::size(_range);
     }
-
-    // Case: Const common_range with a known size uses a non-const iterator
-    constexpr auto
-    end() const requires std::ranges::common_range<const R> && std::ranges::sized_range<R>  //
-    {
-        return _iter_t<true>{std::ranges::end(_range), static_cast<range_index_t<R>>(size())};
-    }
-
-    constexpr auto size() requires std::ranges::sized_range<R> { return std::ranges::size(_range); }
     // Obtain the underlying range:
     constexpr R base() const& requires std::copy_constructible<R> { return _range; }
     constexpr R base() && { return NEO_MOVE(_range); }
@@ -308,6 +325,58 @@ concept random_access_range_of
 
 template <typename R, typename T>
 concept contiguous_range_of = random_access_range_of<R, T> && std::ranges::contiguous_range<R>;
+
+template <typename Dest>
+struct write_into {
+    Dest _dest;
+
+    template <typename Arg>
+    void operator()(Arg&& arg) requires requires {
+        *_dest = NEO_FWD(arg);
+    }
+    { *_dest = NEO_FWD(arg); }
+};
+
+template <typename D>
+explicit write_into(D&&) -> write_into<D>;
+
+template <typename Selector, typename... Handlers>
+class distribute : public pipable {
+private:
+    Selector                _select;
+    std::tuple<Handlers...> _handlers;
+
+    template <std::size_t... Is>
+    void _dist(auto&& elem, std::integral auto select, std::index_sequence<Is...>) {
+        bool did_select
+            = ((static_cast<std::size_t>(select) == Is
+                && (static_cast<void>(neo::invoke(std::get<Is>(_handlers), NEO_FWD(elem))), 1))
+               || ...);
+        neo_assert(expects,
+                   did_select,
+                   "Invalid returned integral select index in neo::ranges::distribute()",
+                   select,
+                   sizeof...(Handlers));
+    }
+
+public:
+    distribute(Selector&& sel, Handlers&&... hs)
+        : _select(NEO_FWD(sel))
+        , _handlers(NEO_FWD(hs)...) {}
+
+    // clang-format off
+    template <std::ranges::input_range R>
+    requires
+            neo::invocable2<Selector, std::ranges::range_reference_t<R>>
+        && (neo::invocable2<Handlers, std::ranges::range_reference_t<R>> && ...)
+    constexpr void operator()(R&& r) noexcept(nothrow_range<R>) {
+        // clang-format on
+        for (auto&& elem : r) {
+            std::integral auto idx = _select(std::as_const(elem));
+            _dist(NEO_FWD(elem), idx, std::index_sequence_for<Handlers...>{});
+        }
+    }
+};
 
 }  // namespace neo::ranges
 

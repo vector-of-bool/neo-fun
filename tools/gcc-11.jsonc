@@ -1,11 +1,10 @@
 {
     "compiler_id": "gnu",
-    "cxx_compiler": "g++-10",
+    "cxx_compiler": "g++-11",
     "cxx_version": "c++20",
     "debug": true,
     "cxx_flags": [
-        "-fconcepts-diagnostics-depth=10",
-        "-fcoroutines"
+        "-fconcepts-diagnostics-depth=10"
     ],
     "warning_flags": "-Werror -Wsign-compare"
 }
