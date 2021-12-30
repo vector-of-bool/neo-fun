@@ -62,8 +62,8 @@ TEST_CASE("Distribute integers") {
     std::views::iota(0, 20)
         | neo::ranges::distribute(  //
             NEO_TL(_1 % 2),
-            neo::ranges::write_into(std::back_inserter(evens)),
-            neo::ranges::write_into(std::back_inserter(odds)));
+            neo::ranges::write_into{std::back_inserter(evens)},
+            neo::ranges::write_into{std::back_inserter(odds)});
     CHECK(evens == std::vector({0, 2, 4, 6, 8, 10, 12, 14, 16, 18}));
     CHECK(odds == std::vector({1, 3, 5, 7, 9, 11, 13, 15, 17, 19}));
 }
