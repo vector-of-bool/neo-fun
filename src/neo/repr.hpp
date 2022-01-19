@@ -452,12 +452,8 @@ requires(!std::is_pointer_v<Integral> && std::same_as<Integral, std::remove_cvre
         DECL_REPR_TYPE_CASE(std::ptrdiff_t, "ptrdiff_t")
         DECL_REPR_TYPE_CASE(long, "long")
         DECL_REPR_TYPE_CASE(unsigned long, "unsigned long")
-        DECL_REPR_TYPE_CASE(long int, "long int")
-        DECL_REPR_TYPE_CASE(unsigned long int, "unsigned long int")
         DECL_REPR_TYPE_CASE(long long, "long long")
         DECL_REPR_TYPE_CASE(unsigned long long, "unsigned long long")
-        DECL_REPR_TYPE_CASE(long long int, "long long int")
-        DECL_REPR_TYPE_CASE(unsigned long long int, "unsigned long long int")
         else {
             static_assert(std::is_void_v<Integral>, "Unhandled built-in integral type");
         }
