@@ -15,9 +15,9 @@ TEST_CASE("Format a simple string") {
 
     std::string s;
     neo::ufmt_append(s, long{2});
-    neo::ufmt_append(s, unsigned long{2});
+    neo::ufmt_append(s, (unsigned long)2);
     neo::ufmt_append(s, double{41.2});
-    neo::ufmt_append(s, float{41.2});
+    neo::ufmt_append(s, float{41.2f});
     CHECK(neo::ufmt("Num: {}", long{2}) == "Num: 2");
 }
 
