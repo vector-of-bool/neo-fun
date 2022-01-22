@@ -34,15 +34,14 @@ void write_str(std::string& s, std::u8string_view sv) noexcept;
 void write_str(std::string& s, std::u16string_view sv) noexcept;
 void write_str(std::string& s, std::u32string_view sv) noexcept;
 
+void write_u64(std::string& s, std::uint64_t v) noexcept;
+void write_i64(std::string& s, std::int64_t v) noexcept;
+
 }  // namespace ufmt_detail
 
 /// Check if the given type has a .to_string() member or a to_string() ADL-visible function.
 template <typename T>
 concept can_to_string = ufmt_detail::to_string_member<T> || ufmt_detail::to_string_adl<T>;
-
-void ufmt_append(std::string& str, neo::alike<bool> auto b) noexcept {
-    str.append(b ? "true" : "false");
-}
 
 template <typename Char, typename Traits>
 inline void ufmt_append(std::string& str, std::basic_string_view<Char, Traits> sv) noexcept {
@@ -55,27 +54,21 @@ inline void ufmt_append(std::string& str, const std::basic_string<Char, Traits, 
 }
 
 inline void ufmt_append(std::string& str, const char* s) noexcept { str.append(s); }
-inline void ufmt_append(std::string& str, char c) noexcept { str.push_back(c); }
 
-void ufmt_append(std::string& str, std::uint8_t i) noexcept;
-void ufmt_append(std::string& str, std::int8_t i) noexcept;
-void ufmt_append(std::string& str, std::uint16_t i) noexcept;
-void ufmt_append(std::string& str, std::int16_t i) noexcept;
-void ufmt_append(std::string& str, std::uint32_t i) noexcept;
-void ufmt_append(std::string& str, std::int32_t i) noexcept;
-void ufmt_append(std::string& str, std::uint64_t i) noexcept;
-void ufmt_append(std::string& str, std::int64_t i) noexcept;
-void ufmt_append(std::string& str, float i) noexcept;
-void ufmt_append(std::string& str, double i) noexcept;
+template <std::integral I>
+void ufmt_append(std::string& str, I i) noexcept {
+    if constexpr (std::same_as<I, bool>) {
+        str.append(i ? "true" : "false");
+    } else if constexpr (std::same_as<I, char>) {
+        str.push_back(i);
+    } else if constexpr (std::is_unsigned_v<I>) {
+        ufmt_detail::write_u64(str, static_cast<std::uint64_t>(i));
+    } else {
+        ufmt_detail::write_i64(str, static_cast<std::int64_t>(i));
+    }
+}
 
-void ufmt_append(std::string& str, neo::alike<std::size_t> auto i) noexcept
-    requires(!std::same_as<std::size_t, std::uint64_t>) {
-    ufmt_append(str, static_cast<std::uint64_t>(i));
-}
-void ufmt_append(std::string& str, neo::alike<std::ptrdiff_t> auto i) noexcept
-    requires(!std::same_as<std::ptrdiff_t, std::int64_t>) {
-    ufmt_append(str, static_cast<std::int64_t>(i));
-}
+void ufmt_append(std::string& str, double s) noexcept;
 
 /// Check if the given T can be formatted via ufmt_append()
 template <typename T>

@@ -7,24 +7,6 @@
 
 using namespace neo;
 
-#define INT_FMT(Type)                                                                              \
-    void neo::ufmt_append(std::string& out, Type val) noexcept {                                   \
-        char buf[32];                                                                              \
-        auto res     = std::to_chars(buf, buf + sizeof(buf), val);                                 \
-        auto n_chars = res.ptr - buf;                                                              \
-        out.append(buf, buf + n_chars);                                                            \
-    }                                                                                              \
-    static_assert(true)
-
-INT_FMT(std::int8_t);
-INT_FMT(std::uint8_t);
-INT_FMT(std::int16_t);
-INT_FMT(std::uint16_t);
-INT_FMT(std::int32_t);
-INT_FMT(std::uint32_t);
-INT_FMT(std::int64_t);
-INT_FMT(std::uint64_t);
-
 void neo::detail::ufmt_too_many_args(std::string_view fmt_str, std::size_t n_args_given) noexcept {
     neo_assert_always(expects,
                       false,
@@ -64,6 +46,13 @@ void write_str(std::string& out, std::basic_string_view<C> sv) noexcept {
     }
 }
 
+void write_val(std::string& out, auto val) noexcept {
+    char buf[32];
+    auto res     = std::to_chars(buf, buf + sizeof(buf), val);
+    auto n_chars = res.ptr - buf;
+    out.append(buf, buf + n_chars);
+}
+
 }  // namespace
 
 void neo::ufmt_detail::write_str(std::string& out, std::wstring_view sv) noexcept {
@@ -79,6 +68,9 @@ void neo::ufmt_detail::write_str(std::string& out, std::u32string_view sv) noexc
     ::write_str(out, sv);
 }
 
-void neo::ufmt_append(std::string& str, float f) noexcept { str.append(std::to_string(f)); }
-
 void neo::ufmt_append(std::string& str, double d) noexcept { str.append(std::to_string(d)); }
+
+void neo::ufmt_detail::write_i64(std::string& out, std::int64_t v) noexcept { ::write_val(out, v); }
+void neo::ufmt_detail::write_u64(std::string& out, std::uint64_t v) noexcept {
+    ::write_val(out, v);
+}

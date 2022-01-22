@@ -13,6 +13,11 @@ static_assert(neo::reprable<std::string_view>);
 static_assert(neo::reprable<std::wstring>);
 static_assert(neo::reprable<std::wstring_view>);
 
+#if _WIN32
+#include <windows.h>
+static_assert(neo::reprable<DWORD>);
+#endif
+
 struct unknown_thing {};
 
 /// Fails:

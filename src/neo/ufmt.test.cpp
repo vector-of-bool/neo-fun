@@ -12,6 +12,13 @@ TEST_CASE("Format a simple string") {
     CHECK(neo::ufmt("2 + 2 = 5 ? {}", false) == "2 + 2 = 5 ? false");
     CHECK(neo::ufmt("2 + 2 = 4 ? {}", true) == "2 + 2 = 4 ? true");
     CHECK(neo::ufmt("'Y' is {}", 'Y') == "'Y' is Y");
+
+    std::string s;
+    neo::ufmt_append(s, long{2});
+    neo::ufmt_append(s, (unsigned long)2);
+    neo::ufmt_append(s, double{41.2});
+    neo::ufmt_append(s, float{41.2f});
+    CHECK(neo::ufmt("Num: {}", long{2}) == "Num: 2");
 }
 
 struct my_item {

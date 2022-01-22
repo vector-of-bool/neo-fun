@@ -68,7 +68,7 @@ public:
           || !std::convertible_to<nullopt_t, U>)
     constexpr operator U() const
         noexcept(std::is_nothrow_constructible_v<U, T&>  //
-              && std::is_nothrow_constructible_v<U, nullptr_t>)
+              && std::is_nothrow_constructible_v<U, decltype(nullptr)>)
     {
         // clang-format on
         if (*this) {

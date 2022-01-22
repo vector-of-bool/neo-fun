@@ -449,6 +449,11 @@ requires(!std::is_pointer_v<Integral> && std::same_as<Integral, std::remove_cvre
         DECL_REPR_TYPE_CASE(std::int64_t, "int64")
         // Some seem to have size_t defined differently??
         DECL_REPR_TYPE_CASE(std::size_t, "size_t")
+        DECL_REPR_TYPE_CASE(std::ptrdiff_t, "ptrdiff_t")
+        DECL_REPR_TYPE_CASE(long, "long")
+        DECL_REPR_TYPE_CASE(unsigned long, "unsigned long")
+        DECL_REPR_TYPE_CASE(long long, "long long")
+        DECL_REPR_TYPE_CASE(unsigned long long, "unsigned long long")
         else {
             static_assert(std::is_void_v<Integral>, "Unhandled built-in integral type");
         }
@@ -458,9 +463,7 @@ requires(!std::is_pointer_v<Integral> && std::same_as<Integral, std::remove_cvre
 #undef DECL_REPR_TYPE_CASE
 
 template <typename T>
-requires std::is_class_v<T>
-struct inherit_from : std::remove_cvref_t<T> {
-};
+requires std::is_class_v<T> struct inherit_from : std::remove_cvref_t<T> {};
 
 template <typename T>
 concept detect_vector = requires(T vec, std::ranges::range_value_t<T> item) {
@@ -497,9 +500,9 @@ concept detect_tuple = requires {
 };
 
 template <typename Pair>
-concept detect_pair = detect_tuple<Pair> && requires(std::remove_cvref_t<Pair>& p,
-                                                     typename Pair::first_type  f,
-                                                     typename Pair::second_type s) {
+concept detect_pair = detect_tuple<Pair>&& requires(std::remove_cvref_t<Pair>& p,
+                                                    typename Pair::first_type  f,
+                                                    typename Pair::second_type s) {
     typename Pair::first_type;
     typename Pair::second_type;
     requires std::same_as<Pair, typename inherit_from<Pair>::pair>;
