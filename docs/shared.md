@@ -3,7 +3,7 @@
 [Smart pointers make for bad public APIs](https://vector-of-bool.github.io/2018/12/02/smart-pointer-apis.html).
 Nevertheless, we often wish to grant the semantics of "shared-ness" to an
 object. Instead of just wrapping things in `std::shared_ptr`, you can use
-`neo/repr.hpp` to create a class that encapsulates the "shared-ness" of a
+`neo/shared.hpp` to create a class that encapsulates the "shared-ness" of a
 `shared_ptr` without the downsides, and with several upsides.
 
 The downsides of using `std::shared_ptr` that are fixed with `neo/shared.hpp`:
@@ -142,7 +142,7 @@ neo::ref_to_const cref = rect;  /// Works as expects
 
 ## Weak References and Weak References-to-Const
 
-Like `shared_ptr` has `weak_ptr`, `neo/repr.hpp` has `neo::weak_ref`. This is a
+Like `shared_ptr` has `weak_ptr`, `neo/shared.hpp` has `neo::weak_ref`. This is a
 class template, and the template argument should be a (possibly-`const`
 qualified) shared-reference class (e.g. `shared_rectangle`).
 
