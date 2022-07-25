@@ -24,4 +24,10 @@
 # define NEO_CONSTEXPR_DESTRUCTOR inline
 #endif
 
+#if NEO_COMPILER_IS_MSVC
+#   define NEO_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
+#else
+#   define NEO_NO_UNIQUE_ADDRESS [[no_unique_address]]
+#endif
+
 // clang-format on
