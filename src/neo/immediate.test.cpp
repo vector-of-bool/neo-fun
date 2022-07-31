@@ -65,3 +65,6 @@ static_assert(std::same_as<int&&, neo::await_result_t<neo::immediate<int>>>);
 static_assert(std::same_as<int&, neo::await_result_t<neo::immediate<int>&>>);
 static_assert(std::same_as<const int&, neo::await_result_t<neo::immediate<int> const&>>);
 static_assert(std::same_as<void, neo::await_result_t<neo::immediate<void>>>);
+
+using rebound = neo::rebind_awaitable_t<neo::immediate<int>, double>;
+static_assert(std::same_as<rebound, neo::immediate<double>>);
