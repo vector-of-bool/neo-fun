@@ -33,7 +33,6 @@ public:
         using lref  = value_type&;
         using rref  = value_type&&;
         using clref = value_type const&;
-        using crref = value_type const&&;
 
     public:
         generator<yield_type> get_return_object() noexcept;
@@ -52,11 +51,6 @@ public:
         }
 
         constexpr auto yield_value(rref v) noexcept requires std::constructible_from<T, rref> {
-            _current = neo::addressof(v);
-            return std::suspend_always{};
-        }
-
-        constexpr auto yield_value(crref v) noexcept requires std::constructible_from<T, crref> {
             _current = neo::addressof(v);
             return std::suspend_always{};
         }
