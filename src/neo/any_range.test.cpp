@@ -3,11 +3,12 @@
 #include "./iterator_facade.hpp"
 #include "./range_archetypes.hpp"
 #include "./range_concepts.hpp"
-#include "./test_concept.hpp"
 #include "./ranges.hpp"
+#include "./test_concept.hpp"
 
 #include <catch2/catch.hpp>
 
+#include <array>
 #include <deque>
 #include <forward_list>
 #include <list>

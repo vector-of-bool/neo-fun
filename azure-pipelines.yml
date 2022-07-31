@@ -14,7 +14,7 @@ jobs:
           echo Loading VS environment
           call "C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\Common7\Tools\vsdevcmd" -arch=x64 || exit 1
           echo Build
-          .\dds.exe build -t tools/msvc.jsonc
+          .\dds.exe build -TD ./conf -t tools/msvc.jsonc
         displayName: Build and Run Unit Tests
 
   - job: linux_gcc10

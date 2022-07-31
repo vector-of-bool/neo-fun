@@ -1,5 +1,6 @@
 #include "./repr.hpp"
 
+#include <array>
 #include <filesystem>
 #include <map>
 #include <optional>

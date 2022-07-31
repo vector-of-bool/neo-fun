@@ -124,4 +124,4 @@ public:
 
 }  // namespace neo
 
-#endif // __dds_header_check guard
+#endif  // __dds_header_check guard

@@ -149,32 +149,32 @@ concept text_view =
 
 namespace text_range_detail {
 
-    template <typename R, typename Char>
-    struct char_traits_of {
-        using type = std::char_traits<Char>;
-    };
+template <typename R, typename Char>
+struct char_traits_of {
+    using type = std::char_traits<Char>;
+};
 
-    template <typename R, typename C>
-    requires requires { typename R::traits_type; }
-    struct char_traits_of<R, C> {
-        using type = typename R::traits_type;
-    };
+template <typename R, typename C>
+requires requires { typename R::traits_type; }
+struct char_traits_of<R, C> {
+    using type = typename R::traits_type;
+};
 
-    template <typename T>
-    constexpr auto get_allocator_of(T&&, auto alloc) noexcept {
-        return alloc;
-    }
+template <typename T>
+constexpr auto get_allocator_of(T&&, auto alloc) noexcept {
+    return alloc;
+}
 
-    template <typename T>
-    constexpr auto get_allocator_of(T &&) noexcept {
-        return std::allocator<text_char_t<T>>{};
-    }
+template <typename T>
+constexpr auto get_allocator_of(T&&) noexcept {
+    return std::allocator<text_char_t<T>>{};
+}
 
-    template <typename T>
-    constexpr auto get_allocator_of(T && t) noexcept requires requires {
-        t.get_allocator();
-    }
-    { return t.get_allocator(); }
+template <typename T>
+constexpr auto get_allocator_of(T&& t) noexcept requires requires {
+    t.get_allocator();
+}
+{ return t.get_allocator(); }
 
 }  // namespace text_range_detail
 
@@ -218,13 +218,9 @@ using text_allocator_t = decltype(neo::text_allocator(NEO_DECLVAL(R)));
  */
 template <text_range R>
 constexpr text_view auto view_text(R&& r) noexcept {
-    if constexpr (text_view<R>) {
-        return r;
-    } else {
-        using traits = text_char_traits_t<R>;
-        using sv     = std::basic_string_view<text_char_t<R>, traits>;
-        return sv(std::ranges::data(r), neo::text_range_size(r));
-    }
+    using traits = text_char_traits_t<R>;
+    using sv     = std::basic_string_view<text_char_t<R>, traits>;
+    return sv(std::ranges::data(r), neo::text_range_size(r));
 }
 
 /**
