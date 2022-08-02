@@ -67,9 +67,18 @@ concept can_advance =
     };
 
 template <typename T>
+concept can_to_address =
+    requires (const T& t) {
+        { t.to_address() } -> std::contiguous_iterator;
+    };
+
+template <typename T>
 concept iter_is_random_access =
     sized_sentinel_of<T, T> &&
     can_advance<T>;
+
+template <typename T>
+concept iter_is_contiguous = iter_is_random_access<T> and can_to_address<T>;
 
 template <typename T>
 concept iter_is_bidirectional =
@@ -328,13 +337,14 @@ public:
      * object.
      */
     constexpr decltype(auto) operator->() const noexcept(noexcept(_self().dereference())) {
-        decltype(auto) deref = **this;
-        if constexpr (std::is_reference_v<decltype(deref)>) {
+        if constexpr (detail::can_to_address<self_type>) {
+            return _self().to_address();
+        } else if constexpr (std::is_reference_v<std::iter_reference_t<self_type>>) {
             // If operator*() returns a reference, just return that address
-            return std::addressof(deref);
+            return std::addressof(**this);
         } else {
             // It returned a value, so we need to wrap it in an arrow_proxy for the caller
-            return arrow_proxy{NEO_MOVE(deref)};
+            return arrow_proxy{**this};
         }
     }
 
@@ -392,24 +402,38 @@ struct iterator_traits<Derived> {
 
     // Pick the iterator category based on the interfaces that it provides
     using iterator_category = std::conditional_t<
-        // Random access?
-        neo::detail::iter_is_random_access<Derived>,
-        std::random_access_iterator_tag,
-        // Nope
+        // Contiguous?
+        neo::detail::iter_is_contiguous<Derived>,
+        std::contiguous_iterator_tag,
+        // Not
         std::conditional_t<
-            // Bidirectional?
-            neo::detail::iter_is_bidirectional<Derived>,
-            std::bidirectional_iterator_tag,
-            // Noh
+            // Random access?
+            neo::detail::iter_is_random_access<Derived>,
+            std::random_access_iterator_tag,
+            // Nope
             std::conditional_t<
-                // Is it single-pass?
-                neo::detail::iter_is_forward<Derived>,
-                // Otherwise it is a forward iterator
-                std::forward_iterator_tag,
-                // Than means it is an input iterator
-                std::input_iterator_tag>>>;
+                // Bidirectional?
+                neo::detail::iter_is_bidirectional<Derived>,
+                std::bidirectional_iterator_tag,
+                // Noh
+                std::conditional_t<
+                    // Is it single-pass?
+                    neo::detail::iter_is_forward<Derived>,
+                    // Otherwise it is a forward iterator
+                    std::forward_iterator_tag,
+                    // Than means it is an input iterator
+                    std::input_iterator_tag>>>>;
 
     using iterator_concept = iterator_category;
+};
+
+template <typename Derived>
+requires neo::detail::can_to_address<Derived>  //
+    and std::derived_from<Derived, neo::iterator_facade<Derived>>
+struct pointer_traits<Derived> {
+    using pointer         = decltype(std::addressof(*NEO_DECLVAL(Derived)));
+    using element_type    = std::remove_pointer_t<pointer>;
+    using difference_type = std::ptrdiff_t;
 };
 
 }  // namespace std
