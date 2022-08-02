@@ -5,6 +5,8 @@
 #include "./invoke.hpp"
 #include "./iterator_facade.hpp"
 #include "./reconstruct.hpp"
+#include "./substring.hpp"
+#include "./text_algo.hpp"
 #include "./text_range.hpp"
 
 #include "./enum.hpp"
@@ -18,7 +20,7 @@ namespace neo {
  *
  * @tparam View The type of the text view
  */
-template <text_view View>
+template <text_range View>
 struct simple_token {
     /// The view of the token text.
     View view;
@@ -30,7 +32,8 @@ template <typename FindSplit>
 struct simple_token_splitter {
     [[no_unique_address]] FindSplit _find_split;
 
-    template <text_view View>
+    template <text_range View>
+    requires std::ranges::borrowed_range<View> and neo::reconstructible_range<View>
     constexpr std::optional<simple_token<View>> operator()(View prev,
                                                            View remaining) const noexcept {
         if (std::ranges::empty(remaining)
@@ -43,7 +46,7 @@ struct simple_token_splitter {
         }
 
         // Find the next splitter:
-        View split = _find_split(remaining);
+        View split = _find_split(std::as_const(remaining));
 
         // Get the text leading up to the new split
         auto tok = neo::reconstruct_range(remaining,
@@ -59,15 +62,14 @@ requires std::predicate<C, char32_t>
 struct charclass_splitter {
     [[no_unique_address]] C _classifier{};
 
-    template <text_view V>
-    requires reconstructible_range<V>
-    constexpr V operator()(V remaining) const noexcept {
+    template <text_range V>
+    constexpr substring_t<V> operator()(V&& remaining) const noexcept {
         auto skip_start
             = std::ranges::find_if(remaining, [&](char32_t c) { return _classifier(c); });
         auto skip_end = std::ranges::find_if(skip_start,
                                              std::ranges::end(remaining),
                                              [&](char32_t c) { return not _classifier(c); });
-        return neo::reconstruct_range(remaining, skip_start, skip_end);
+        return neo::substring(remaining, skip_start, skip_end);
     }
 };
 
@@ -78,18 +80,24 @@ struct is_whitespace_fn {
 };
 
 struct find_newline_fn {
-    constexpr auto operator()(neo::text_view auto view) const {
-        auto v = neo::view_text(view);
-        while (not v.empty() and not v.starts_with("\n") and not v.starts_with("\r\n")) {
-            v.remove_prefix(1);
+    template <text_range T>
+    constexpr substring_t<T> operator()(T view) const {
+        // A CRLF constant range to help compare against
+        std::ranges::range_value_t<T> crlf_arr[3] = {'\r', '\n', 0};
+        const auto                    crlf        = borrow_text(crlf_arr);
+        std::ranges::range_value_t<T> lf_arr[2]   = {'\n', 0};
+        auto                          lf          = borrow_text(lf_arr);
+        while (not std::ranges::empty(view) and not neo::starts_with(view, lf)
+               and not neo::starts_with(view, crlf)) {
+            view = substring(view, 1);
         }
-        if (v.starts_with("\r\n")) {
-            return neo::reconstruct_range(view, v.begin(), v.begin() + 2);
-        } else if (v.starts_with("\n")) {
-            return neo::reconstruct_range(view, v.begin(), v.begin() + 1);
+        if (neo::starts_with(view, crlf)) {
+            return substring(view, 0, 2);
+        } else if (neo::starts_with(view, lf)) {
+            return substring(view, 0, 1);
         }
         // "v" is empty:
-        return neo::reconstruct_range(view, v.begin(), v.end());
+        return neo::substring(view, 0);
     }
 };
 
@@ -101,7 +109,7 @@ struct line_splitter : simple_token_splitter<find_newline_fn> {};
 
 template <typename T, typename Text>
 concept token_type = requires(T&& token) {
-    { token.view } -> std::convertible_to<view_text_t<Text>>;
+    { token.view } -> std::convertible_to<Text>;
 };
 
 template <typename T, typename Text>
@@ -112,10 +120,10 @@ concept token_result = neo::simple_boolean<T> && requires(T&& token) {
 template <typename Func, typename Text>
 concept tokenizer_fn =  //
     neo::invocable2<Func,
-                    view_text_t<Text>,
-                    view_text_t<Text>>  //
-    && text_range<Text>                 //
-    && token_result<neo::invoke_result_t<Func, view_text_t<Text>, view_text_t<Text>>, Text>;
+                    Text,
+                    Text>  //
+    && text_range<Text>    //
+    && token_result<neo::invoke_result_t<Func, Text, Text>, Text>;
 
 /**
  * @brief A tokenizer object. Splits a text_range into a range of tokens
@@ -123,7 +131,7 @@ concept tokenizer_fn =  //
  * @tparam R The type of the text range that is being split
  * @tparam Tok The tokenization function
  */
-template <text_range R, tokenizer_fn<view_text_t<R>> Tok>
+template <text_range R, tokenizer_fn<borrow_text_t<R>> Tok>
 class tokenizer {
     /// The text that is being tokenized
     R _text;
@@ -131,6 +139,8 @@ class tokenizer {
     [[no_unique_address]] Tok _get_next_token;
 
 public:
+    using borrowed_text = borrow_text_t<R&>;
+
     /**
      * @brief Construct a new tokenizer from a text range and token splitter
      */
@@ -138,16 +148,19 @@ public:
         : _text(NEO_FWD(text))
         , _get_next_token(NEO_FWD(tkz)) {}
 
+    constexpr explicit tokenizer(R&& text) noexcept
+        : _text(NEO_FWD(text)) {}
+
     /// The type of the token that is generated by this tokenizer
-    using token_result = invoke_result_t<Tok&, view_text_t<R>, view_text_t<R>>;
+    using token_result = invoke_result_t<Tok&, borrowed_text, borrowed_text>;
 
     /**
      * @brief The iterator that walks the range of tokens
      */
     struct iterator : iterator_facade<iterator> {
     private:
-        view_text_t<R> _tail;
-        token_result   _current;
+        borrowed_text _tail;
+        token_result  _current;
 
         std::remove_reference_t<Tok>* _tokenize = nullptr;
 
@@ -156,7 +169,7 @@ public:
 
         struct sentinel_type {};
 
-        explicit iterator(view_text_t<R> v, Tok& tok)
+        explicit iterator(borrowed_text v, Tok& tok)
             : _tail(v)
             , _tokenize(neo::addressof(tok)) {
             increment();
@@ -179,13 +192,45 @@ public:
         }
     };
 
-    constexpr iterator begin() noexcept { return iterator{neo::view_text(_text), _get_next_token}; }
+    constexpr iterator begin() noexcept {
+        return iterator{neo::borrow_text(_text), _get_next_token};
+    }
 
     constexpr auto end() noexcept { return typename iterator::sentinel_type{}; }
 };
 
-template <text_range R, tokenizer_fn<view_text_t<R>> Tok>
+template <text_range R, tokenizer_fn<borrow_text_t<R>> Tok>
 explicit tokenizer(R&&, Tok&&) -> tokenizer<R, Tok>;
+
+namespace tokenize_detail {
+
+template <text_range R>
+using text_line_split_tokenizer = neo::tokenizer<R, neo::line_splitter>;
+
+struct get_token_view_fn {
+    constexpr auto operator()(const auto& token) const noexcept { return token.view; }
+};
+
+template <text_range R>
+constexpr auto iter_lines_impl(R&& text) noexcept {
+    return tokenizer<R, line_splitter>{NEO_FWD(text), line_splitter{}}
+    | std::views::transform(get_token_view_fn{});
+}
+
+}  // namespace tokenize_detail
+
+template <text_range Text>
+struct text_lines_view : decltype(tokenize_detail::iter_lines_impl(NEO_DECLVAL(Text))) {
+    explicit text_lines_view(Text&& t) noexcept
+        : text_lines_view::transform_view(tokenize_detail::iter_lines_impl(NEO_FWD(t))) {}
+};
+
+inline constexpr struct iter_lines_fn {
+    template <text_range Text>
+    constexpr auto operator()(Text&& text) const noexcept {
+        return text_lines_view<Text>{NEO_FWD(text)};
+    }
+} iter_lines;
 
 }  // namespace neo
 
@@ -198,5 +243,8 @@ constexpr bool enable_borrowed_range<neo::tokenizer<R, Tok>> = std::ranges::borr
 template <typename R, typename Tok>
 constexpr bool enable_view<neo::tokenizer<R, Tok>> = std::ranges::view<R>and
                std::is_trivially_copyable_v<Tok>;
+
+template <neo::text_range R>
+constexpr bool enable_borrowed_range<neo::text_lines_view<R>> = std::ranges::borrowed_range<R>;
 
 }  // namespace std::ranges

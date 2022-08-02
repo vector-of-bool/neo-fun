@@ -218,6 +218,7 @@ using text_allocator_t = decltype(neo::text_allocator(NEO_DECLVAL(R)));
  * std::basic_string_view for the contents of the text range
  */
 template <text_range R>
+requires std::ranges::contiguous_range<R>
 constexpr text_view auto view_text(R&& r) noexcept {
     using traits = text_char_traits_t<R>;
     using sv     = std::basic_string_view<text_char_t<R>, traits>;
@@ -252,5 +253,22 @@ constexpr auto copy_text(const R& r) noexcept {
 
 template <text_range R>
 using copy_text_t = decltype(copy_text(NEO_DECLVAL(R)));
+
+inline constexpr struct borrow_text_fn {
+    template <text_range R>
+    constexpr auto operator()(R&& r) const noexcept {
+        using Rv = std::remove_reference_t<R>;
+        if constexpr (std::ranges::borrowed_range<Rv>) {
+            return NEO_FWD(r);
+        } else if constexpr (std::ranges::contiguous_range<Rv>) {
+            return view_text(r);
+        } else {
+            return std::ranges::subrange(std::ranges::begin(r), std::ranges::end(r));
+        }
+    }
+} borrow_text;
+
+template <typename T>
+using borrow_text_t = decltype(borrow_text(NEO_DECLVAL(T)));
 
 }  // namespace neo

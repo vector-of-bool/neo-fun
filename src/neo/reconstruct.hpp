@@ -104,7 +104,7 @@ template <typename T>
 constexpr bool reconstruct_manually_enabled = neo::enable_reconstructible_range<T>;
 
 template <typename T>
-concept enable_reconstructible = neo::enable_reconstructible_range<std::remove_cvref_t<T>>  //
+concept enable_reconstructible = neo::enable_reconstructible_range<T>  //
     || blessed_reconstructible_range<T>;
 
 }  // namespace range_detail
@@ -114,7 +114,7 @@ concept reconstructible_range = std::ranges::range<T>  //
     && std::constructible_from<std::remove_cvref_t<T>,
                                std::ranges::iterator_t<T>,
                                std::ranges::sentinel_t<T>>  //
-    && range_detail::enable_reconstructible<T>;
+    && range_detail::enable_reconstructible<std::remove_cvref_t<T>>;
 
 template <typename R>
 requires reconstructible_range<std::remove_cvref_t<R>>

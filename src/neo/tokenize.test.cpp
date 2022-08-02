@@ -33,3 +33,17 @@ TEST_CASE("Tokenize an owned string") {
     ++it;
     CHECK(it->view == "bar");
 }
+
+TEST_CASE("Iterate some lines") {
+    std::string s     = "foo\nbar\nbaz";
+    auto        iter  = neo::iter_lines(s);
+    auto        lines = neo::to_vector(iter);
+    CHECK(lines.size() == 3);
+    CHECK(lines == std::vector<std::string_view>({"foo", "bar", "baz"}));
+
+    // Final newline causes another empty line:
+    s     = "foo\n\nbar\nbaz\n";
+    iter  = neo::iter_lines(s);
+    lines = neo::to_vector(iter);
+    CHECK(lines == std::vector<std::string_view>({"foo", "", "bar", "baz", ""}));
+}
