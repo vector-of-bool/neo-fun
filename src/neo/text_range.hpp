@@ -69,16 +69,17 @@ using iter_char_t = std::iter_value_t<Iter>;
 template <typename Iter>
 concept text_iterator =
     character_iterator<Iter>
-    && std::contiguous_iterator<Iter>;
+    && std::random_access_iterator<Iter>
+    ;
 
 /**
  * @brief Match any contiguous sized range whose iterator is a text_iterator
  */
 template <typename T>
 concept text_range =
-    std::ranges::contiguous_range<T>
-    && std::ranges::sized_range<T>
-    && character_range<T>;
+    std::ranges::random_access_range<T>
+    and std::ranges::sized_range<T>
+    and character_range<T>;
 
 /**
  * @brief Obtain the character type of a text range
