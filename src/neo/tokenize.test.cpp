@@ -38,12 +38,21 @@ TEST_CASE("Iterate some lines") {
     std::string s     = "foo\nbar\nbaz";
     auto        iter  = neo::iter_lines(s);
     auto        lines = neo::to_vector(iter);
-    CHECK(lines.size() == 3);
-    CHECK(lines == std::vector<std::string_view>({"foo", "bar", "baz"}));
+    CHECKED_IF(lines.size() == 3) {
+        CHECK(lines[0] == "foo");
+        CHECK(lines[1] == "bar");
+        CHECK(lines[2] == "baz");
+    }
 
     // Final newline causes another empty line:
     s     = "foo\n\nbar\nbaz\n";
     iter  = neo::iter_lines(s);
     lines = neo::to_vector(iter);
-    CHECK(lines == std::vector<std::string_view>({"foo", "", "bar", "baz", ""}));
+    CHECKED_IF(lines.size() == 5) {
+        CHECK(lines[0] == "foo");
+        CHECK(lines[1] == "");
+        CHECK(lines[2] == "bar");
+        CHECK(lines[3] == "baz");
+        CHECK(lines[4] == "");
+    }
 }

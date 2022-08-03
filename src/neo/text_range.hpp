@@ -1,7 +1,9 @@
 #pragma once
 
+#include "./concepts.hpp"
 #include "./declval.hpp"
 
+#include <algorithm>
 #include <ranges>
 #include <string>
 
@@ -254,21 +256,51 @@ constexpr auto copy_text(const R& r) noexcept {
 template <text_range R>
 using copy_text_t = decltype(copy_text(NEO_DECLVAL(R)));
 
-inline constexpr struct borrow_text_fn {
-    template <text_range R>
-    constexpr auto operator()(R&& r) const noexcept {
-        using Rv = std::remove_reference_t<R>;
-        if constexpr (std::ranges::borrowed_range<Rv>) {
-            return NEO_FWD(r);
-        } else if constexpr (std::ranges::contiguous_range<Rv>) {
-            return view_text(r);
-        } else {
-            return std::ranges::subrange(std::ranges::begin(r), std::ranges::end(r));
-        }
+template <text_range R>
+struct text_subrange : std::ranges::subrange<std::ranges::iterator_t<R>> {
+
+    enum { enable_reconstructible_range = 1 };
+
+    constexpr text_subrange() requires std::default_initializable<std::ranges::iterator_t<R>>
+    = default;
+
+    constexpr text_subrange(std::ranges::iterator_t<R> iter,
+                            std::ranges::sentinel_t<R> stop) noexcept
+        : text_subrange::subrange(iter, stop) {}
+
+    constexpr text_subrange(alike<R> auto&& str) noexcept
+        : text_subrange(std::ranges::begin(str), std::ranges::begin(str) + text_range_size(str)) {}
+
+    constexpr bool operator==(text_range auto const& other) const noexcept {
+        auto other_len = text_range_size(other);
+        return this->size() == other_len
+            and std::ranges::equal(*this,
+                                   std::ranges::subrange(std::ranges::begin(other),
+                                                         std::ranges::begin(other) + other_len));
     }
-} borrow_text;
+
+    constexpr auto operator<=>(text_range auto const& other) const noexcept {
+        auto ob = std::ranges::begin(other);
+        return std::lexicographical_compare_three_way(this->begin(),
+                                                      this->end(),
+                                                      ob,
+                                                      ob + text_range_size(other));
+    }
+};
+
+template <text_range R>
+explicit text_subrange(const R&) -> text_subrange<R>;
 
 template <typename T>
-using borrow_text_t = decltype(borrow_text(NEO_DECLVAL(T)));
+constexpr bool is_text_subrange = false;
+
+template <typename T>
+constexpr bool is_text_subrange<text_subrange<T>> = true;
 
 }  // namespace neo
+
+template <typename T>
+constexpr bool std::ranges::enable_view<neo::text_subrange<T>> = true;
+
+template <typename T>
+constexpr bool std::ranges::enable_borrowed_range<neo::text_subrange<T>> = true;

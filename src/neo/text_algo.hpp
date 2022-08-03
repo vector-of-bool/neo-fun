@@ -18,14 +18,14 @@ namespace neo {
 
 inline constexpr struct trim_fn {
     template <text_range R, std::predicate<char32_t> Predicate>
-    constexpr text_range auto operator()(R&& text, Predicate&& pred) const noexcept {
+    constexpr substring_t<R> operator()(R&& text, Predicate&& pred) const noexcept {
         auto new_begin = std::ranges::find_if_not(text, pred);
         auto new_end   = std::ranges::find_if_not(std::views::reverse(text), pred);
         return substring(text, new_begin, new_end.base());
     }
 
     template <text_range R>
-    constexpr text_range auto operator()(R&& text) const noexcept {
+    constexpr substring_t<R> operator()(R&& text) const noexcept {
         return (*this)(text, [](char32_t c) {
             return c == ' ' or c == '\t' or c == '\r' or c == '\f' or c == '\n';
         });
@@ -138,7 +138,7 @@ public:
 
     constexpr auto data() const noexcept
         requires(sizeof...(Ts) == 1 and (std::ranges::contiguous_range<Ts> and ...)) {
-        std::ranges::data(_nth<0>());
+        return std::ranges::data(_nth<0>());
     }
 
     class iterator : public neo::iterator_facade<iterator> {
@@ -377,11 +377,6 @@ inline constexpr struct starts_with_fn {
         auto rend = std::ranges::end(right);
         return (*this)(lit, lend, rit, rend, compare);
     }
-
-    // template <std::ranges::forward_range Left, std::ranges::forward_range Right>
-    // constexpr bool operator()(Left&& left, Right&& right) const noexcept {
-    //     return (*this)(left, right, std::equal_to<>{});
-    // }
 
     template <std::ranges::forward_range Left, std::forward_iterator RightIter>
     constexpr bool
