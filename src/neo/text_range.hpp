@@ -286,6 +286,15 @@ struct text_subrange : std::ranges::subrange<std::ranges::iterator_t<R>> {
                                                       ob,
                                                       ob + text_range_size(other));
     }
+
+    template <typename Char, typename Traits>
+    friend std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& o,
+                                                        text_subrange self) noexcept {
+        for (Char c : self) {
+            o.put(c);
+        }
+        return o;
+    }
 };
 
 template <text_range R>

@@ -4,12 +4,11 @@
 #include "./fwd.hpp"
 #include "./invoke.hpp"
 #include "./iterator_facade.hpp"
+#include "./ranges.hpp"
 #include "./reconstruct.hpp"
 #include "./substring.hpp"
 #include "./text_algo.hpp"
 #include "./text_range.hpp"
-
-#include "./enum.hpp"
 
 #include <algorithm>
 #include <optional>
@@ -146,6 +145,8 @@ class tokenizer {
 public:
     using borrowed_text = substring_t<R&>;
 
+    constexpr tokenizer() = default;
+
     /**
      * @brief Construct a new tokenizer from a text range and token splitter
      */
@@ -219,16 +220,35 @@ struct get_token_view_fn {
 }  // namespace tokenize_detail
 
 template <text_range Text>
-struct text_lines_view : std::ranges::transform_view<tokenizer<Text, line_splitter>,
-                                                     tokenize_detail::get_token_view_fn> {
-    constexpr explicit text_lines_view(Text&& t) noexcept
-        : text_lines_view::transform_view(tokenizer<Text, line_splitter>{NEO_FWD(t)}, {}) {}
+requires std::ranges::view<Text>
+struct text_lines_view : std::ranges::view_interface<text_lines_view<Text>> {
+    using inner_view = std::ranges::transform_view<tokenizer<Text, line_splitter>,
+                                                   tokenize_detail::get_token_view_fn>;
+    inner_view _view;
+
+    text_lines_view() = default;
+
+    constexpr explicit text_lines_view(Text t) noexcept
+        : _view(tokenizer<Text, line_splitter>{NEO_FWD(t)}, {}) {}
+
+    constexpr auto begin() noexcept(neo::ranges::nothrow_range<inner_view>) {
+        return _view.begin();
+    }
+    constexpr auto begin() const noexcept(
+        neo::ranges::nothrow_range<inner_view>) requires std::ranges::range<const inner_view> {
+        return _view.begin();
+    }
+    constexpr auto end() noexcept { return _view.end(); }
+    constexpr auto end() const noexcept requires std::ranges::range<const inner_view> {
+        return _view.end();
+    }
 };
 
 inline constexpr struct iter_lines_fn {
     template <text_range Text>
-    constexpr text_lines_view<Text> operator()(Text&& text) const noexcept {
-        return text_lines_view<Text>{NEO_FWD(text)};
+    requires std::ranges::viewable_range<Text>
+    constexpr text_lines_view<std::views::all_t<Text>> operator()(Text&& text) const noexcept {
+        return text_lines_view<std::views::all_t<Text>>(std::views::all(NEO_FWD(text)));
     }
 } iter_lines;
 
