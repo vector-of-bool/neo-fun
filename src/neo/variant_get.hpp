@@ -16,22 +16,26 @@ namespace var_detail {
 template <typename>
 void try_get(...) = delete;
 
-template <typename Var, typename Alt>
-using try_get_result_t = std::add_pointer_t<neo::forward_like_t<Var, Alt>>;
+template <typename Result, typename Alt>
+concept try_get_result = requires(Result res, void (*fn)(Alt& ref)) {
+    { res ? 0 : 0 }
+    noexcept;
+    fn(*res);
+};
 
 template <typename Variant, typename Alt>
 concept has_adl_try_get = requires(Variant&& var) {
-    { try_get<Alt>(var) } -> std::same_as<try_get_result_t<Variant, Alt>>;
+    { try_get<Alt>(var) } -> try_get_result<forward_like_t<Variant, Alt>>;
 };
 
 template <typename Variant, typename Alt>
 concept has_member_try_get = requires(Variant&& var) {
-    { var.template try_get<Alt>() } -> std::same_as<try_get_result_t<Variant, Alt>>;
+    { var.template try_get<Alt>() } -> try_get_result<forward_like_t<Variant, Alt>>;
 };
 
 template <typename Variant, typename Alt>
 concept has_adl_get_if = requires(Variant&& var) {
-    { get_if<Alt>(neo::addressof(var)) } -> std::same_as<try_get_result_t<Variant, Alt>>;
+    { get_if<Alt>(neo::addressof(var)) } -> try_get_result<forward_like_t<Variant, Alt>>;
 };
 
 template <typename Alt>
@@ -97,7 +101,7 @@ constexpr inline auto try_get = try_get_fn<Alt>{};
 template <typename Alternative>
 struct holds_alternative_fn {
     constexpr bool operator()(supports_alternative<Alternative> auto const& var) const noexcept {
-        return try_get<Alternative>(var) != nullptr;
+        return static_cast<bool>(try_get<Alternative>(var));
     }
 };
 
@@ -111,17 +115,17 @@ template <typename Alternative>
 struct get_fn {
     template <supports_alternative<Alternative> Variant>
     constexpr decltype(auto) operator()(Variant&& var) const {
-        auto ptr = try_get<Alternative>(var);
-        if (ptr == nullptr) {
+        auto maybe = try_get<Alternative>(var);
+        if (not static_cast<bool>(maybe)) {
             var_detail::throw_bad_variant_access();
         }
         if constexpr (std::is_reference_v<Alternative>) {
-            return static_cast<Alternative>(*ptr);
+            return static_cast<Alternative>(*maybe);
         } else {
             if constexpr (std::is_rvalue_reference_v<Variant&&>) {
-                return NEO_MOVE(*ptr);
+                return NEO_MOVE(*maybe);
             } else {
-                return *ptr;
+                return *maybe;
             }
         }
     }
