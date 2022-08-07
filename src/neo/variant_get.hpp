@@ -19,13 +19,6 @@ void try_get(...) = delete;
 template <typename Var, typename Alt>
 using try_get_result_t = std::add_pointer_t<neo::forward_like_t<Var, Alt>>;
 
-template <typename Alternative>
-constexpr inline auto try_get_impl = neo::ordered_overload{
-    [] NEO_CTL(_1.template try_get<Alternative>()),
-    [] NEO_CTL(try_get<Alternative>(_1)),
-    [] NEO_CTL(get_if<Alternative>(neo::addressof(_1))),
-};
-
 template <typename Variant, typename Alt>
 concept has_adl_try_get = requires(Variant&& var) {
     { try_get<Alt>(var) } -> std::same_as<try_get_result_t<Variant, Alt>>;
@@ -39,6 +32,13 @@ concept has_member_try_get = requires(Variant&& var) {
 template <typename Variant, typename Alt>
 concept has_adl_get_if = requires(Variant&& var) {
     { get_if<Alt>(neo::addressof(var)) } -> std::same_as<try_get_result_t<Variant, Alt>>;
+};
+
+template <typename Alt>
+constexpr inline auto try_get_impl = neo::ordered_overload{
+    [](has_member_try_get<Alt> auto&& var) noexcept { return var.template try_get<Alt>(); },
+    [](has_adl_try_get<Alt> auto&& var) noexcept { return try_get<Alt>(var); },
+    [](has_adl_get_if<Alt> auto&& var) noexcept { return get_if<Alt>(neo::addressof(var)); },
 };
 
 template <typename Variant, typename Alt>
