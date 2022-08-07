@@ -3,6 +3,7 @@
 #include "./addressof.hpp"
 #include "./like.hpp"
 #include "./overload.hpp"
+#include "./platform.hpp"
 #include "./tl.hpp"
 
 #include <concepts>
@@ -38,12 +39,21 @@ concept has_adl_get_if = requires(Variant&& var) {
     { get_if<Alt>(neo::addressof(var)) } -> try_get_result<forward_like_t<Variant, Alt>>;
 };
 
+#if NEO_COMPILER_IS_GNU
 template <typename Alt>
 constexpr inline auto try_get_impl = neo::ordered_overload{
     [](has_member_try_get<Alt> auto&& var) noexcept { return var.template try_get<Alt>(); },
     [](has_adl_try_get<Alt> auto&& var) noexcept { return try_get<Alt>(var); },
     [](has_adl_get_if<Alt> auto&& var) noexcept { return get_if<Alt>(neo::addressof(var)); },
 };
+#else
+template <typename Alt>
+constexpr inline auto try_get_impl = neo::ordered_overload{
+    [] NEO_CTL(_1.template try_get<Alt>()),
+    [] NEO_CTL(try_get<Alt>(_1)),
+    [] NEO_CTL(get_if<Alt>(neo::addressof(_1))),
+};
+#endif
 
 template <typename Variant, typename Alt>
 concept has_try_get =                    //
