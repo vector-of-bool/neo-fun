@@ -80,7 +80,8 @@ concept supports_alternative
 
 template <typename Alternative>
 struct try_get_fn {
-    constexpr auto operator()(supports_alternative<Alternative> auto&& var) const
+    template <supports_alternative<Alternative> Var>
+    constexpr auto operator()(Var&& var) const
         NEO_RETURNS(var_detail::try_get_impl<Alternative>(NEO_FWD(var)));
 };
 
