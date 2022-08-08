@@ -7,13 +7,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Build
-        env: {TARGET: +build-alpine-gcc-11.2}
-        run: &script |
-          bash tools/earthly.sh "$TARGET"
+        run: bash tools/earthly.sh +build-alpine-gcc-11.2
   build-gcc10:
     name: Build for GCC 10.3
     runs-on: ubuntu-latest
     steps:
       - name: Build
-        env: {TARGET: +build-alpine-gcc-10.3}
-        run: *script
+        run: bash tools/earthly.sh +build-alpine-gcc-10.3
