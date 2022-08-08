@@ -21,7 +21,7 @@ if (!(Test-Path $bpt_exe)) {
         -OutFile $bpt_exe
 }
 
-& $bpt_exe build --project=$root --toolchain=$Toolchain
+& $bpt_exe build --project=$root --toolchain=$Toolchain --tweaks-dir=$root/conf
 
 if ($LASTEXITCODE -ne 0) {
     throw "Execution of bpt build failed [$LASTEXITCODE]"
