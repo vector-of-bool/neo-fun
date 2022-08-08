@@ -21,11 +21,20 @@ jobs:
 
   build-vs2019:
     name: Build for VS 2019
+    runs-on: windows-2019
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Build and Test
+        run: tools/build-vs2019e.bat -Toolchain tools/msvc.jsonc
+
+  build-vs2022:
+    name: Build for VS 2022
     runs-on: windows-2022
     steps:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Probe
-        run: gci -recurse "C:/Program Files (x86)/Microsoft Visual Studio/2019"
+        run: gci -recurse "C:/Program Files (x86)/Microsoft Visual Studio"
       - name: Build and Test
-        run: tools/build-vs2019e.bat -Toolchain tools/msvc.jsonc
+        run: tools/build-vs2022e.bat -Toolchain tools/msvc.jsonc

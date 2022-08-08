@@ -34,7 +34,7 @@ build:
         }' \
         | tee toolchain.yaml
     RUN --mount=type=cache,target=/root/.ccache \
-        bpt build --toolchain=toolchain.yaml
+        bpt build --toolchain=toolchain.yaml --tweaks-dir=conf
 
 build-alpine-gcc-11.2:
     BUILD +build --alpine_version=3.16
