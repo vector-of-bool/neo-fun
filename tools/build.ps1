@@ -17,7 +17,7 @@ $null = New-Item -ItemType Directory $build_dir -Force
 
 $bpt_exe = Join-Path $build_dir "bpt.exe"
 if (!(Test-Path $bpt_exe)) {
-    Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/vector-of-bool/bpt/releases/download/1.0.0-beta.1/bpt-linux-x64" `
+    Invoke-WebRequest -UseBasicParsing -Uri "https://github.com/vector-of-bool/bpt/releases/download/1.0.0-beta.1/bpt-win-x64.exe" `
         -OutFile $bpt_exe
 }
 
