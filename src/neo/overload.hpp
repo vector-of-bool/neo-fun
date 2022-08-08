@@ -80,13 +80,13 @@ struct ordered_overload_impl<Fn, Tail...> : ordered_overload_impl<Tail...> {
     // clang-format off
     template <typename... Args>
     constexpr decltype(auto) operator()(Args&&... args) const
-        noexcept(neo::invocable2<const Fn&, Args...>
-                     ? std::is_nothrow_invocable_v<const Fn&, Args...>
-                     : std::is_nothrow_invocable_v<const base_type&, Args...>) //
-        requires neo::invocable2<const Fn&, Args...>
-              or neo::invocable2<const base_type&, Args...>
+        noexcept(neo::invocable2<const Fn&, Args&&...>
+                     ? std::is_nothrow_invocable_v<const Fn&, Args&&...>
+                     : std::is_nothrow_invocable_v<const base_type&, Args&&...>)
+        requires neo::invocable2<const Fn&, Args&&...>
+              or neo::invocable2<const base_type&, Args&&...>
     {
-        if constexpr (neo::invocable2<const Fn&, Args...>) {
+        if constexpr (neo::invocable2<const Fn&, Args&&...>) {
             return neo::invoke(neo::unref_member(_my_fn), NEO_FWD(args)...);
         } else {
             return base_type::operator()(NEO_FWD(args)...);
@@ -95,13 +95,13 @@ struct ordered_overload_impl<Fn, Tail...> : ordered_overload_impl<Tail...> {
 
     template <typename... Args>
     constexpr decltype(auto) operator()(Args&&... args)
-        noexcept(neo::invocable2<Fn&, Args...>
-                     ? std::is_nothrow_invocable_v<Fn&, Args...>
-                     : std::is_nothrow_invocable_v<base_type&, Args...>)
-        requires neo::invocable2<Fn&, Args...>
-              or neo::invocable2<base_type&, Args...>
+        noexcept(neo::invocable2<Fn&, Args&&...>
+                     ? std::is_nothrow_invocable_v<Fn&, Args&&...>
+                     : std::is_nothrow_invocable_v<base_type&, Args&&...>)
+        requires neo::invocable2<Fn&, Args&&...>
+              or neo::invocable2<base_type&, Args&&...>
     {
-        if constexpr (neo::invocable2<Fn&, Args...>) {
+        if constexpr (neo::invocable2<Fn&, Args&&...>) {
             return neo::invoke(neo::unref_member(_my_fn), NEO_FWD(args)...);
         } else {
             return base_type::operator()(NEO_FWD(args)...);
