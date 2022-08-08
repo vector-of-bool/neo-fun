@@ -23,3 +23,8 @@ static_assert(is_same_v<decltype(mref_v<int&&>), int&&>);
 static_assert(is_same_v<decltype(mref_v<const int&&>), int&&>);
 static_assert(is_same_v<decltype(mref_v<int&>), int&>);
 static_assert(is_same_v<decltype(mref_v<const int&>), int&>);
+
+#include <catch2/catch.hpp>
+
+// This is required in order to link in some configurations MSVC
+TEST_CASE("nil") {}

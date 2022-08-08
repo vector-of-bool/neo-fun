@@ -10,3 +10,8 @@ static_assert(std::same_as<neo::tag<>, neo::template_args_tag_t<std::tuple<>>>);
 static_assert(
     std::same_as<neo::tag<int, double>, neo::template_args_tag_t<std::tuple<int, double>>>);
 static_assert(std::same_as<neo::tag<int, char>, neo::template_args_tag_t<std::variant<int, char>>>);
+
+#include <catch2/catch.hpp>
+
+// This is required in order to link in some configurations MSVC
+TEST_CASE("nil") {}
