@@ -2,7 +2,7 @@
 
 rem Load the VS environment
 echo "Loading VS 2022 enterprise..."
-call "C:\Program Files (x86)\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\vsdevcmd" -arch=x64 || exit 1
+call "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\Common7\Tools\vsdevcmd" -arch=x64 || exit 1
 
 rem Invoke PowerShell for a scripting environment
 echo "Running build:"
