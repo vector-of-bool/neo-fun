@@ -17,4 +17,4 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Build
-        run: bash tools/earthly.sh +build-alpine-gcc-10.3
+        run: bash tools/earthly.sh +build-alpine-gcc-10.3 --cxx_flags "-fcoroutines"
