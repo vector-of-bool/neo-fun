@@ -1,5 +1,7 @@
 #include "./archetypes.hpp"
 
+#include <catch2/catch.hpp>
+
 #include <string>
 
 NEO_MSVC_PRAGMA(warning(disable : 4624));
