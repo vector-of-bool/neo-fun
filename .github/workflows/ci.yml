@@ -8,7 +8,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Build
+      - name: Build and Test
         run: bash tools/earthly.sh +build-alpine-gcc-11.2
   build-gcc10:
     name: Build for GCC 10.3
@@ -16,7 +16,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Build
+      - name: Build and Test
         run: bash tools/earthly.sh +build-alpine-gcc-10.3 --cxx_flags "-fcoroutines"
 
   build-vs2019:
@@ -25,5 +25,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: build
+      - name: Probe
+        run: gci -recurse "C:/Program Files (x86)/Microsoft Visual Studio/2019"
+      - name: Build and Test
         run: tools/build-vs2019e.bat -Toolchain tools/msvc.jsonc
