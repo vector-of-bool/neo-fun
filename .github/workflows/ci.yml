@@ -8,6 +8,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+      - name: Restore Cache
+        uses: actions/cache@v3
+        with:
+          path: /var/lib/docker/volumes/earthly-cache/
+          key: abc
       - name: Build and Test
         run: bash tools/earthly.sh +build-alpine-gcc-11.2
   build-gcc10:
@@ -16,6 +21,11 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+      - name: Restore Cache
+        uses: actions/cache@v3
+        with:
+          path: /var/lib/docker/volumes/earthly-cache/
+          key: abc
       - name: Build and Test
         run: bash tools/earthly.sh +build-alpine-gcc-10.3 --cxx_flags "-fcoroutines"
 
@@ -25,6 +35,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+      - name: Restore Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            _build/
+            ~/AppData/Local/bpt/
+          key: abc
       - name: Build and Test
         run: tools/build-vs2019e.bat -Toolchain tools/msvc.jsonc
 
@@ -34,5 +51,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
+      - name: Restore Cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            _build/
+            ~/AppData/Local/bpt/
+          key: abc
       - name: Build and Test
         run: tools/build-vs2022e.bat -Toolchain tools/msvc.jsonc
