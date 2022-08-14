@@ -6,6 +6,9 @@
 
 NEO_MSVC_PRAGMA(warning(disable : 4624));
 
+// This is required in order to link in some configurations MSVC
+TEST_CASE("nil") {}
+
 using namespace neo::arch;
 
 static_assert(!neo::destructible<indestructible>);

@@ -4,9 +4,14 @@
 
 #include "./test_concept.hpp"
 
+#include <catch2/catch.hpp>
+
 #include <memory>
 #include <string>
 #include <vector>
+
+// This is required in order to link in some configurations MSVC
+TEST_CASE("nil") {}
 
 using namespace neo;
 

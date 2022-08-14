@@ -45,3 +45,6 @@ void test_all() {
     test<int const&&, double const&, int const&>();
     test<int const&&, double const&&, int const&&>();
 }
+
+// This is required in order to link in some configurations MSVC
+TEST_CASE("nil") {}

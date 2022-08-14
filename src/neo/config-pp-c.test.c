@@ -36,3 +36,8 @@
 
 // Workaround warning about empty translation unit
 void foo() {}
+
+#ifdef _MSC_VER
+// This is required in order to link in some configurations MSVC
+int main() {}
+#endif

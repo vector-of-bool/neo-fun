@@ -20,3 +20,8 @@ static_assert(!NEO_SettingValueEqual(foo, Color, Green));
 #if !NEO_SettingValueEqual(foo, Color, Red)
 #error "Fail2"
 #endif
+
+#include <catch2/catch.hpp>
+
+// This is required in order to link in some configurations MSVC
+TEST_CASE("nil") {}
