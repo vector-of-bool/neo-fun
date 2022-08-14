@@ -12,7 +12,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: /var/lib/docker/volumes/earthly-cache/
-          key: abc
+          key: gcc11
       - name: Build and Test
         run: bash tools/earthly.sh +build-alpine-gcc-11.2
   build-gcc10:
@@ -25,7 +25,7 @@ jobs:
         uses: actions/cache@v3
         with:
           path: /var/lib/docker/volumes/earthly-cache/
-          key: abc
+          key: gcc10
       - name: Build and Test
         run: bash tools/earthly.sh +build-alpine-gcc-10.3 --cxx_flags "-fcoroutines"
 
@@ -41,7 +41,7 @@ jobs:
           path: |
             _build/
             ~/AppData/Local/bpt/
-          key: abc
+          key: vs2019
       - name: Build and Test
         run: tools/build-vs2019e.bat -Toolchain tools/msvc.jsonc
 
@@ -57,6 +57,6 @@ jobs:
           path: |
             _build/
             ~/AppData/Local/bpt/
-          key: abc
+          key: vs2022
       - name: Build and Test
         run: tools/build-vs2022e.bat -Toolchain tools/msvc.jsonc
