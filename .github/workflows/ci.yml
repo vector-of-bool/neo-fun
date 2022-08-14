@@ -41,6 +41,7 @@ jobs:
           path: |
             _build/
             ~/AppData/Local/bpt/
+            !**/*.exe
           key: vs2019
       - name: Build and Test
         run: tools/build-vs2019e.bat -Toolchain tools/msvc.jsonc
@@ -57,6 +58,7 @@ jobs:
           path: |
             _build/
             ~/AppData/Local/bpt/
+            !**/*.exe
           key: vs2022
       - name: Build and Test
         run: tools/build-vs2022e.bat -Toolchain tools/msvc.jsonc
