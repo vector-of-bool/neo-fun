@@ -31,3 +31,8 @@ static_assert(std::is_same_v<neo::tag<double, double, char>,
 
 static_assert(std::is_same_v<neo::tag<double, double, char>,
                              neo::invocable_arg_types_t<int(&&)(double, double, char)>>);
+
+#include <catch2/catch.hpp>
+
+// This is required in order to link in some configurations MSVC
+TEST_CASE("nil") {}

@@ -65,3 +65,8 @@ NEO_TEST_CONCEPT(random_access_iterator<std::vector<int>::iterator>);
 // No stdlib types have contiguous iterators yet, but we can make-do with pointers
 NEO_TEST_CONCEPT(contiguous_iterator<int*>);
 NEO_TEST_CONCEPT(!contiguous_iterator<std::forward_list<int>::iterator>);
+
+#include <catch2/catch.hpp>
+
+// This is required in order to link in some configurations MSVC
+TEST_CASE("nil") {}
