@@ -20,24 +20,18 @@ public:
     explicit constexpr assignable_box(U&& arg) noexcept(noexcept(T(NEO_FWD(arg))))
         : _value(NEO_FWD(arg)) {}
 
-    [[nodiscard]] constexpr T&        operator*() & noexcept { return _value; }
-    [[nodiscard]] constexpr const T&  operator*() const& noexcept { return _value; }
-    [[nodiscard]] constexpr T&&       operator*() && noexcept { return NEO_MOVE(_value); }
-    [[nodiscard]] constexpr const T&& operator*() const&& noexcept { return NEO_MOVE(_value); }
-
-    constexpr T*       operator->() noexcept { return neo::addressof(_value); }
-    constexpr const T* operator->() const noexcept { return neo::addressof(_value); }
-
-    constexpr explicit operator T&() noexcept { return _value; }
-    constexpr explicit operator const T&() const noexcept { return _value; }
+    [[nodiscard]] constexpr T&        get() & noexcept { return _value; }
+    [[nodiscard]] constexpr const T&  get() const& noexcept { return _value; }
+    [[nodiscard]] constexpr T&&       get() && noexcept { return NEO_MOVE(_value); }
+    [[nodiscard]] constexpr const T&& get() const&& noexcept { return NEO_MOVE(_value); }
 
     constexpr void friend do_repr(auto out, const assignable_box* self) noexcept requires requires {
-        out.repr(**self);
+        out.repr(self->get());
     }
     {
         out.type("{}", out.template repr_type<T>());
         if (self) {
-            out.value("{}", out.repr_value(**self));
+            out.value("{}", out.repr_value(self->get()));
         }
     }
 };
@@ -55,19 +49,17 @@ public:
     } : _ptr(neo::addressof(arg)) {
     }
 
-    [[nodiscard]] constexpr T& operator*() const noexcept { return *_ptr; }
+    [[nodiscard]] constexpr T& get() const noexcept { return *_ptr; }
 
     constexpr T* operator->() const noexcept { return _ptr; }
 
-    constexpr explicit operator T&() const noexcept { return *_ptr; }
-
     constexpr void friend do_repr(auto out, const assignable_box* self) noexcept requires requires {
-        out.repr(**self);
+        out.repr(self->get());
     }
     {
         out.type("[reference to {}]", out.template repr_type<T>());
         if (self) {
-            out.value("{}", out.repr_value(**self));
+            out.value("{}", out.repr_value(self->get()));
         }
     }
 };

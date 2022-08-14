@@ -1,8 +1,8 @@
 #pragma once
 
+#include "./assignable_box.hpp"
 #include "./ranges.hpp"
 #include "./reconstruct.hpp"
-#include "./ref_member.hpp"
 #include "./string.hpp"
 #include "./substring.hpp"
 #include "./tag.hpp"
@@ -100,7 +100,7 @@ inline constexpr struct join_text_fn {
 
 template <text_range... Ts>
 class str_concat_tuple {
-    std::tuple<neo::wrap_ref_member_t<Ts>...> _strs;
+    NEO_NO_UNIQUE_ADDRESS std::tuple<neo::assignable_box<Ts>...> _strs;
 
     template <std::size_t N, std::size_t Counter, typename Head, typename... Tail>
     constexpr auto const& _get_nth(neo::tag<Head, Tail...>) const noexcept {
@@ -113,7 +113,7 @@ class str_concat_tuple {
 
     template <std::size_t N>
     constexpr auto const& _nth() const noexcept {
-        return neo::unref_member(std::get<N>(_strs));
+        return std::get<N>(_strs).get();
     }
 
     using size_type       = std::size_t;
@@ -129,11 +129,10 @@ public:
         : _strs(NEO_FWD(strings)...) {}
 
     constexpr size_type size() const noexcept {
-        return std::apply(
-            [this](auto&&... elems) {
-                return (neo::text_range_size(neo::unref_member(elems)) + ... + 0ull);
-            },
-            _strs);
+        return std::
+            apply([this](
+                      auto&&... elems) { return (neo::text_range_size(elems.get()) + ... + 0ull); },
+                  _strs);
     }
 
     constexpr auto data() const noexcept
@@ -295,7 +294,7 @@ public:
     template <typename Char, typename Traits>
     friend std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& out,
                                                         str_concat_tuple const& self) noexcept {
-        std::apply([&](auto&&... elems) { ((out << neo::unref_member(elems)), ...); }, self._strs);
+        std::apply([&](auto&&... elems) { ((out << elems.get()), ...); }, self._strs);
         return out;
     }
 
