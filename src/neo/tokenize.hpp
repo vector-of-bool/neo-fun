@@ -1,5 +1,6 @@
 #pragma once
 
+#include "./assignable_box.hpp"
 #include "./concepts.hpp"
 #include "./fwd.hpp"
 #include "./invoke.hpp"
@@ -57,16 +58,16 @@ struct simple_token_splitter {
 template <typename C>
 requires std::predicate<C, char32_t>
 struct charclass_splitter {
-    NEO_NO_UNIQUE_ADDRESS neo::wrap_ref_member_t<C> _classifier{};
+    NEO_NO_UNIQUE_ADDRESS assignable_box<C> _classifier{};
 
     template <text_range T>
     constexpr substring_t<T> operator()(const T& remaining) const noexcept {
         auto skip_start = std::ranges::find_if(remaining, [&](char32_t c) {
-            return neo::invoke(neo::unref_member(_classifier), c);
+            return neo::invoke(_classifier.get(), c);
         });
         auto skip_end
             = std::ranges::find_if(skip_start, std::ranges::end(remaining), [&](char32_t c) {
-                  return not neo::invoke(neo::unref_member(_classifier), c);
+                  return not neo::invoke(_classifier.get(), c);
               });
         return {skip_start, skip_end};
     }
@@ -138,9 +139,9 @@ concept tokenizer_fn =  //
 template <text_range R, tokenizer_fn<substring_t<R&>> Tok>
 class tokenizer {
     /// The text that is being tokenized
-    neo::wrap_ref_member_t<R> _text;
+    NEO_NO_UNIQUE_ADDRESS assignable_box<R> _text;
     /// The token-splitting function
-    [[no_unique_address]] Tok _get_next_token;
+    NEO_NO_UNIQUE_ADDRESS assignable_box<Tok> _get_next_token;
 
 public:
     using borrowed_text = substring_t<R&>;
@@ -202,7 +203,7 @@ public:
     };
 
     constexpr iterator begin() noexcept {
-        return iterator{neo::substring(neo::unref_member(_text), 0), _get_next_token};
+        return iterator{neo::substring(_text.get(), 0), _get_next_token.get()};
     }
 
     constexpr auto end() noexcept { return typename iterator::sentinel_type{}; }

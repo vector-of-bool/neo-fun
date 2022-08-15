@@ -1,9 +1,9 @@
 #pragma once
 
+#include "./assignable_box.hpp"
 #include "./attrib.hpp"
 #include "./fwd.hpp"
 #include "./invoke.hpp"
-#include "./ref_member.hpp"
 #include "./returns.hpp"
 
 #include <type_traits>
@@ -14,7 +14,7 @@ namespace detail {
 
 template <typename Func>
 class overload_fn {
-    NEO_NO_UNIQUE_ADDRESS neo::wrap_ref_member_t<Func> _func;
+    NEO_NO_UNIQUE_ADDRESS neo::assignable_box<Func> _func;
 
 public:
     constexpr explicit overload_fn(Func&& fn) noexcept(noexcept(Func(NEO_FWD(fn))))
@@ -25,7 +25,7 @@ public:
 
     template <typename... Args>
     constexpr auto operator()(Args&&... args) const
-        NEO_RETURNS(neo::invoke(_func, NEO_FWD(args)...));
+        NEO_RETURNS(neo::invoke(_func.get(), NEO_FWD(args)...));
 };
 
 }  // namespace detail
@@ -65,7 +65,7 @@ template <typename Fn, typename... Tail>
 struct ordered_overload_impl<Fn, Tail...> : ordered_overload_impl<Tail...> {
     using base_type = ordered_overload_impl<Tail...>;
 
-    NEO_NO_UNIQUE_ADDRESS neo::wrap_ref_member_t<Fn> _my_fn;
+    NEO_NO_UNIQUE_ADDRESS neo::assignable_box<Fn> _my_fn;
 
     // Default constructor
     constexpr ordered_overload_impl() = default;
@@ -87,7 +87,7 @@ struct ordered_overload_impl<Fn, Tail...> : ordered_overload_impl<Tail...> {
               or neo::invocable2<const base_type&, Args&&...>
     {
         if constexpr (neo::invocable2<const Fn&, Args&&...>) {
-            return neo::invoke(neo::unref_member(_my_fn), NEO_FWD(args)...);
+            return neo::invoke(_my_fn.get(), NEO_FWD(args)...);
         } else {
             return base_type::operator()(NEO_FWD(args)...);
         }
@@ -102,7 +102,7 @@ struct ordered_overload_impl<Fn, Tail...> : ordered_overload_impl<Tail...> {
               or neo::invocable2<base_type&, Args&&...>
     {
         if constexpr (neo::invocable2<Fn&, Args&&...>) {
-            return neo::invoke(neo::unref_member(_my_fn), NEO_FWD(args)...);
+            return neo::invoke(_my_fn.get(), NEO_FWD(args)...);
         } else {
             return base_type::operator()(NEO_FWD(args)...);
         }
