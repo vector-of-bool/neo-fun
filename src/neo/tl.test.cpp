@@ -17,13 +17,17 @@ TEST_CASE("Create a simple lambda expression") {
     auto r = NEO_TL(55);
     CHECK(r() == 55);
     CHECK(r(1, 2, 3, 4) == 55);
+#if !NEO_FeatureIsEnabled(Neo, TerseLambdaMSVCNoexceptWorkaround)
     static_assert(noexcept(r()));
+#endif
 
     auto maybe_throws = NEO_TL(not_noexcept());
     static_assert(!noexcept(maybe_throws()));
 
+#if !NEO_FeatureIsEnabled(Neo, TerseLambdaMSVCNoexceptWorkaround)
     auto no_throws = NEO_TL(is_noexcept());
     static_assert(noexcept(no_throws()));
+#endif
 
     auto variadic = NEO_TL(foo(_args...));
     static_assert(std::invocable<decltype(variadic), int, std::string>);

@@ -1,0 +1,1 @@
+#define Neo_ToggleFeature_TerseLambdaMSVCNoexceptWorkaround Enabled

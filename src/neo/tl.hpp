@@ -1,5 +1,7 @@
 #pragma once
 
+#include "./config-pp.hpp"
+#include "./config.hpp"
 #include "./declval.hpp"
 #include "./fwd.hpp"
 
@@ -47,6 +49,17 @@ using nth_arg_t = decltype(nth_arg<I>(NEO_DECLVAL(TlArgs)...));
 // clang-format on
 
 // Roughly based on https://github.com/Quincunx271/TerseLambda
+#if NEO_FeatureIsEnabled(Neo, TerseLambdaMSVCNoexceptWorkaround) && defined(_MSC_VER)
+#define NEO_CTL(...)                                                                               \
+    <typename... TlArgs>(TlArgs && ... _args)                                                      \
+        ->decltype(auto) requires(NEO_TL_REQUIRES(__VA_ARGS__)) {                                  \
+        [[maybe_unused]] auto&& _1 = ::neo::tl_detail::nth_arg<0>(NEO_FWD(_args)...);              \
+        [[maybe_unused]] auto&& _2 = ::neo::tl_detail::nth_arg<1>(NEO_FWD(_args)...);              \
+        [[maybe_unused]] auto&& _3 = ::neo::tl_detail::nth_arg<2>(NEO_FWD(_args)...);              \
+        [[maybe_unused]] auto&& _4 = ::neo::tl_detail::nth_arg<3>(NEO_FWD(_args)...);              \
+        return (__VA_ARGS__);                                                                      \
+    }
+#else
 #define NEO_CTL(...)                                                                               \
     <typename... TlArgs>(TlArgs && ... _args) noexcept(NEO_TL_REQUIRES({ __VA_ARGS__ } noexcept))  \
         ->decltype(auto) requires(NEO_TL_REQUIRES(__VA_ARGS__)) {                                  \
@@ -56,6 +69,7 @@ using nth_arg_t = decltype(nth_arg<I>(NEO_DECLVAL(TlArgs)...));
         [[maybe_unused]] auto&& _4 = ::neo::tl_detail::nth_arg<3>(NEO_FWD(_args)...);              \
         return (__VA_ARGS__);                                                                      \
     }
+#endif
 
 #define NEO_TL [&] NEO_CTL
 

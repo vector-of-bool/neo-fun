@@ -1,7 +1,9 @@
 #pragma once
 
+#include "./concepts.hpp"
 #include "./declval.hpp"
 
+#include <algorithm>
 #include <ranges>
 #include <string>
 
@@ -69,16 +71,17 @@ using iter_char_t = std::iter_value_t<Iter>;
 template <typename Iter>
 concept text_iterator =
     character_iterator<Iter>
-    && std::contiguous_iterator<Iter>;
+    && std::random_access_iterator<Iter>
+    ;
 
 /**
  * @brief Match any contiguous sized range whose iterator is a text_iterator
  */
 template <typename T>
 concept text_range =
-    std::ranges::contiguous_range<T>
-    && std::ranges::sized_range<T>
-    && character_range<T>;
+    std::ranges::random_access_range<T>
+    and std::ranges::sized_range<T>
+    and character_range<T>;
 
 /**
  * @brief Obtain the character type of a text range
@@ -149,32 +152,32 @@ concept text_view =
 
 namespace text_range_detail {
 
-    template <typename R, typename Char>
-    struct char_traits_of {
-        using type = std::char_traits<Char>;
-    };
+template <typename R, typename Char>
+struct char_traits_of {
+    using type = std::char_traits<Char>;
+};
 
-    template <typename R, typename C>
-    requires requires { typename R::traits_type; }
-    struct char_traits_of<R, C> {
-        using type = typename R::traits_type;
-    };
+template <typename R, typename C>
+requires requires { typename R::traits_type; }
+struct char_traits_of<R, C> {
+    using type = typename R::traits_type;
+};
 
-    template <typename T>
-    constexpr auto get_allocator_of(T&&, auto alloc) noexcept {
-        return alloc;
-    }
+template <typename T>
+constexpr auto get_allocator_of(T&&, auto alloc) noexcept {
+    return alloc;
+}
 
-    template <typename T>
-    constexpr auto get_allocator_of(T &&) noexcept {
-        return std::allocator<text_char_t<T>>{};
-    }
+template <typename T>
+constexpr auto get_allocator_of(T&&) noexcept {
+    return std::allocator<text_char_t<T>>{};
+}
 
-    template <typename T>
-    constexpr auto get_allocator_of(T && t) noexcept requires requires {
-        t.get_allocator();
-    }
-    { return t.get_allocator(); }
+template <typename T>
+constexpr auto get_allocator_of(T&& t) noexcept requires requires {
+    t.get_allocator();
+}
+{ return t.get_allocator(); }
 
 }  // namespace text_range_detail
 
@@ -217,14 +220,11 @@ using text_allocator_t = decltype(neo::text_allocator(NEO_DECLVAL(R)));
  * std::basic_string_view for the contents of the text range
  */
 template <text_range R>
+requires std::ranges::contiguous_range<R>
 constexpr text_view auto view_text(R&& r) noexcept {
-    if constexpr (text_view<R>) {
-        return r;
-    } else {
-        using traits = text_char_traits_t<R>;
-        using sv     = std::basic_string_view<text_char_t<R>, traits>;
-        return sv(std::ranges::data(r), neo::text_range_size(r));
-    }
+    using traits = text_char_traits_t<R>;
+    using sv     = std::basic_string_view<text_char_t<R>, traits>;
+    return sv(std::ranges::data(r), neo::text_range_size(r));
 }
 
 /**
@@ -256,4 +256,60 @@ constexpr auto copy_text(const R& r) noexcept {
 template <text_range R>
 using copy_text_t = decltype(copy_text(NEO_DECLVAL(R)));
 
+template <text_range R>
+struct text_subrange : std::ranges::subrange<std::ranges::iterator_t<R>> {
+
+    enum { enable_reconstructible_range = 1 };
+
+    constexpr text_subrange() requires std::default_initializable<std::ranges::iterator_t<R>>
+    = default;
+
+    constexpr text_subrange(std::ranges::iterator_t<R> iter,
+                            std::ranges::sentinel_t<R> stop) noexcept
+        : text_subrange::subrange(iter, stop) {}
+
+    constexpr text_subrange(alike<R> auto&& str) noexcept
+        : text_subrange(std::ranges::begin(str), std::ranges::begin(str) + text_range_size(str)) {}
+
+    constexpr bool operator==(text_range auto const& other) const noexcept {
+        auto other_len = text_range_size(other);
+        return this->size() == other_len
+            and std::ranges::equal(*this,
+                                   std::ranges::subrange(std::ranges::begin(other),
+                                                         std::ranges::begin(other) + other_len));
+    }
+
+    constexpr auto operator<=>(text_range auto const& other) const noexcept {
+        auto ob = std::ranges::begin(other);
+        return std::lexicographical_compare_three_way(this->begin(),
+                                                      this->end(),
+                                                      ob,
+                                                      ob + text_range_size(other));
+    }
+
+    template <typename Char, typename Traits>
+    friend std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& o,
+                                                        text_subrange self) noexcept {
+        for (Char c : self) {
+            o.put(c);
+        }
+        return o;
+    }
+};
+
+template <text_range R>
+explicit text_subrange(const R&) -> text_subrange<R>;
+
+template <typename T>
+constexpr bool is_text_subrange = false;
+
+template <typename T>
+constexpr bool is_text_subrange<text_subrange<T>> = true;
+
 }  // namespace neo
+
+template <typename T>
+constexpr bool std::ranges::enable_view<neo::text_subrange<T>> = true;
+
+template <typename T>
+constexpr bool std::ranges::enable_borrowed_range<neo::text_subrange<T>> = true;

@@ -10,7 +10,7 @@ class ref_member;
 namespace rm_detail {
 
 template <typename T>
-T& convert(T& t) noexcept {
+constexpr T& convert(T& t) noexcept {
     return t;
 }
 
@@ -68,13 +68,23 @@ public:
             noexcept(rm_detail::convert<type>(static_cast<U&&>(arg))))
         : _ptr(neo::addressof(rm_detail::convert(static_cast<U&&>(arg)))) {}
 
-    constexpr ref_member(const ref_member&) noexcept = default;
+    constexpr ref_member(const ref_member&) noexcept            = default;
     constexpr ref_member& operator=(const ref_member&) noexcept = default;
 
     /// Obtain the referred-to object reference
     constexpr T& get() const noexcept { return *_ptr; }
     constexpr    operator T&() const noexcept { return *_ptr; }
 };
+
+template <typename T>
+constexpr T&& unref_member(T&& arg) noexcept {
+    return NEO_FWD(arg);
+}
+
+template <typename T>
+constexpr T& unref_member(ref_member<T> arg) noexcept {
+    return arg;
+}
 
 /**
  * @brief If the given T is a reference, type is ref_member<remove_reference_t<T>>,

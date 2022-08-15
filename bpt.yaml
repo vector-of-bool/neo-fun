@@ -1,0 +1,12 @@
+name: neo-fun
+version: 0.12.0
+test-dependencies:
+  - catch2@2.13.7 using main
+readme: README.md
+homepage: &home https://github.com/vector-of-bool/neo-fun
+repository: *home
+documentation: https://github.com/vector-of-bool/neo-fun/tree/master/docs
+description: A set of libraries that don't fit anywhere else
+license: BSL-1.0
+authors:
+  - vector-of-bool <vectorofbool@gmail.com>
