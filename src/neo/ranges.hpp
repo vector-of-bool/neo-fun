@@ -68,7 +68,7 @@ struct pipable {
     template <typename Left, neo::invocable2<Left> Right>
     constexpr friend decltype(auto)
     operator|(Left&& left, Right&& right) noexcept(nothrow_invocable<Right, Left>) {
-        return neo::invoke(NEO_FWD(right), NEO_FWD(left));
+        return NEO_INVOKE(NEO_FWD(right), NEO_FWD(left));
     }
 };
 
@@ -290,7 +290,7 @@ public:
     constexpr void
     operator()(Range&& range) noexcept(nothrow_invocable<Func&, range_reference_t<Range>>) {
         for (auto&& elem : range) {
-            neo::invoke(_fn, NEO_FWD(elem));
+            NEO_INVOKE(_fn, NEO_FWD(elem));
         }
     }
 };
@@ -350,7 +350,7 @@ private:
     void _dist(auto&& elem, std::integral auto select, std::index_sequence<Is...>) {
         bool did_select
             = ((static_cast<std::size_t>(select) == Is
-                && (static_cast<void>(neo::invoke(std::get<Is>(_handlers), NEO_FWD(elem))), 1))
+                && (static_cast<void>(NEO_INVOKE(std::get<Is>(_handlers), NEO_FWD(elem))), 1))
                || ...);
         neo_assert(expects,
                    did_select,
