@@ -251,7 +251,7 @@ void emit_one(const EventReturner& func) requires(
     using EventType = emit_as_t<neo::invoke_result_t<EventReturner>>;
     // If we have a handler, invoke the factory and emit the event
     if (!!event_detail::tl_tail_listener<std::remove_cvref_t<EventType>>) {
-        emit_one(neo::invoke(func));
+        emit_one(NEO_INVOKE(func));
     }
 }
 
@@ -298,9 +298,9 @@ class listener : scoped_listener<ListenEvent> {
                 static_assert(std::is_void_v<GivenHandlerRetType>,
                               "The handler for this event type should not return a value");
             }
-            return neo::invoke(_handler, event);
+            return NEO_INVOKE(_handler, event);
         } else if constexpr (std::is_void_v<GivenHandlerRetType>) {
-            neo::invoke(_handler, event);
+            NEO_INVOKE(_handler, event);
             return neo::get_default_emit_result(event);
         } else {
             static_assert(std::is_void_v<GivenHandlerRetType>,

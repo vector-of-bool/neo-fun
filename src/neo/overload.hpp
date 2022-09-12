@@ -26,11 +26,11 @@ public:
 
     template <typename... Args>
     constexpr auto operator()(Args&&... args)
-        NEO_RETURNS(neo::invoke(_func.get(), NEO_FWD(args)...));
+        NEO_RETURNS(NEO_INVOKE(_func.get(), NEO_FWD(args)...));
 
     template <typename... Args>
     constexpr auto operator()(Args&&... args) const
-        NEO_RETURNS(neo::invoke(_func.get(), NEO_FWD(args)...));
+        NEO_RETURNS(NEO_INVOKE(_func.get(), NEO_FWD(args)...));
 };
 
 template <typename Func>
