@@ -8,6 +8,12 @@
 
 namespace neo {
 
+/**
+ * @brief A type which is suitable for invocation via regular function-call syntax
+ *
+ * @tparam Fn A function or function object
+ * @tparam Args Arguments to give to the function
+ */
 template <typename Fn, typename... Args>
 concept simple_invocable = requires(Fn&& fn, Args&&... args) {
     NEO_FWD(fn)(NEO_FWD(args)...);
@@ -112,18 +118,14 @@ concept invocable2 = simple_invocable<Fn, Args...> or requires(Fn&& fn, Args&&..
     neo::invoke(NEO_FWD(fn), NEO_FWD(args)...);
 };
 
-template <typename Fn, typename... Args>
-requires invocable2<Fn, Args...>
-constexpr decltype(auto) fast_invoke_result(Fn&& fn, Args&&... args) {
-    if constexpr (simple_invocable<Fn, Args...>) {
-        return NEO_FWD(fn)(NEO_FWD(args)...);
-    } else {
-        return neo::invoke(NEO_FWD(fn), NEO_FWD(args)...);
-    }
-}
-
+/**
+ * @brief The result type of a neo::invoke with the given argument types
+ *
+ * @tparam Func An invocable object
+ * @tparam Args Arguments for the invocable
+ */
 template <typename Func, typename... Args>
 requires invocable2<Func, Args...>
-using invoke_result_t = decltype(fast_invoke_result(NEO_DECLVAL(Func), NEO_DECLVAL(Args)...));
+using invoke_result_t = decltype(invoke(NEO_DECLVAL(Func), NEO_DECLVAL(Args)...));
 
 }  // namespace neo
