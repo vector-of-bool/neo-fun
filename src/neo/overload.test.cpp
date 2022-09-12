@@ -25,6 +25,15 @@ TEST_CASE("Create an ordered overload") {
 
     // Normally ambiguous overload, but this chooses the first viable invocable
     CHECK(math(4u) == 8);
+
+    auto length = neo::ordered_overload{
+        [](std::string_view s) { return s.length(); },
+        [](auto n) { return n.first; },
+    };
+
+    // The "invalid" function is never inspected:
+    CHECK(length(std::string("Hi")) == 2);
+    CHECK(length(std::pair(8, 1)) == 8);
 }
 
 TEST_CASE("Empty overload") {
