@@ -32,7 +32,11 @@ concept detect_str_common = neo::text_range<T>  //
 };
 
 template <typename T>
-struct inherit_from : T {};
+struct inherit_from {};
+
+template <typename T>
+requires(std::is_class_v<T> and not std::is_final_v<T>) struct inherit_from<T> : T {
+};
 
 template <typename T>
 concept detect_string_view = detect_str_common<T>  //
@@ -110,11 +114,12 @@ concept enable_reconstructible = neo::enable_reconstructible_range<T>  //
 }  // namespace range_detail
 
 template <typename T>
-concept reconstructible_range = std::ranges::range<T>  //
-    && std::constructible_from<std::remove_cvref_t<T>,
-                               std::ranges::iterator_t<T>,
-                               std::ranges::sentinel_t<T>>  //
-    && range_detail::enable_reconstructible<std::remove_cvref_t<T>>;
+concept reconstructible_range = (std::ranges::range<T>  //
+                                 && std::constructible_from<std::remove_cvref_t<T>,
+                                                            std::ranges::iterator_t<T>,
+                                                            std::ranges::sentinel_t<T>>  //
+                                 && range_detail::enable_reconstructible<std::remove_cvref_t<T>>)
+    or range_detail::has_specialized_reconstruct<T>;
 
 template <typename R>
 requires reconstructible_range<std::remove_cvref_t<R>>
