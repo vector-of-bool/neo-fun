@@ -1,5 +1,6 @@
 #pragma once
 
+#include "./declval.hpp"
 #include "./fwd.hpp"
 
 #include <memory>
@@ -43,5 +44,33 @@ template <typename T, typename R = std::remove_cvref_t<T>>
 constexpr auto copy_unique(T&& t) noexcept(std::is_nothrow_constructible_v<R, T>) {
     return std::unique_ptr<R>(new R(NEO_FWD(t)));
 }
+
+namespace _memory_detail {
+
+template <typename T>
+constexpr bool has_value_type = requires {
+    typename T::value_type;
+};
+
+template <typename T>
+constexpr bool has_get_allocator = requires(T& t) {
+    t.get_allocator();
+};
+
+}  // namespace _memory_detail
+
+template <typename T>
+constexpr auto allocator_of(T&& t, auto alloc = std::allocator<void>{}) noexcept {
+    if constexpr (_memory_detail::has_get_allocator<T>) {
+        return t.get_allocator();
+    } else if constexpr (_memory_detail::has_value_type<T>) {
+        return rebind_alloc<typename T::value_type>(alloc);
+    } else {
+        return alloc;
+    }
+}
+
+template <typename T>
+using get_allocator_t = decltype(allocator_of(NEO_DECLVAL(T)));
 
 }  // namespace neo
