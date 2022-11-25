@@ -18,6 +18,17 @@ template <typename Alloc, typename T>
 using rebind_alloc_t = typename std::allocator_traits<Alloc>::template rebind_alloc<T>;
 
 /**
+ * @brief Construct a new allocator by rebind-constructing the given allocator to a new type
+ *
+ * @tparam T The type to be allocated
+ * @param alloc The allocator to rebind
+ */
+template <typename T, typename Allocator>
+constexpr rebind_alloc_t<Allocator, T> rebind_alloc(Allocator alloc) noexcept {
+    return rebind_alloc_t<Allocator, T>(alloc);
+}
+
+/**
  * @brief Create a decay-copy of the given object wrapped in a shared_ptr
  */
 template <typename T, typename R = std::remove_cvref_t<T>>
