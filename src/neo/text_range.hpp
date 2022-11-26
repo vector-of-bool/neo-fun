@@ -7,6 +7,7 @@
 #include "./version.hpp"
 
 #include <algorithm>
+#include <array>
 #include <ranges>
 #include <string>
 

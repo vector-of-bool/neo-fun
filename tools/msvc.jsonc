@@ -8,6 +8,7 @@
     "warning_flags": [
         "/WX",
         "/wd5105", // "Macro 'defined' has undefined behavior -- appears in winbase.h
+        "/wd4127" // "Consider using 'if constexpr'"
     ],
     "debug": true,
     "optimize": false
