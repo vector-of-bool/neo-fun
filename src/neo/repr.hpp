@@ -77,6 +77,30 @@ concept has_repr_builtin =   //
 template <typename T>
 concept reprable_impl = has_repr_builtin<std::remove_cvref_t<T>> || has_adl_do_repr<T>;
 
+struct item_repr_base {
+    virtual std::string string() const noexcept = 0;
+
+private:
+    void write_ostream(std::ostream& o) const noexcept;
+
+    friend std::ostream& operator<<(std::ostream& out, const item_repr_base& self) noexcept {
+        self.write_ostream(out);
+        return out;
+    }
+};
+
+struct fallback_repr : item_repr_base {
+    std::string _fallback;
+
+    explicit fallback_repr(std::string s) noexcept
+        : _fallback(NEO_MOVE(s)) {}
+
+    std::string           string() const noexcept { return _fallback; }
+    constexpr friend void ufmt_append(auto& into, fallback_repr const& self) noexcept {
+        into.append(self._fallback);
+    }
+};
+
 class repr_writer {
     std::string* _out;
 
@@ -95,11 +119,38 @@ public:
     template <reprable_impl T>
     constexpr auto repr_type() const noexcept;
 
+    template <typename T>
+    constexpr auto repr_type(std::string_view fallback) {
+        if constexpr (reprable_impl<T>) {
+            return this->repr_type<T>();
+        } else {
+            return fallback_repr{std::string(fallback)};
+        }
+    }
+
     template <reprable_impl T>
     constexpr auto repr_value(const T& arg) const noexcept;
 
+    template <typename T>
+    constexpr auto repr_value(const T& arg, std::string_view fallback) const noexcept {
+        if constexpr (reprable_impl<T>) {
+            return this->repr_value(arg);
+        } else {
+            return fallback_repr{std::string(fallback)};
+        }
+    }
+
     template <reprable_impl T>
     constexpr auto repr(const T& arg) const noexcept;
+
+    template <typename T>
+    constexpr auto repr(const T& arg, std::string_view fallback) const noexcept {
+        if constexpr (reprable_impl<T>) {
+            return this->repr(arg);
+        } else {
+            return fallback_repr{std::string(fallback)};
+        }
+    }
 
     template <typename T>
     constexpr static bool can_repr = reprable_impl<T>;
@@ -120,7 +171,7 @@ public:
     constexpr void type(std::string_view fmt [[maybe_unused]],
                         const auto&... args [[maybe_unused]]) noexcept {
         if constexpr (not just_value) {
-            append(fmt, args...);
+            this->append(fmt, args...);
         }
     }
 
@@ -128,40 +179,36 @@ public:
                          const auto&... args [[maybe_unused]]) noexcept {
         if constexpr (not just_type) {
             if constexpr (not just_value) {
-                append("{");
+                this->append("{");
             }
-            append(fmt, args...);
+            this->append(fmt, args...);
             if constexpr (not just_value) {
-                append("}");
+                this->append("}");
             }
         }
     }
 
     constexpr void bracket_value(std::string_view fmt [[maybe_unused]],
                                  const auto&... args [[maybe_unused]]) noexcept {
-        append("{");
-        append(fmt, args...);
-        append("}");
+        this->append("{");
+        this->append(fmt, args...);
+        this->append("}");
     }
 
-    constexpr auto repr_sub(const auto& obj) noexcept {
+    constexpr auto repr_sub(const reprable_impl auto& obj) noexcept {
         if constexpr (just_value) {
-            return repr_value(obj);
+            return this->repr_value(obj);
         } else {
-            return repr(obj);
+            return this->repr(obj);
         }
     }
-};
 
-struct item_repr_base {
-    virtual std::string string() const noexcept = 0;
-
-private:
-    void write_ostream(std::ostream& o) const noexcept;
-
-    friend std::ostream& operator<<(std::ostream& out, const item_repr_base& self) noexcept {
-        self.write_ostream(out);
-        return out;
+    constexpr auto repr_sub(const auto& obj, std::string_view fallback) noexcept {
+        if constexpr (just_value) {
+            return this->repr_value(obj, fallback);
+        } else {
+            return this->repr(obj, fallback);
+        }
     }
 };
 
@@ -244,11 +291,30 @@ constexpr auto repr_type(const T&) noexcept {
     return repr_type<T>();
 }
 
+template <typename T, std::convertible_to<std::string> Sv>
+constexpr auto repr_type(Sv&& sv) noexcept {
+    if constexpr (reprable<T>) {
+        return repr_type<T>();
+    } else {
+        return repr_detail::fallback_repr{std::string(NEO_MOVE(sv))};
+    }
+}
+
 /// Function object type for neo::repr_value
 struct repr_value_fn {
     template <reprable T>
     [[nodiscard]] constexpr auto operator()(const T& value) const noexcept {
         return repr_detail::value_repr<T, false>{value};
+    }
+
+    template <typename T>
+    [[nodiscard]] constexpr auto operator()(const T&         arg,
+                                            std::string_view fallback) const noexcept {
+        if constexpr (reprable<T>) {
+            return (*this)(arg);
+        } else {
+            return repr_detail::fallback_repr{std::string(fallback)};
+        }
     }
 };
 
@@ -264,6 +330,16 @@ struct repr_fn {
     template <reprable T>
     [[nodiscard]] constexpr auto operator()(const T& arg) const noexcept {
         return repr_detail::value_repr<T, true>{arg};
+    }
+
+    template <typename T>
+    [[nodiscard]] constexpr auto operator()(const T&         arg,
+                                            std::string_view fallback) const noexcept {
+        if constexpr (reprable<T>) {
+            return (*this)(arg);
+        } else {
+            return repr_detail::fallback_repr{std::string(fallback)};
+        }
     }
 };
 
@@ -324,7 +400,7 @@ struct repr_builtin<T*> {
         if constexpr (std::is_void_v<T>) {
             // Special case for void*
             if constexpr (out.just_type) {
-                out.append("{}*", repr_type<T>());
+                out.append("{}*", neo::repr_type<T>());
             } else if constexpr (out.just_value) {
                 if (*value == nullptr) {
                     out.append("nullptr");
@@ -338,27 +414,25 @@ struct repr_builtin<T*> {
                     out.append("0x{}", view);
                 }
             } else {
-                out.append("[{}* {}]", repr_type<T>(), repr_value(*value));
+                out.append("[{}* {}]", neo::repr_type<T>(), repr_value(*value));
             }
         } else if constexpr (out.just_type) {
-            if constexpr (reprable<T>) {
-                out.append("{}*", repr_type<T>());
-            } else {
-                out.append("unknown-pointer");
-            }
+            out.append("{}*", neo::repr_type<T>("unknown-type"));
         } else if constexpr (out.just_value) {
             if constexpr (reprable<T>) {
                 if (*value != nullptr) {
                     // Wrap the value in brackets to represent the de-referencing
-                    out.append("->{}", repr_value(**value));
+                    out.append("({})->{}",
+                               neo::repr_value(static_cast<const void*>(*value)),
+                               neo::repr_value(**value));
                 } else {
                     out.append("nullptr");
                 }
             } else {
-                out.append("{}", repr_value(static_cast<const void*>(*value)));
+                out.append("{}", neo::repr_value(static_cast<const void*>(*value)));
             }
         } else {
-            out.append("[{} {}]", repr_type<T*>(), repr_value(*value));
+            out.append("[{} {}]", neo::repr_type<T*>(), repr_value(*value));
         }
     }
 };
@@ -463,7 +537,9 @@ requires(!std::is_pointer_v<Integral> && std::same_as<Integral, std::remove_cvre
 #undef DECL_REPR_TYPE_CASE
 
 template <typename T>
-requires std::is_class_v<T> struct inherit_from : std::remove_cvref_t<T> {};
+requires std::is_class_v<T>
+struct inherit_from : std::remove_cvref_t<T> {
+};
 
 template <typename T>
 concept detect_vector = requires(T vec, std::ranges::range_value_t<T> item) {
@@ -500,9 +576,9 @@ concept detect_tuple = requires {
 };
 
 template <typename Pair>
-concept detect_pair = detect_tuple<Pair>&& requires(std::remove_cvref_t<Pair>& p,
-                                                    typename Pair::first_type  f,
-                                                    typename Pair::second_type s) {
+concept detect_pair = detect_tuple<Pair> && requires(std::remove_cvref_t<Pair>& p,
+                                                     typename Pair::first_type  f,
+                                                     typename Pair::second_type s) {
     typename Pair::first_type;
     typename Pair::second_type;
     requires std::same_as<Pair, typename inherit_from<Pair>::pair>;
@@ -548,27 +624,27 @@ template <detect_pair Pair>
 struct repr_builtin<Pair> {
     using first  = typename Pair::first_type;
     using second = typename Pair::second_type;
-    constexpr static void write(auto out, auto* value) noexcept
-        requires(reprable<first>&& reprable<second>) {
+    constexpr static void write(auto out, auto* value) noexcept {
         if constexpr (out.just_type) {
             out.append("pair<{}, {}>",
-                       repr_type<typename Pair::first_type>(),
-                       repr_type<typename Pair::second_type>());
+                       repr_type<typename Pair::first_type>("unknown-type"),
+                       repr_type<typename Pair::second_type>("unknown-type"));
         } else if constexpr (out.just_value) {
-            out.append("{{}, {}}", repr_value(value->first), repr_value(value->second));
+            out.append("{{}, {}}",
+                       neo::repr_value(value->first, "?"),
+                       neo::repr_value(value->second, "?"));
         } else {
-            out.append("pair{{}, {}}", repr(value->first), repr(value->second));
+            out.append("pair{{}, {}}", neo::repr(value->first, "?"), neo::repr(value->second, "?"));
         }
     }
 };
 
 template <detect_optional Optional>
 struct repr_builtin<Optional> {
-    using val_t = typename Optional::value_type;
-    constexpr static void write(auto out, auto* value) noexcept requires reprable<val_t> {
-        out.type("optional<{}>", repr_type<typename Optional::value_type>());
+    constexpr static void write(auto out, auto* value) noexcept {
+        out.type("optional<{}>", neo::repr_type<typename Optional::value_type>("?"));
         if (value and *value) {
-            out.value("->{}", out.repr_value(**value));
+            out.value("->{}", neo::repr_value(**value, "?"));
         } else {
             out.value("nullopt");
         }
@@ -695,11 +771,8 @@ requires requires {
     requires !detect_path<R>;
 }
 struct repr_builtin<R> {
-    constexpr static void write(auto out, auto* value) noexcept requires requires {
-        requires reprable<std::ranges::range_value_t<R>>;
-    }
-    {
-        auto value_type_str = repr_type<std::ranges::range_value_t<R>>();
+    constexpr static void write(auto out, auto* value) noexcept {
+        auto value_type_str = repr_type<std::ranges::range_value_t<R>>("?");
         if constexpr (detect_vector<R>) {
             out.type("vector<{}>", value_type_str);
         } else if constexpr (std::is_array_v<R>) {
@@ -713,7 +786,7 @@ struct repr_builtin<R> {
             out.append("{");
             auto end = std::ranges::cend(*value);
             for (auto it = std::ranges::cbegin(*value); it != end; ++it) {
-                out.append("{}", repr_value(*it));
+                out.append("{}", repr_value(*it, "?"));
                 if (std::next(it) != end) {
                     out.append(", ");
                 }
@@ -729,9 +802,9 @@ template <std::size_t First, std::size_t... Idx, typename Tuple>
 constexpr void
 tuple_out_next(auto out, std::index_sequence<First, Idx...>, const Tuple* tup [[maybe_unused]]) {
     if constexpr (out.just_type) {
-        out.append("{}", repr_type<std::tuple_element_t<First, Tuple>>());
+        out.append("{}", neo::repr_type<std::tuple_element_t<First, Tuple>>("?"));
     } else {
-        out.append("{}", out.repr_sub(std::get<First>(*tup)));
+        out.append("{}", out.repr_sub(std::get<First>(*tup), "?"));
     }
     if constexpr (sizeof...(Idx) != 0) {
         out.append(", ");
@@ -739,20 +812,13 @@ tuple_out_next(auto out, std::index_sequence<First, Idx...>, const Tuple* tup [[
     }
 }
 
-template <typename Tup, std::size_t... Seq>
-void check_tuple_can_repr(const Tup&, std::index_sequence<Seq...>) requires(
-    (reprable<std::tuple_element_t<Seq, Tup>>)&&...) {}
-
 template <typename Tuple>
 requires requires {
     requires detect_tuple<Tuple>;
     requires !detect_pair<Tuple>;
 }
 struct repr_builtin<Tuple> {
-    constexpr static void write(auto out, auto* value) noexcept requires requires {
-        check_tuple_can_repr(*value, std::make_index_sequence<std::tuple_size_v<Tuple>>{});
-    }
-    {
+    constexpr static void write(auto out, auto* value) noexcept {
         if constexpr (out.just_type) {
             out.append("tuple<");
         } else if constexpr (out.just_value) {
