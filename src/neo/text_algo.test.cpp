@@ -9,6 +9,8 @@
 
 using namespace std::literals;
 
+using namespace neo::text_range_operators;
+
 TEST_CASE("Trim a string") {
     std::string s  = " foo bar  ";
     auto        s2 = neo::trim(s);
@@ -18,12 +20,12 @@ TEST_CASE("Trim a string") {
 TEST_CASE("Join some strings") {
     auto strs = {"foo"sv, "bar"sv, "baz"sv};
 
-    auto fin = neo::join_text(strs, "-"sv);
+    auto fin = neo::join_text(strs, "-");
     CHECK(fin == "foo-bar-baz");
 }
 
 TEST_CASE("The empty string") {
-    neo::empty_string empty;
+    auto empty = neo::str_concat();
     CHECK(empty == "");
     CHECK(empty == ""s);
     CHECK(empty == ""sv);
@@ -37,9 +39,9 @@ TEST_CASE("The empty string") {
     CHECK(strm.str() == "foobar");
 }
 
-static_assert(std::ranges::borrowed_range<neo::empty_string>);
-auto n = std::ranges::begin(neo::empty_string{});
-static_assert(std::ranges::forward_range<neo::empty_string>);
+static_assert(std::ranges::borrowed_range<neo::str_concat_t<>>);
+auto n = std::ranges::begin(neo::str_concat());
+static_assert(std::ranges::forward_range<neo::str_concat_t<>>);
 
 TEST_CASE("Concatenating strings") {
     SECTION("Empty") {
@@ -100,5 +102,8 @@ TEST_CASE("Concatenating strings") {
         CHECK(s2 == "foobarbaz meow");
         static_assert(neo::text_range<decltype(s2)>);
         CHECK(s2[9] == ' ');
+
+        auto stdstr = neo::to_std_string(s2);
+        CHECK(stdstr == "foobarbaz meow");
     }
 }

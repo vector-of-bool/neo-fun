@@ -5,6 +5,8 @@
 #include "./tl.hpp"
 #include <catch2/catch.hpp>
 
+using namespace neo::text_range_operators;
+
 TEST_CASE("Tokenize a simple string") {
     std::string    s = "a b c";
     neo::tokenizer toks{s, neo::whitespace_splitter{}};
@@ -17,11 +19,11 @@ TEST_CASE("Tokenize a simple string") {
 
     auto it = toks.begin();
     REQUIRE(it != toks.end());
-    CHECK(it->view == "a");
+    CHECK(*it == "a");
     ++it;
-    CHECK(it->view == "b");
+    CHECK(*it == "b");
     ++it;
-    CHECK(it->view == "c");
+    CHECK(*it == "c");
 }
 
 TEST_CASE("Tokenize an owned string") {
@@ -29,9 +31,9 @@ TEST_CASE("Tokenize an owned string") {
     static_assert(std::ranges::forward_range<decltype(toks)>);
 
     auto it = toks.begin();
-    CHECK(it->view == "foo");
+    CHECK(*it == "foo");
     ++it;
-    CHECK(it->view == "bar");
+    CHECK(*it == "bar");
 }
 
 TEST_CASE("Iterate some lines") {

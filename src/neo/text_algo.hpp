@@ -9,6 +9,7 @@
 #include "./text_range.hpp"
 
 #include <algorithm>
+#include <compare>
 #include <concepts>
 #include <iosfwd>
 #include <numeric>
@@ -16,16 +17,56 @@
 
 namespace neo {
 
+namespace text_algo_detail {
+
+template <typename Into, typename... Args>
+concept can_append_to = requires(Into& into, Args&&... args) {
+    into.append(NEO_FWD(args)...);
+};
+
+}  // namespace text_algo_detail
+
+template <mutable_text_range Out, input_text_range R>
+constexpr void text_append(Out& into, R&& from) noexcept {
+    if constexpr (text_algo_detail::can_append_to<Out, R&&>) {
+        // We append R directly
+        into.append(NEO_FWD(from));
+        return;
+    }
+
+    if constexpr (text_algo_detail::
+                      can_append_to<Out, std::ranges::iterator_t<R>, std::ranges::sentinel_t<R>>) {
+        // We can append iterators from R directly
+        into.append(std::ranges::begin(from), neo::text_range_end(from));
+        return;
+    }
+
+    if (std::ranges::sized_range<R> or std::ranges::random_access_range<R>) {
+        // 'from' has a known size, so we can reserve space and then write it:
+        auto prev_size = static_cast<std::size_t>(neo::text_range_distance(into));
+        into.resize(prev_size + neo::text_range_size(from));
+        auto out = std::ranges::next(std::ranges::begin(into), prev_size);
+        std::ranges::copy(neo::view_text(from), out);
+    } else {
+        // Fallback, just copy characters individually
+        std::ranges::copy(neo::view_text(from), std::back_inserter(into));
+    }
+}
+
 inline constexpr struct trim_fn {
     template <text_range R, std::predicate<char32_t> Predicate>
-    constexpr substring_t<R> operator()(R&& text, Predicate&& pred) const noexcept {
+    constexpr substring_t<R> operator()(R&& text, Predicate&& pred) const
+        noexcept(ranges::nothrow_range<R>) {
+        // Find the first non-matching
         auto new_begin = std::ranges::find_if_not(text, pred);
-        auto new_end   = std::ranges::find_if_not(std::views::reverse(text), pred);
+        // Find the last non-matching
+        auto new_end = std::ranges::find_if_not(std::views::reverse(text), pred);
+        // These are the new boundaries:
         return substring(text, new_begin, new_end.base());
     }
 
     template <text_range R>
-    constexpr substring_t<R> operator()(R&& text) const noexcept {
+    constexpr substring_t<R> operator()(R&& text) const noexcept(ranges::nothrow_range<R>) {
         return (*this)(text, [](char32_t c) {
             return c == ' ' or c == '\t' or c == '\r' or c == '\f' or c == '\n';
         });
@@ -38,17 +79,17 @@ namespace stdr = std::ranges;
 
 template <text_range Joiner>
 struct join_text_closure : neo::ranges::pipable {
-    Joiner _join;
+    NEO_NO_UNIQUE_ADDRESS view_text_t<Joiner> _join;
 
     explicit join_text_closure(Joiner&& j) noexcept
-        : _join(NEO_FWD(j)) {}
+        : _join(neo::view_text(NEO_FWD(j))) {}
 
     template <std::ranges::input_range R>
-    requires text_range<std::ranges::range_reference_t<R>>
+    requires input_text_range<std::ranges::range_reference_t<R>>
     constexpr auto operator()(R&& strings) const noexcept {
-        using RetType = neo::copy_text_t<std::ranges::range_reference_t<R>>;
-        RetType acc   = neo::make_empty_string_from(_join);
+        auto acc = neo::make_empty_string_from(_join);
         if constexpr (stdr::forward_range<R>) {
+            // We can reserve space for the final string without destroying the input range
             size_t strings_acc = 0;
             size_t n_strings   = 0;
             stdr::for_each(strings, [&](auto&& str) {
@@ -63,10 +104,10 @@ struct join_text_closure : neo::ranges::pipable {
         auto       it   = std::ranges::begin(strings);
         const auto stop = std::ranges::end(strings);
         while (it != stop) {
-            acc.append(neo::view_text(*it));
+            neo::text_append(acc, *it);
             ++it;
             if (it != stop) {
-                acc.append(neo::view_text(_join));
+                neo::text_append(acc, _join);
             }
         }
         return acc;
@@ -87,6 +128,9 @@ struct str_concat_types<> {
 
 }  // namespace text_algo_detail
 
+/**
+ * @brief Eagerly join a range of text_ranges into a new std::string
+ */
 inline constexpr struct join_text_fn {
     template <text_range Joiner>
     constexpr auto operator()(Joiner&& j) const noexcept {
@@ -97,6 +141,8 @@ inline constexpr struct join_text_fn {
     requires neo::text_range<std::ranges::range_reference_t<R>>
     constexpr auto operator()(R&& r, Joiner&& j) const noexcept { return (*this)(j)(r); }
 } join_text;
+
+namespace text_algo_detail {
 
 template <text_range... Ts>
 class str_concat_tuple {
@@ -122,16 +168,14 @@ class str_concat_tuple {
     using reference       = typename text_algo_detail::str_concat_types<Ts...>::reference;
 
 public:
-    constexpr str_concat_tuple() requires((std::is_default_constructible_v<Ts> and ...))  //
-        = default;
+    constexpr str_concat_tuple() requires((std::is_default_constructible_v<Ts> and ...)) = default;
 
     constexpr explicit str_concat_tuple(Ts&&... strings) noexcept
         : _strs(NEO_FWD(strings)...) {}
 
-    constexpr size_type size() const noexcept {
+    constexpr size_type size() const noexcept requires(std::ranges::sized_range<Ts>and...) {
         return std::
-            apply([this](
-                      auto&&... elems) { return (neo::text_range_size(elems.get()) + ... + 0ull); },
+            apply([](auto&&... elems) { return (neo::text_range_size(elems.get()) + ... + 0ull); },
                   _strs);
     }
 
@@ -187,7 +231,7 @@ public:
         }
 
         template <std::size_t N>
-        constexpr reference _deref() const noexcept {
+        constexpr reference _deref() const {
             if constexpr (N == sizeof...(Ts)) {
                 std::terminate();
             } else {
@@ -199,7 +243,7 @@ public:
             }
         }
 
-        constexpr void _advance(std::size_t off) noexcept {
+        constexpr void _advance(std::size_t off) {
             while (off >= _remaining_in_cur_subrange() and _index < sizeof...(Ts)) {
                 off -= _remaining_in_cur_subrange();
                 ++_index;
@@ -229,7 +273,7 @@ public:
             _inner_idx -= off;
         }
 
-        constexpr std::ptrdiff_t _dist_fwd(const iterator& other) const noexcept {
+        constexpr std::ptrdiff_t _dist_fwd(const iterator& other) const {
             neo_assert(invariant, _index < other._index, "Invalid dist-fwd");
             auto           idx = _index;
             std::ptrdiff_t off = _remaining_in_cur_subrange();
@@ -256,7 +300,7 @@ public:
         }
 
     public:
-        constexpr void advance(std::ptrdiff_t off) noexcept {
+        constexpr void advance(std::ptrdiff_t off) noexcept((ranges::nothrow_range<Ts> and ...)) {
             if (off > 0) {
                 _advance(off);
             } else if (off < 0) {
@@ -264,7 +308,8 @@ public:
             }
         }
 
-        constexpr std::ptrdiff_t distance_to(iterator const& other) const noexcept {
+        constexpr std::ptrdiff_t distance_to(iterator const& other) const
+            noexcept((ranges::nothrow_range<Ts> and ...)) {
             if (_index > other._index) {
                 return _dist_bwd(other);
             } else if (_index < other._index) {
@@ -274,7 +319,9 @@ public:
             }
         }
 
-        constexpr reference dereference() const noexcept { return _deref<0>(); }
+        constexpr reference dereference() const noexcept((ranges::nothrow_range<Ts> and ...)) {
+            return _deref<0>();
+        }
 
         constexpr bool operator==(iterator other) const noexcept {
             return _index == other._index and _inner_idx == other._inner_idx;
@@ -286,38 +333,20 @@ public:
         }
     };
 
-    constexpr auto begin() const noexcept { return iterator{*this, 0}; }
-    constexpr auto end() const noexcept { return iterator{*this, sizeof...(Ts)}; }
-
-    constexpr reference operator[](size_type off) const noexcept { return begin()[off]; }
-
-    template <typename Char, typename Traits>
-    friend std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& out,
-                                                        str_concat_tuple const& self) noexcept {
-        std::apply([&](auto&&... elems) { ((out << elems.get()), ...); }, self._strs);
-        return out;
+    constexpr auto begin() const noexcept((ranges::nothrow_range<Ts> and ...)) {
+        return iterator{*this, 0};
+    }
+    constexpr auto end() const noexcept((ranges::nothrow_range<Ts> and ...)) {
+        return iterator{*this, sizeof...(Ts)};
     }
 
-    constexpr bool operator==(text_range auto&& other) const noexcept {
-        auto size = this->size();
-        return size == neo::text_range_size(other)
-            and std::ranges::equal(*this,
-                                   std::ranges::subrange(std::ranges::begin(other),
-                                                         std::ranges::begin(other)
-                                                             + neo::text_range_size(other)));
-    }
-
-    constexpr auto operator<=>(text_range auto&& other) const noexcept {
-        auto ob = std::ranges::begin(other);
-        return std::lexicographical_compare_three_way(  //
-            begin(),
-            end(),
-            ob,
-            ob + neo::text_range_size(other));
+    constexpr reference operator[](size_type off) const
+        noexcept((ranges::nothrow_range<Ts> and ...)) requires(random_access_text_range<Ts>and...) {
+        return begin()[off];
     }
 
     template <mutable_text_range S>
-    constexpr explicit operator S() const noexcept {
+    constexpr explicit operator S() const noexcept((ranges::nothrow_range<Ts> and ...)) {
         S ret;
         ret.resize(size());
         std::ranges::copy(*this, std::ranges::begin(ret));
@@ -325,23 +354,20 @@ public:
     }
 };
 
-struct empty_string : str_concat_tuple<> {
-    constexpr explicit empty_string() noexcept = default;
-};
-
 template <text_range... Ts>
 explicit str_concat_tuple(Ts&&...) -> str_concat_tuple<Ts...>;
+
+}  // namespace text_algo_detail
 
 inline constexpr struct str_concat_fn {
     template <text_range... Strings>
     constexpr auto operator()(Strings&&... strings) const noexcept {
-        if constexpr (sizeof...(Strings) == 0) {
-            return empty_string{};
-        } else {
-            return str_concat_tuple{NEO_FWD(strings)...};
-        }
+        return text_algo_detail::str_concat_tuple{NEO_FWD(strings)...};
     }
 } str_concat;
+
+template <text_range... Ts>
+using str_concat_t = decltype(neo::str_concat(NEO_DECLVAL(Ts)...));
 
 inline constexpr struct starts_with_fn {
     template <std::forward_iterator                           Left,
@@ -391,21 +417,117 @@ inline constexpr struct starts_with_fn {
         return (*this)(left, stop, std::ranges::begin(right), std::ranges::end(right));
     }
 } starts_with;
+
+template <typename CharEqual = std::ranges::equal_to>
+struct text_range_equal_to {
+    NEO_NO_UNIQUE_ADDRESS CharEqual _equal;
+
+    template <forward_text_range L,
+              forward_text_range R,
+              typename Lv = view_text_t<L>,
+              typename Rv = view_text_t<R>>
+    requires neo::invocable2<CharEqual,
+                             std::ranges::range_reference_t<Lv>,
+                             std::ranges::range_reference_t<Rv>>
+    constexpr inline bool operator()(L&& left, R&& right) const
+        noexcept(ranges::nothrow_range<L>and ranges::nothrow_range<R>) {
+        return std::ranges::equal(neo::view_text(left), neo::view_text(right), _equal);
+    }
+};
+
+template <typename Compare = std::compare_three_way>
+struct text_range_compare_3way {
+    NEO_NO_UNIQUE_ADDRESS Compare _compare;
+
+    template <forward_text_range L,
+              forward_text_range R,
+              typename Lv = view_text_t<L>,
+              typename Rv = view_text_t<R>,
+              typename Lc = text_char_t<Lv>,
+              typename Rc = text_char_t<Rv>>
+    requires neo::invocable2<Compare, Lc, Rc>
+    constexpr neo::invoke_result_t<Compare, Lc, Rc> operator()(L&& left, R&& right) const
+        noexcept(ranges::nothrow_range<L>and ranges::nothrow_range<R>) {
+        const auto vl   = neo::view_text(left);
+        const auto vr   = neo::view_text(right);
+        auto       lit  = std::ranges::begin(vl);
+        auto       rit  = std::ranges::begin(vr);
+        const auto lend = std::ranges::end(vl);
+        const auto rend = std::ranges::end(vr);
+        while (lit != lend and rit != rend) {
+            auto c = _compare(*lit, *rit);
+            if (std::is_neq(c)) {
+                return c;
+            }
+        }
+        // We ran to the end of one of the ranges
+        if (lit == lend) {
+            if (rit == rend) {
+                // We hit the end of both
+                return std::strong_ordering::equal;
+            } else {
+                // left is shorter than right, and thus less-than
+                return std::strong_ordering::less;
+            }
+        } else {
+            // left is longer than right, and thus greater-than
+            return std::strong_ordering::greater;
+        }
+    }
+};
+
+namespace text_range_operators {
+
+inline namespace equality {
+
+constexpr inline auto operator==(forward_text_range auto&& left, forward_text_range auto&& right)
+    NEO_RETURNS(text_range_equal_to<>{}(left, right));
+
+}
+
+inline namespace compare_3way {
+
+template <forward_text_range L, forward_text_range R>
+constexpr inline auto operator<=>(L&& left, R&& right)
+    NEO_RETURNS(text_range_compare_3way{}(left, right));
+
+}
+
+inline namespace stream_insertion {
+
+template <typename Os, forward_text_range R, typename View = view_text_t<R>>
+constexpr inline Os& operator<<(Os& out, R&& str) noexcept(ranges::nothrow_range<R>) requires
+    requires(std::add_pointer_t<std::ranges::range_value_t<View>> sptr,
+             std::ranges::range_size_t<View>                      size) {
+    out.put(*std::ranges::begin(str));
+    out.write(sptr, size);
+}
+{
+    auto view = neo::view_text(str);
+    if constexpr (contiguous_text_range<View>) {
+        out.write(std::ranges::data(view), std::ranges::size(view));
+    } else {
+        for (auto&& c : view) {
+            out.put(c);
+        }
+    }
+    return out;
+}
+
+}  // namespace stream_insertion
+
+}  // namespace text_range_operators
+
 }  // namespace neo
 
 namespace std::ranges {
 
 template <typename... Ts>
-constexpr bool
-    enable_borrowed_range<neo::str_concat_tuple<Ts...>> = (std::ranges::borrowed_range<Ts> and ...);
+constexpr bool enable_borrowed_range<
+    neo::text_algo_detail::str_concat_tuple<Ts...>> = (std::ranges::borrowed_range<Ts> and ...);
 
 template <typename... Ts>
-constexpr bool enable_view<neo::str_concat_tuple<Ts...>> = (std::ranges::view<Ts> and ...);
-
-template <>
-constexpr inline bool enable_borrowed_range<neo::empty_string> = true;
-
-template <>
-constexpr bool enable_view<neo::empty_string> = true;
+constexpr bool
+    enable_view<neo::text_algo_detail::str_concat_tuple<Ts...>> = (std::ranges::view<Ts> and ...);
 
 }  // namespace std::ranges

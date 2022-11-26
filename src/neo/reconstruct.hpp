@@ -8,6 +8,8 @@
 
 namespace neo {
 
+namespace _sr = std::ranges;
+
 namespace range_detail {
 
 template <typename T>
@@ -28,7 +30,7 @@ concept detect_str_common = neo::text_range<T>  //
     && requires(const std::remove_cvref_t<T> const_str) {
     const_str.length();
     requires std::constructible_from < std::remove_cvref_t<T>,
-    typename std::remove_cvref_t<T>::const_pointer, std::ranges::range_size_t<T> > ;
+    typename std::remove_cvref_t<T>::const_pointer, _sr::range_size_t<T> > ;
 };
 
 template <typename T>
@@ -80,24 +82,24 @@ constexpr bool detect_std_container_name =  //
 #undef TYPENAME_IS
 
 template <typename T>
-concept detect_reconstructible_std_range = std::ranges::range<T>                           //
-    && std::constructible_from<T, std::ranges::iterator_t<T>, std::ranges::sentinel_t<T>>  //
+concept detect_reconstructible_std_range = _sr::range<T>                   //
+    && std::constructible_from<T, _sr::iterator_t<T>, _sr::sentinel_t<T>>  //
     && detect_std_container_name<T>;
 
 template <detect_string_or_view SV>
-constexpr auto _reconstruct(const SV&                         sv,
-                            std::ranges::iterator_t<const SV> iter,
-                            std::ranges::sentinel_t<const SV> sentinel) noexcept {
-    const auto start_offset = std::distance(std::ranges::begin(sv), iter);
+constexpr auto _reconstruct(const SV&                 sv,
+                            _sr::iterator_t<const SV> iter,
+                            _sr::sentinel_t<const SV> sentinel) noexcept {
+    const auto start_offset = std::distance(_sr::begin(sv), iter);
     const auto size         = std::distance(iter, sentinel);
-    return sv.substr(static_cast<std::ranges::range_size_t<SV>>(start_offset),
-                     static_cast<std::ranges::range_size_t<SV>>(size));
+    return sv.substr(static_cast<_sr::range_size_t<SV>>(start_offset),
+                     static_cast<_sr::range_size_t<SV>>(size));
 }
 
 template <typename T>
-concept has_specialized_reconstruct = std::ranges::range<T>  //
+concept has_specialized_reconstruct = _sr::range<T>  //
     && requires(T&& r) {
-    range_detail::_reconstruct(r, std::ranges::begin(r), std::ranges::end(r));
+    range_detail::_reconstruct(r, _sr::begin(r), _sr::end(r));
 };
 
 template <typename T>
@@ -111,24 +113,43 @@ template <typename T>
 concept enable_reconstructible = neo::enable_reconstructible_range<T>  //
     || blessed_reconstructible_range<T>;
 
+template <typename T>
+constexpr bool is_nothrow_special_reconstruct_v = false;
+
+template <has_specialized_reconstruct T>
+constexpr bool is_nothrow_special_reconstruct_v<T> = requires(T&& range) {
+    {
+        range_detail::_reconstruct(NEO_FWD(range),
+                                   std::ranges::begin(range),
+                                   std::ranges::end(range))
+    }
+    noexcept;
+};
+
 }  // namespace range_detail
 
 template <typename T>
-concept reconstructible_range = (std::ranges::range<T>  //
-                                 && std::constructible_from<std::remove_cvref_t<T>,
-                                                            std::ranges::iterator_t<T>,
-                                                            std::ranges::sentinel_t<T>>  //
-                                 && range_detail::enable_reconstructible<std::remove_cvref_t<T>>)
+concept reconstructible_range = (_sr::range<T>  //
+                                 and std::constructible_from<std::remove_cvref_t<T>,
+                                                             _sr::iterator_t<T>,
+                                                             _sr::sentinel_t<T>>  //
+                                 and range_detail::enable_reconstructible<std::remove_cvref_t<T>>)
     or range_detail::has_specialized_reconstruct<T>;
 
 template <typename R>
+constexpr bool is_nothrow_reconstructible_range_v =  //
+    reconstructible_range<R>                         //
+        and std::is_nothrow_constructible_v<std::remove_cvref_t<R>,
+                                            _sr::iterator_t<R>,
+                                            _sr::sentinel_t<R>>  //
+    or range_detail::is_nothrow_special_reconstruct_v<std::remove_cvref_t<R>>;
+
+template <typename R>
 requires reconstructible_range<std::remove_cvref_t<R>>
-constexpr std::remove_cvref_t<R> reconstruct_range(R&&                        range,
-                                                   std::ranges::iterator_t<R> iter,
-                                                   std::ranges::sentinel_t<R> sentinel)  //
-    noexcept(std::is_nothrow_constructible_v<std::remove_cvref_t<R>,
-                                             std::ranges::iterator_t<R>,
-                                             std::ranges::sentinel_t<R>>) {
+constexpr std::remove_cvref_t<R> reconstruct_range(R&&                range,
+                                                   _sr::iterator_t<R> iter,
+                                                   _sr::sentinel_t<R> sentinel)  //
+    noexcept(is_nothrow_reconstructible_range_v<std::remove_cvref_t<R>>) {
     if constexpr (range_detail::has_specialized_reconstruct<std::remove_cvref_t<R>>) {
         return range_detail::_reconstruct(NEO_FWD(range), iter, sentinel);
     } else {

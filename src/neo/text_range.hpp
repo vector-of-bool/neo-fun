@@ -2,6 +2,9 @@
 
 #include "./concepts.hpp"
 #include "./declval.hpp"
+#include "./memory.hpp"
+#include "./ranges.hpp"
+#include "./version.hpp"
 
 #include <algorithm>
 #include <ranges>
@@ -40,65 +43,125 @@ template <typename T>
 concept character_type = is_char_type_v<T>;
 
 /**
- * @brief Match an input iterator whose value type is a character type
+ * @brief Match an iterator whose value type is a character type.
+ *
+ * Implies character_iterator<Iter>
  */
 template <typename Iter>
-concept character_iterator =
-    std::input_iterator<Iter>
-    && character_type<std::iter_value_t<Iter>>;
-
-/**
- * @brief Match a range type whose value type is a character type
- */
-template <typename R>
-concept character_range =
-    std::ranges::input_range<R>
-    && character_iterator<std::ranges::iterator_t<R>>;
+concept text_iterator =
+    std::input_or_output_iterator<Iter>
+    and character_type<std::iter_value_t<Iter>>
+    ;
 
 /**
  * @brief Obtain the character type of a character_iterator.
  *
  * Substitution failure if 'Iter' is not a character_iterator
  */
-template <character_iterator Iter>
+template <text_iterator Iter>
 using iter_char_t = std::iter_value_t<Iter>;
 
 /**
- * @brief Match a contiguous iterator whose value type is a character type.
+ * @brief Match an input iterator whose value type is a character type
  *
- * Implies character_iterator<Iter>
+ * @deprecated Use text_iterator instead
  */
 template <typename Iter>
-concept text_iterator =
-    character_iterator<Iter>
-    && std::random_access_iterator<Iter>
-    ;
+concept character_iterator = text_iterator<Iter>;
 
 /**
- * @brief Match any contiguous sized range whose iterator is a text_iterator
+ * @brief Match any range whose iterator is a text_iterator
  */
-template <typename T>
+template <typename R>
 concept text_range =
-    std::ranges::random_access_range<T>
-    and std::ranges::sized_range<T>
-    and character_range<T>;
+    std::ranges::range<R>
+    and text_iterator<std::ranges::iterator_t<R>>;
+
+/**
+ * @brief Match a range type whose value type is a character type
+ * @deprecated Use text_range instead
+ */
+template <typename R>
+concept character_range = text_range<R>;
+
+/// A text_range which is also an input_range
+template <typename R>
+concept input_text_range = text_range<R> and std::ranges::input_range<R>;
+
+/// A text_range which is also an output_range
+template <typename R, typename Char>
+concept output_text_range = text_range<R> and std::ranges::output_range<R, Char>;
+
+/// A text_range which is also forward-iterable
+template <typename R>
+concept forward_text_range = text_range<R> and std::ranges::forward_range<R>;
+
+/// A text_range which is bidirectionally iterable
+template <typename R>
+concept bidirectional_text_range = text_range<R> and std::ranges::bidirectional_range<R>;
+
+/// A text_range which is random-access
+template <typename R>
+concept random_access_text_range = text_range<R> and std::ranges::random_access_range<R>;
+
+/// A text_range which is also contiguous
+template <typename R>
+concept contiguous_text_range = text_range<R> and std::ranges::contiguous_range<R>;
+
+/// A text_range which is a sized_range (has a constant-time known size)
+template <typename R>
+concept sized_text_range = text_range<R> and std::ranges::sized_range<R>;
+
+/// Trait to detect a character array reference
+template <typename T>
+constexpr bool is_text_array_ref_v = false;
+
+template <typename Char, std::size_t N>
+    requires character_type<std::remove_const_t<Char>>
+constexpr bool is_text_array_ref_v<Char (&)[N]> = true;
+
+template <typename Char, std::size_t N>
+    requires character_type<std::remove_const_t<Char>>
+constexpr bool is_text_array_ref_v<Char (&&)[N]> = true;
+
+/// Match an argument that is a text array
+template <typename R>
+concept text_array_ref = contiguous_text_range<R> and is_text_array_ref_v<R>;
 
 /**
  * @brief Obtain the character type of a text range
  *
- * Substitution failure if 'T' is not a character_range
+ * Substitution failure if 'T' is not a text_range
  */
-template <character_range T>
+template <text_range T>
 using text_char_t = std::ranges::range_value_t<T>;
 
-template <text_range R>
+/**
+ * @brief Compute the size of a sized_text_range
+ */
+template <sized_text_range R>
 constexpr std::size_t text_range_size(const R& r) noexcept {
     return std::ranges::size(r);
 }
 
+// Overload for character arrays
 template <character_type C, std::size_t N>
 constexpr std::size_t text_range_size(const C (&)[N]) noexcept {
     return N-1;
+}
+
+/**
+ * @brief Compute the size of the given text_range, even if it is not a sized_range
+ *
+ * This can degrade to linear performance if the range is not sized or random-access
+ */
+template <text_range R>
+constexpr std::ranges::range_difference_t<R> text_range_distance(const R& r) noexcept {
+    if constexpr (text_range<R>) {
+        return static_cast<std::ranges::range_difference_t<R>>(text_range_size(r));
+    } else {
+        return std::ranges::distance(r);
+    }
 }
 
 /**
@@ -119,7 +182,7 @@ concept mutable_text_range =
     && std::regular<std::remove_cvref_t<T>>
     && std::constructible_from<std::remove_cvref_t<T>,
                                text_char_t<T> const*,
-                               std::ranges::range_size_t<T> >
+                               std::ranges::range_size_t<T>>
     && requires (T string,
                  const std::remove_cvref_t<T> const_str,
                  std::ranges::range_size_t<T> size,
@@ -138,16 +201,13 @@ concept mutable_text_range =
     };
 
 /**
- * @brief Match a text_range whose data() always returns a pointer-to-const.
+ * @brief Match a text_range that is also a view.
  */
-template <typename T>
-concept text_view =
-    text_range<T>
-    && !mutable_text_range<T>
-    && requires(std::remove_const_t<T> sv) {
-        { std::ranges::data(sv) } noexcept
-            -> std::same_as<text_char_t<T> const*>;
-    };
+template <typename R>
+concept text_view = text_range<R> and std::ranges::view<R>;
+
+template <typename R>
+concept viewable_text_range = text_range<R> and std::ranges::viewable_range<R>;
 // clang-format on
 
 namespace text_range_detail {
@@ -162,22 +222,6 @@ requires requires { typename R::traits_type; }
 struct char_traits_of<R, C> {
     using type = typename R::traits_type;
 };
-
-template <typename T>
-constexpr auto get_allocator_of(T&&, auto alloc) noexcept {
-    return alloc;
-}
-
-template <typename T>
-constexpr auto get_allocator_of(T&&) noexcept {
-    return std::allocator<text_char_t<T>>{};
-}
-
-template <typename T>
-constexpr auto get_allocator_of(T&& t) noexcept requires requires {
-    t.get_allocator();
-}
-{ return t.get_allocator(); }
 
 }  // namespace text_range_detail
 
@@ -194,16 +238,16 @@ using text_char_traits_t = typename text_range_detail::char_traits_of<T, text_ch
  * @brief Get an allocator associated with the given text_range
  *
  * If `R` has a `get_allocator()` method, returns `r.get_allocator()`, otherwise
- * a 'alloc', if provided, otherwise a default-constructed std::allocator
+ * a 'alloc', if provided, otherwise a default-constructed std::allocator for the
+ * range's character type
  */
-template <text_range R>
-constexpr auto text_allocator(R&& r, auto alloc) noexcept {
-    return text_range_detail::get_allocator_of(r, alloc);
-}
-
-template <text_range R>
-constexpr auto text_allocator(R&& r) noexcept {
-    return text_range_detail::get_allocator_of(r);
+template <text_range R, typename Alloc = std::allocator<text_char_t<R>>>
+constexpr auto text_allocator(R&& r, Alloc alloc = Alloc()) noexcept {
+    if constexpr (text_array_ref<R>) {
+        return neo::rebind_alloc<text_char_t<R>>(alloc);
+    } else {
+        return neo::allocator_of(r, alloc);
+    }
 }
 
 /**
@@ -214,102 +258,179 @@ template <text_range R>
 using text_allocator_t = decltype(neo::text_allocator(NEO_DECLVAL(R)));
 
 /**
+ * @brief Convert a contiguous viewable text range into a std::basic_string_view
+ *
+ * @param str The text_range to convert
+ * @return requires constexpr A new std::basic_string_view of the appropriate character type
+ */
+template <contiguous_text_range R>
+requires viewable_text_range<R>
+constexpr auto to_std_string_view(R&& str) noexcept {
+    using traits    = text_char_traits_t<R>;
+    using view_type = std::basic_string_view<text_char_t<R>, traits>;
+    auto p          = std::ranges::data(str);
+    auto size       = neo::text_range_size(str);
+    return view_type(p, size);
+}
+
+/**
  * @brief Obtain a text_view of the given text_range `r`
  *
  * If `r` is already a text_view, returns `r`, otherwise creates a
  * std::basic_string_view for the contents of the text range
  */
-template <text_range R>
-requires std::ranges::contiguous_range<R>
+template <input_text_range R>
+requires viewable_text_range<R>
 constexpr text_view auto view_text(R&& r) noexcept {
-    using traits = text_char_traits_t<R>;
-    using sv     = std::basic_string_view<text_char_t<R>, traits>;
-    return sv(std::ranges::data(r), neo::text_range_size(r));
+    if constexpr (text_array_ref<R>) {
+        return to_std_string_view(r);
+    } else {
+        return std::views::all(NEO_FWD(r));
+    }
 }
 
 /**
- * @brief Obtain a type that will be returned by `view_text()` for the text_range `R`
+ * @brief Obtain the type that will be returned by `view_text()` for the text_range `R`
  */
 template <text_range R>
 using view_text_t = decltype(neo::view_text(NEO_DECLVAL(R)));
 
 /**
- * @brief Create a mutable copy of the given text_range
+ * @brief Obtain the end sentinel of the given text_range.
+ *
+ * This differs from std::ranges::end in that it drops one char from
+ * character arrays, which are assumed to be null-terminated.
  */
 template <text_range R>
-constexpr auto copy_text(const R& r, auto alloc) noexcept {
-    if constexpr (mutable_text_range<R>) {
-        return R(std::ranges::data(r), neo::text_range_size(r), alloc);
+constexpr auto text_range_end(R&& r) noexcept {
+    if constexpr (text_array_ref<R> or std::ranges::common_range<R>) {
+        return std::ranges::next(std::ranges::begin(r), neo::text_range_size(r));
     } else {
-        using traits = text_char_traits_t<R>;
-        using str    = std::basic_string<text_char_t<R>, traits, text_allocator_t<R>>;
-        return str(std::ranges::data(r), neo::text_range_size(r), alloc);
+        return std::ranges::end(r);
     }
 }
 
-template <text_range R>
-constexpr auto copy_text(const R& r) noexcept {
+/**
+ * @brief Convert a given text_range into a single std::basic_string
+ */
+inline constexpr struct to_std_string_fn : ranges::pipable {
+    /**
+     * @brief Construct a std::basic_string from the given text_range and allocator
+     *
+     * @param str An input text range.
+     * @param alloc The allocator. If omitted, uses std::allocator
+     * @return constexpr auto
+     */
+    template <input_text_range R, typename Alloc>
+    constexpr auto operator()(R&& str, Alloc alloc) const noexcept(ranges::nothrow_range<R>) {
+        using traits   = text_char_traits_t<R>;
+        using str_type = std::basic_string<text_char_t<R>, traits, Alloc>;
+
+        if constexpr (contiguous_text_range<R>) {
+            // We can copy out of the buffer in the string
+            const auto ptr = std::ranges::data(str);
+            const auto sz  = neo::text_range_size(str);
+            return str_type(ptr, sz, alloc);
+        }
+
+        if constexpr (std::constructible_from<str_type, R, Alloc>) {
+            /// We can convert directly
+            return str_type(NEO_FWD(str), alloc);
+        }
+
+        if (std::ranges::common_range<R> and random_access_text_range<R>) {
+            /// The string has a known size and is common, so we can use the assign() method to get
+            /// the data in-place.
+            const auto it  = std::ranges::begin(str);
+            const auto end = neo::text_range_end(str);
+            return str_type(it, end, alloc);
+        } else if (random_access_text_range<R> or sized_text_range<R>) {
+            // We can calculate the size of the range in constant time, so we will allocate a region
+            // and then overwrite it with the range data.
+            // Compute the size:
+            auto size = static_cast<typename str_type::size_type>(neo::text_range_distance(str));
+            // Normalize-away char arrays:
+            auto view = neo::view_text(str);
+
+            // If the string is small enough, just create a small buffer then assign-into the
+            // std::string
+            constexpr auto small_size = 32;
+            if (size <= small_size) {
+                std::array<text_char_t<R>, small_size> arr;
+                std::ranges::copy(view, arr.begin());
+                return str_type(arr.data(), arr.data() + size, alloc);
+            }
+
+            std::exception_ptr e;
+            auto fill = [&](typename str_type::pointer ptr, typename str_type::size_type) {
+                if constexpr (neo::ranges::nothrow_range<R>) {
+                    std::ranges::copy(view, ptr);
+                } else {
+                    // Guard around ranges that may throw, since throwing within
+                    // resize_and_overwrite it UB. We'll rethrow the exception
+                    // when it is safe.
+                    try {
+                        std::ranges::copy(ptr, view);
+                    } catch (...) {
+                        e = std::current_exception();
+                    }
+                }
+                return size;
+            };
+
+            str_type ret(alloc);
+#if __cpp_lib_string_resize_and_overwrite >= 202110L
+            ret.resize_and_overwrite(size, fill);
+#else
+            ret.resize(neo::text_range_distance(str));
+            fill(ret.data(), 0);
+#endif
+            if (e and not ranges::nothrow_range<R>) {
+                std::rethrow_exception(e);
+            }
+            return ret;
+        } else {
+            // Slow case, we need to just copy out the characters
+            str_type ret(alloc);
+            std::ranges::copy(std::ranges::begin(str),
+                              neo::text_range_end(str),
+                              std::back_inserter(ret));
+            return ret;
+        }
+    }
+
+    /**
+     * @brief Convert to a std::basic_string.
+     *
+     * Attempts to obtain an allocator from the range, but falls back to std::allocator otherwise.
+     */
+    template <input_text_range R>
+    constexpr auto operator()(R&& str) const noexcept(ranges::nothrow_range<R>) {
+        auto alloc = text_allocator(str);
+        return (*this)(NEO_FWD(str), alloc);
+    }
+} to_std_string;
+
+/**
+ * @brief Create a mutable copy of the given text_range
+ */
+template <input_text_range R>
+constexpr auto copy_text(R&& r, auto alloc) noexcept {
+    using R1 = std::remove_cvref_t<R>;
+    if constexpr (mutable_text_range<R1>) {
+        return R1(std::ranges::data(r), neo::text_range_size(r), alloc);
+    } else {
+        return to_std_string(NEO_FWD(r), alloc);
+    }
+}
+
+template <input_text_range R>
+constexpr auto copy_text(R&& r) noexcept {
     auto alloc = neo::text_allocator(r);
-    return copy_text(r, alloc);
+    return copy_text(NEO_FWD(r), alloc);
 }
 
 template <text_range R>
 using copy_text_t = decltype(copy_text(NEO_DECLVAL(R)));
 
-template <text_range R>
-struct text_subrange : std::ranges::subrange<std::ranges::iterator_t<R>> {
-
-    enum { enable_reconstructible_range = 1 };
-
-    constexpr text_subrange() requires std::default_initializable<std::ranges::iterator_t<R>>
-    = default;
-
-    constexpr text_subrange(std::ranges::iterator_t<R> iter,
-                            std::ranges::sentinel_t<R> stop) noexcept
-        : text_subrange::subrange(iter, stop) {}
-
-    constexpr text_subrange(alike<R> auto&& str) noexcept
-        : text_subrange(std::ranges::begin(str), std::ranges::begin(str) + text_range_size(str)) {}
-
-    constexpr bool operator==(text_range auto const& other) const noexcept {
-        auto other_len = text_range_size(other);
-        return this->size() == other_len
-            and std::ranges::equal(*this,
-                                   std::ranges::subrange(std::ranges::begin(other),
-                                                         std::ranges::begin(other) + other_len));
-    }
-
-    constexpr auto operator<=>(text_range auto const& other) const noexcept {
-        auto ob = std::ranges::begin(other);
-        return std::lexicographical_compare_three_way(this->begin(),
-                                                      this->end(),
-                                                      ob,
-                                                      ob + text_range_size(other));
-    }
-
-    template <typename Char, typename Traits>
-    friend std::basic_ostream<Char, Traits>& operator<<(std::basic_ostream<Char, Traits>& o,
-                                                        text_subrange self) noexcept {
-        for (Char c : self) {
-            o.put(c);
-        }
-        return o;
-    }
-};
-
-template <text_range R>
-explicit text_subrange(const R&) -> text_subrange<R>;
-
-template <typename T>
-constexpr bool is_text_subrange = false;
-
-template <typename T>
-constexpr bool is_text_subrange<text_subrange<T>> = true;
-
 }  // namespace neo
-
-template <typename T>
-constexpr bool std::ranges::enable_view<neo::text_subrange<T>> = true;
-
-template <typename T>
-constexpr bool std::ranges::enable_borrowed_range<neo::text_subrange<T>> = true;

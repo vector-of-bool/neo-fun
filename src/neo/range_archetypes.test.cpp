@@ -35,6 +35,8 @@ static_assert(sr::bidirectional_range<bidirectional_range<>>);
 static_assert(sr::random_access_range<random_access_range<>>);
 static_assert(sr::contiguous_range<contiguous_range<>>);
 
+static_assert(sr::view<view<>>);
+
 #include <catch2/catch.hpp>
 
 // This is required in order to link in some configurations MSVC
