@@ -32,16 +32,13 @@ constexpr void text_append(Out& into, R&& from) noexcept {
         // We append R directly
         into.append(NEO_FWD(from));
         return;
-    }
-
-    if constexpr (text_algo_detail::
-                      can_append_to<Out, std::ranges::iterator_t<R>, std::ranges::sentinel_t<R>>) {
+    } else if constexpr (text_algo_detail::can_append_to<Out,
+                                                         std::ranges::iterator_t<R>,
+                                                         std::ranges::sentinel_t<R>>) {
         // We can append iterators from R directly
         into.append(std::ranges::begin(from), neo::text_range_end(from));
         return;
-    }
-
-    if (std::ranges::sized_range<R> or std::ranges::random_access_range<R>) {
+    } else if constexpr (std::ranges::sized_range<R> or std::ranges::random_access_range<R>) {
         // 'from' has a known size, so we can reserve space and then write it:
         auto prev_size = static_cast<std::size_t>(neo::text_range_distance(into));
         into.resize(prev_size + neo::text_range_size(from));
@@ -480,7 +477,8 @@ namespace text_range_operators {
 
 inline namespace equality {
 
-constexpr inline auto operator==(forward_text_range auto&& left, forward_text_range auto&& right)
+template <forward_text_range L, forward_text_range R>
+constexpr inline auto operator==(L&& left, R&& right)
     NEO_RETURNS(text_range_equal_to<>{}(left, right));
 
 }

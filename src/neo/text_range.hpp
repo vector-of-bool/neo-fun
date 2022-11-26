@@ -332,20 +332,16 @@ inline constexpr struct to_std_string_fn : ranges::pipable {
             const auto ptr = std::ranges::data(str);
             const auto sz  = neo::text_range_size(str);
             return str_type(ptr, sz, alloc);
-        }
-
-        if constexpr (std::constructible_from<str_type, R, Alloc>) {
+        } else if constexpr (std::constructible_from<str_type, R, Alloc>) {
             /// We can convert directly
             return str_type(NEO_FWD(str), alloc);
-        }
-
-        if (std::ranges::common_range<R> and random_access_text_range<R>) {
+        } else if constexpr (std::ranges::common_range<R> and random_access_text_range<R>) {
             /// The string has a known size and is common, so we can use the assign() method to get
             /// the data in-place.
             const auto it  = std::ranges::begin(str);
             const auto end = neo::text_range_end(str);
             return str_type(it, end, alloc);
-        } else if (random_access_text_range<R> or sized_text_range<R>) {
+        } else if constexpr (random_access_text_range<R> or sized_text_range<R>) {
             // We can calculate the size of the range in constant time, so we will allocate a region
             // and then overwrite it with the range data.
             // Compute the size:
