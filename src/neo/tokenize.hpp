@@ -1,12 +1,12 @@
 #pragma once
 
-#include "./assignable_box.hpp"
 #include "./concepts.hpp"
 #include "./fwd.hpp"
 #include "./invoke.hpp"
 #include "./iterator_facade.hpp"
 #include "./ranges.hpp"
 #include "./reconstruct.hpp"
+#include "./scalar_box.hpp"
 #include "./substring.hpp"
 #include "./text_algo.hpp"
 #include "./text_range.hpp"
@@ -58,7 +58,7 @@ struct simple_token_splitter {
 template <typename C>
 requires std::predicate<C, char32_t>
 struct charclass_splitter {
-    NEO_NO_UNIQUE_ADDRESS assignable_box<C> _classifier{};
+    NEO_NO_UNIQUE_ADDRESS scalar_box<C> _classifier{};
 
     template <text_range T>
     constexpr substring_t<T> operator()(const T& remaining) const noexcept {
@@ -141,9 +141,9 @@ class tokenizer {
     using View = view_text_t<R&>;
 
     /// The text that is being tokenized
-    NEO_NO_UNIQUE_ADDRESS assignable_box<R> _text;
+    NEO_NO_UNIQUE_ADDRESS scalar_box<R> _text;
     /// The token-splitting function
-    NEO_NO_UNIQUE_ADDRESS assignable_box<Tok> _get_next_token;
+    NEO_NO_UNIQUE_ADDRESS scalar_box<Tok> _get_next_token;
 
     constexpr static bool _is_nothrow
         = ranges::nothrow_range<R> and std::is_nothrow_invocable_v<Tok, View, View>;

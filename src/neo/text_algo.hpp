@@ -1,8 +1,8 @@
 #pragma once
 
-#include "./assignable_box.hpp"
 #include "./ranges.hpp"
 #include "./reconstruct.hpp"
+#include "./scalar_box.hpp"
 #include "./string.hpp"
 #include "./substring.hpp"
 #include "./tag.hpp"
@@ -27,7 +27,7 @@ concept can_append_to = requires(Into& into, Args&&... args) {
 }  // namespace text_algo_detail
 
 template <mutable_text_range Out, input_text_range R>
-constexpr void text_append(Out& into, R&& from) noexcept {
+constexpr void text_append(Out& into, R&& from) noexcept(ranges::nothrow_range<R>) {
     if constexpr (text_algo_detail::can_append_to<Out, R&&>) {
         // We append R directly
         into.append(NEO_FWD(from));
@@ -143,7 +143,7 @@ namespace text_algo_detail {
 
 template <text_range... Ts>
 class str_concat_tuple {
-    NEO_NO_UNIQUE_ADDRESS std::tuple<neo::assignable_box<Ts>...> _strs;
+    NEO_NO_UNIQUE_ADDRESS std::tuple<neo::scalar_box<Ts>...> _strs;
 
     template <std::size_t N, std::size_t Counter, typename Head, typename... Tail>
     constexpr auto const& _get_nth(neo::tag<Head, Tail...>) const noexcept {

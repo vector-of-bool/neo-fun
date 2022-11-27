@@ -1,10 +1,10 @@
 #pragma once
 
-#include "./assignable_box.hpp"
 #include "./attrib.hpp"
 #include "./fwd.hpp"
 #include "./invoke.hpp"
 #include "./returns.hpp"
+#include "./scalar_box.hpp"
 #include "./tag.hpp"
 
 #include <type_traits>
@@ -16,7 +16,7 @@ namespace detail {
 
 template <typename Func>
 class overload_fn {
-    NEO_NO_UNIQUE_ADDRESS neo::assignable_box<Func> _func;
+    NEO_NO_UNIQUE_ADDRESS neo::scalar_box<Func> _func;
 
 public:
     constexpr overload_fn() = default;
@@ -37,7 +37,7 @@ template <typename Func>
 requires(not std::is_member_object_pointer_v<std::remove_cvref_t<Func>>           //
          and not std::is_member_object_pointer_v<std::remove_reference_t<Func>>)  //
     class overload_fn<Func> {
-    NEO_NO_UNIQUE_ADDRESS neo::assignable_box<Func> _func;
+    NEO_NO_UNIQUE_ADDRESS neo::scalar_box<Func> _func;
 
 public:
     constexpr overload_fn() = default;
@@ -89,7 +89,7 @@ template <typename Fn, typename... Tail>
 struct ordered_overload_impl<Fn, Tail...> : ordered_overload_impl<Tail...> {
     using base_type = ordered_overload_impl<Tail...>;
 
-    NEO_NO_UNIQUE_ADDRESS neo::assignable_box<Fn> _my_fn;
+    NEO_NO_UNIQUE_ADDRESS neo::scalar_box<Fn> _my_fn;
 
     // Default constructor
     constexpr ordered_overload_impl() = default;

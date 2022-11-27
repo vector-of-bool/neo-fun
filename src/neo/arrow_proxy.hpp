@@ -1,7 +1,7 @@
 #pragma once
 
 #include "./addressof.hpp"
-#include "./assignable_box.hpp"
+#include "./scalar_box.hpp"
 
 namespace neo {
 
@@ -12,7 +12,7 @@ namespace neo {
  */
 template <typename T>
 class arrow_proxy {
-    NEO_NO_UNIQUE_ADDRESS assignable_box<T> _value;
+    NEO_NO_UNIQUE_ADDRESS scalar_box<T> _value;
 
 public:
     explicit constexpr arrow_proxy(T&& t) noexcept
