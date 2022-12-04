@@ -127,7 +127,8 @@ public:
 
 template <typename Void>
 requires std::is_void_v<Void>
-struct scalar_box<Void> : public _obox_detail::box_base<Void> {
+class scalar_box<Void> : public _obox_detail::box_base<Void> {
+public:
     constexpr Void get() const noexcept {}
 
     constexpr void friend do_repr(auto out, const scalar_box* self) noexcept {
