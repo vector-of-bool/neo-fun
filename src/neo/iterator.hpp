@@ -39,4 +39,20 @@ template <typename Iter>
 requires requires { typename std::iterator_traits<Iter>::iterator_category; }
 using iter_category_t = typename std::iterator_traits<Iter>::iterator_category;
 
+// clang-format off
+/**
+ * @brief Match an iterator who's increment (and possible decrement) will not throw
+ */
+template <typename Iter>
+concept nothrow_advancing_iterator =     //
+    std::input_or_output_iterator<Iter>  //
+    and requires(Iter it) {
+        { ++it } noexcept;
+    }
+    and (not std::bidirectional_iterator<Iter>
+         or requires(Iter it) {
+            { --it } noexcept;
+         });
+// clang-format off
+
 }  // namespace neo
