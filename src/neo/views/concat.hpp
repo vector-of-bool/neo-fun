@@ -236,7 +236,8 @@ private:
     }
 
     template <std::size_t N>
-    constexpr difference_type _diff_within_subrange(const iterator& other) const noexcept {
+    constexpr difference_type _diff_within_subrange(const iterator& other
+                                                    [[maybe_unused]]) const noexcept {
         if constexpr (N == sizeof...(Rs)) {
             return 0;
         } else if (_var.index() == N) {
@@ -247,7 +248,8 @@ private:
     }
 
     template <std::size_t N>
-    constexpr difference_type _diff_look_back(const iterator& other) const noexcept {
+    constexpr difference_type _diff_look_back(const iterator& other
+                                              [[maybe_unused]]) const noexcept {
         if constexpr (N == SIZE_MAX) {
             neo::unreachable();
         } else {
@@ -277,7 +279,8 @@ private:
     }
 
     template <std::size_t N>
-    constexpr difference_type _diff_look_ahead(const iterator& other) const noexcept {
+    constexpr difference_type _diff_look_ahead(const iterator& other
+                                               [[maybe_unused]]) const noexcept {
         if constexpr (N == sizeof...(Rs)) {
             neo::unreachable();
         } else {
