@@ -156,7 +156,7 @@ public:
     constexpr tuple(const Ts&... ts)
         noexcept(nothrow_constructible_from<container, Ts...>)
         requires (sizeof...(Ts) != 0)
-             and constructible_from2<container, Ts...>
+             and constructible_from2<container, const Ts&...>
         : tuple(convert_each_tag{}, ts...)
         {}
 
