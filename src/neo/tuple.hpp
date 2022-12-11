@@ -152,7 +152,7 @@ public:
     constexpr tuple& operator=(const tuple&) = default;
     constexpr tuple& operator=(tuple&&) = default;
 
-    explicit(not (convertible_to2<const Ts&, Ts> and ...))
+    explicit(not (convertible_to2<const Ts&, Ts> and ... and true))
     constexpr tuple(const Ts&... ts)
         noexcept(nothrow_constructible_from<container, Ts...>)
         requires (sizeof...(Ts) != 0)
