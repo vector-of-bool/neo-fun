@@ -25,18 +25,25 @@ struct tag {};
  * Variable template of a tag type
  */
 template <typename... Ts>
-constexpr tag<Ts...> tag_v;
+constexpr tag<Ts...> tag_v = {};
+
+template <auto...>
+struct vtag {};
+
+template <auto... Vs>
+constexpr vtag<Vs...> vtag_v = {};
 
 /**
  * Get the number of elements in a tag type.
  */
 template <typename Tag>
-requires is_type_parameterized_template_v<Tag>
-int tag_size_v = 0;
+auto tag_size_v = nullptr;
 
-template <template <class...> class Tmpl, typename... Ts>
-requires is_type_parameterized_template_v<Tmpl<Ts...>>
-constexpr unsigned tag_size_v<Tmpl<Ts...>> = static_cast<unsigned>(sizeof...(Ts));
+template <template <class...> class L, typename... Ts>
+constexpr unsigned tag_size_v<L<Ts...>> = static_cast<unsigned>(sizeof...(Ts));
+
+template <template <auto...> class L, auto... Vs>
+constexpr unsigned tag_size_v<L<Vs...>> = static_cast<unsigned>(sizeof...(Vs));
 
 /**
  * @brief An object that represents a compile-type type.
@@ -102,5 +109,60 @@ struct sole_type<Tmpl<T>> {
 
 template <typename T>
 using sole_type_t = typename sole_type<T>::type;
+
+template <typename Seq>
+struct concat_2;
+
+// Concatenate sequences of just types
+template <template <class...> class L, typename... Ts>
+struct concat_2<L<Ts...>> {
+    template <typename O>
+    struct with;
+
+    template <typename... Us>
+    struct with<L<Us...>> {
+        using type = L<Ts..., Us...>;
+    };
+};
+
+// Concatenate sequences of constants
+template <template <class C, C...> class L, class C, C... Ns>
+struct concat_2<L<C, Ns...>> {
+    template <typename O>
+    struct with;
+
+    template <C... Vs>
+    struct with<L<C, Vs...>> {
+        using type = L<C, Ns..., Vs...>;
+    };
+};
+
+template <typename... Tags>
+struct tag_concat;
+
+// A single element is just itself:
+template <typename One>
+struct tag_concat<One> {
+    using type = One;
+};
+
+// Concat two items:
+template <typename L, typename R>
+struct tag_concat<L, R> : concat_2<L>::template with<R> {};
+
+// Concat three items:
+template <typename A, typename B, typename C>
+struct tag_concat<A, B, C> : tag_concat<typename tag_concat<A, B>::type, C> {};
+
+// Concat four items:
+template <typename A, typename B, typename C, typename D>
+struct tag_concat<A, B, C, D>
+    : tag_concat<typename tag_concat<A, B>::type, typename tag_concat<C, D>::type> {};
+
+// Concat five or more items:
+template <typename A, typename B, typename C, typename D, typename... Rest>
+struct tag_concat<A, B, C, D, Rest...> : tag_concat<typename tag_concat<A, B>::type,
+                                                    typename tag_concat<C, D>::type,
+                                                    typename tag_concat<Rest>::type...> {};
 
 }  // namespace neo
