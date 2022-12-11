@@ -288,5 +288,48 @@ concept simple_boolean = requires(const B b) {
 };
 #endif
 
-} // namespace neo
-// clang-format off
+template <typename T>
+concept _destructible2 = requires(T& v) {
+    { v.~T() } noexcept;
+};
+
+/// Faster variant of std::destructible
+template <typename T>
+concept destructible2 = _destructible2<typename std::remove_cvref<T>::type>;
+
+/// Faster variant of std::constructible_from
+template <typename T, typename... Args>
+concept constructible_from2 =
+    destructible2<T>
+    and requires(T value, Args&&... args) {
+        T(NEO_FWD(args)...);
+    };
+
+/// Equivalent to std::constructible_from, but checks that construction is noexcept
+template <typename T, typename... Args>
+concept nothrow_constructible_from =
+    constructible_from2<T, Args...>
+    and requires(Args&&... args) {
+        { T(NEO_FWD(args)...) } noexcept;
+    };
+
+/// Check whether one can static_cast<To>(From)
+template <typename From, typename To>
+concept explicit_convertible_to =
+    requires (From&& from) {
+        static_cast<To>(NEO_FWD(from));
+    };
+
+/// Faster variant of std::convertible_to. Includes explicit_convertible_to
+template <typename From, typename To>
+concept convertible_to2 =
+    explicit_convertible_to<From, To>
+    and requires (void(&fn)(To), From&& from) {
+        // "To" is a valid return type
+        static_cast<To(*)()>(nullptr);
+        fn(NEO_FWD(from));
+    };
+
+// clang-format on
+
+}  // namespace neo

@@ -162,3 +162,5 @@ template <neo::copyable T>
 std::false_type test_trivially_copyable_subsume(T);
 
 static_assert(decltype(test_trivially_copyable_subsume(5))::value);
+
+static_assert(destructible2<int&>);
