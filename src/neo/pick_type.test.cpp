@@ -27,3 +27,6 @@ item<9845> f6 = neo::pick_type_of_t<9845, p<std::make_index_sequence<10'000>>::t
 // nth f     = 9;
 
 #endif
+
+// Required for executable linkage
+int main() {}
