@@ -18,6 +18,64 @@ namespace neo {
 template <typename...>
 class tuple;
 
+// Deduction guide: Decay all arguments
+template <typename... Ts>
+tuple(const Ts&... ts) -> tuple<Ts...>;
+
+namespace _tup_detail {
+
+template <auto>
+void get();
+
+template <typename T, std::size_t N>
+concept has_member_get_n = requires(T&& v) {
+    NEO_FWD(v).template get<N>();
+};
+
+template <typename T, std::size_t N>
+concept has_adl_get_n = requires(T&& t) {
+    get<N>(NEO_FWD(t));
+};
+
+}  // namespace _tup_detail
+
+template <typename Tpl, std::size_t Index>
+concept can_tuple_get_nth = requires {
+    requires std::tuple_size_v<std::remove_cvref_t<Tpl>> > Index;
+    requires _tup_detail::has_adl_get_n<Tpl, Index> or _tup_detail::has_member_get_n<Tpl, Index>;
+};
+
+/**
+ * @brief Invocable object that attempts to access the Nth element of the given tuple
+ *
+ * @tparam N
+ */
+template <std::size_t N>
+struct tuple_get_fn {
+    template <can_tuple_get_nth<N> Tuple>
+    constexpr decltype(auto) operator()(Tuple&& tup) const noexcept {
+        if constexpr (_tup_detail::has_member_get_n<Tuple, N>) {
+            return NEO_FWD(tup).template get<N>();
+        } else {
+            using _tup_detail::get;
+            return get<N>(NEO_FWD(tup));
+        }
+    }
+};
+
+template <std::size_t N>
+constexpr inline auto tuple_get = tuple_get_fn<N>{};
+
+/**
+ * @brief Obtain the return type of calling tuple_get<N>() with the given tuple type
+ *
+ * @tparam Tuple A tuple type
+ * @tparam N An index that is valid for Tuple
+ */
+template <typename Tuple, std::size_t N>
+requires can_tuple_get_nth<Tuple, N>
+using tuple_get_t = decltype(tuple_get<N>(NEO_DECLVAL(Tuple)));
+
 namespace _tup_detail {
 
 /// Holds the actual tuple data element
@@ -38,18 +96,6 @@ struct nth_box : box<T> {
     using box<T>::box;
 };
 
-/// Get mutable lval
-template <std::size_t N, typename T>
-constexpr T&& get(nth_box<N, T>& box) noexcept {
-    return static_cast<T&&>(box.item);
-}
-
-/// Get const lval
-template <std::size_t N, typename T>
-constexpr T const&& get_const(nth_box<N, T> const& box) noexcept {
-    return static_cast<T const&&>(box.item);
-}
-
 template <typename Seq, typename Tpl>
 struct boxes;
 
@@ -65,8 +111,7 @@ struct boxes<std::index_sequence<Is...>, tuple<Ts...>> : nth_box<Is, Ts>... {
 
 template <std::size_t... Ns>
 constexpr bool equal(const auto& left, const auto& right, std::index_sequence<Ns...>) noexcept {
-    return (static_cast<bool>(_tup_detail::get_const<Ns>(left) == _tup_detail::get_const<Ns>(right))
-            and ...);
+    return (static_cast<bool>(left.template get<Ns>() == right.template get<Ns>()) and ...);
 }
 
 constexpr auto compare_three_way(const auto&, const auto&, std::index_sequence<>) noexcept {
@@ -76,8 +121,8 @@ constexpr auto compare_three_way(const auto&, const auto&, std::index_sequence<>
 template <std::size_t I, std::size_t... Ns>
 constexpr std::strong_ordering
 compare_three_way(const auto& lhs, const auto& rhs, std::index_sequence<I, Ns...>) noexcept {
-    const auto result = std::compare_strong_order_fallback(_tup_detail::get_const<I>(lhs),
-                                                           _tup_detail::get_const<I>(rhs));
+    const auto result
+        = std::compare_strong_order_fallback(lhs.template get<I>(), rhs.template get<I>());
     if (not std::is_eq(result)) {
         return result;
     }
@@ -88,18 +133,15 @@ compare_three_way(const auto& lhs, const auto& rhs, std::index_sequence<I, Ns...
 template <std::size_t I, std::size_t J, std::size_t K, std::size_t... Ns>
 constexpr std::strong_ordering
 compare_three_way(const auto& lhs, const auto& rhs, std::index_sequence<I, J, K, Ns...>) noexcept {
-    const auto i = std::compare_strong_order_fallback(_tup_detail::get_const<I>(lhs),
-                                                      _tup_detail::get_const<I>(rhs));
+    const auto i = std::compare_strong_order_fallback(lhs.template get<I>(), rhs.template get<I>());
     if (i != 0) {
         return i;
     }
-    const auto j = std::compare_strong_order_fallback(_tup_detail::get_const<J>(lhs),
-                                                      _tup_detail::get_const<J>(rhs));
+    const auto j = std::compare_strong_order_fallback(lhs.template get<J>(), rhs.template get<J>());
     if (j != 0) {
         return j;
     }
-    const auto k = std::compare_strong_order_fallback(_tup_detail::get_const<K>(lhs),
-                                                      _tup_detail::get_const<K>(rhs));
+    const auto k = std::compare_strong_order_fallback(lhs.template get<K>(), rhs.template get<K>());
     if (k != 0) {
         return k;
     }
@@ -108,6 +150,15 @@ compare_three_way(const auto& lhs, const auto& rhs, std::index_sequence<I, J, K,
 }
 
 }  // namespace _tup_detail
+
+template <>
+class tuple<> {
+public:
+    using index_sequence = std::index_sequence<>;
+
+    constexpr auto operator<=>(const tuple&) const noexcept { return std::strong_ordering::equal; }
+    constexpr bool operator==(const tuple&) const noexcept { return true; }
+};
 
 template <typename... Ts>
 class tuple {
@@ -139,10 +190,11 @@ private:
         requires requires { container(static_cast<Ts>(NEO_FWD(other).template get<Ns>())...); }
         : tuple(convert_each_tag{}, NEO_FWD(other).template get<Ns>()...)
         {}
-    // clang-format on
+
+    template <std::size_t N>
+    using _nth_box = _tup_detail::nth_box<N, typename pick_type<N>::template from<Ts...>::type>;
 
 public:
-    // clang-format off
     constexpr tuple() = default;
 
     constexpr tuple(tuple&) = default;
@@ -152,7 +204,7 @@ public:
     constexpr tuple& operator=(const tuple&) = default;
     constexpr tuple& operator=(tuple&&) = default;
 
-    explicit(not (convertible_to2<const Ts&, Ts> and ... and true))
+    explicit(not (convertible_to2<const Ts&, Ts> and ...))
     constexpr tuple(const Ts&... ts)
         noexcept(nothrow_constructible_from<container, Ts...>)
         requires (sizeof...(Ts) != 0)
@@ -211,65 +263,42 @@ public:
         {}
 
     // clang-format on
-    template <std::size_t Index>
+    template <std::size_t N>
     constexpr decltype(auto) get() & noexcept {
-        auto&& elem = _tup_detail::get<Index>(_values);
-        return static_cast<decltype(elem)&>(elem);
+        auto& box = static_cast<_nth_box<N>&>(_values);
+        return static_cast<decltype(box.item)&>(box.item);
     }
 
-    template <std::size_t Index>
+    template <std::size_t N>
     constexpr decltype(auto) get() const& noexcept {
-        auto&& elem = _tup_detail::get_const<Index>(_values);
-        return static_cast<decltype(elem) const&>(elem);
+        auto& box = static_cast<const _nth_box<N>&>(_values);
+        return static_cast<decltype(box.item) const&>(box.item);
     }
 
-    template <std::size_t Index>
+    template <std::size_t N>
     constexpr decltype(auto) get() && noexcept {
-        auto&& elem = _tup_detail::get<Index>(_values);
-        return static_cast<decltype(elem)&&>(elem);
+        auto& box = static_cast<_nth_box<N>&>(_values);
+        return static_cast<decltype(box.item)&&>(box.item);
     }
 
-    template <std::size_t Index>
+    template <std::size_t N>
     constexpr decltype(auto) get() const&& noexcept {
-        auto&& elem = _tup_detail::get_const<Index>(_values);
-        return static_cast<decltype(elem) const&&>(elem);
+        auto& box = static_cast<const _nth_box<N>&>(_values);
+        return static_cast<decltype(box.item) const&&>(box.item);
     }
 
     template <std::equality_comparable_with<Ts>... Us>
     constexpr bool operator==(tuple<Us...> const& rhs) const noexcept {
-        return _tup_detail::equal(_values, rhs._values, index_sequence{});
+        return _tup_detail::equal(*this, rhs, index_sequence{});
     }
 
     template <std::totally_ordered_with<Ts>... Us>
     constexpr typename std::common_comparison_category<
         typename std::compare_three_way_result<Ts, Us>::type...>::type
     operator<=>(const tuple<Us...>& other) const noexcept {
-        return _tup_detail::compare_three_way(_values, other._values, index_sequence{});
+        return _tup_detail::compare_three_way(*this, other, index_sequence{});
     }
 };
-
-template <typename... Ts>
-tuple(const Ts&... ts) -> tuple<Ts...>;
-
-template <std::size_t N>
-struct tuple_get_fn {
-    template <typename Tuple>
-    constexpr decltype(auto) operator()(Tuple&& tup) const noexcept {
-        return NEO_FWD(tup).template get<N>();
-    }
-};
-
-template <std::size_t N>
-constexpr inline auto tuple_get = tuple_get_fn<N>{};
-
-/**
- * @brief Obtain the return type of calling .get<N>() on the given tuple type.
- *
- * @tparam Tuple A tuple type
- * @tparam N An index that is valid for Tuple
- */
-template <typename Tuple, std::size_t N>
-using tuple_get_t = decltype(NEO_DECLVAL(Tuple).template get<N>());
 
 template <typename Tuple>
 using index_sequence_t = typename std::remove_reference<Tuple>::type::index_sequence;

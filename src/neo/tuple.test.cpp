@@ -66,3 +66,13 @@ TEST_CASE("Simple usage") {
     int        a = 1;
     neo::tuple i{a};
 }
+
+TEST_CASE("Get<> on a std::tuple") {
+    std::tuple<int, std::string>      t;
+    std::same_as<int&> decltype(auto) n [[maybe_unused]] = neo::tuple_get<0>(t);
+
+    neo::tuple<int, std::string>                    t2;
+    std::same_as<std::string&> decltype(auto)       s [[maybe_unused]] = neo::tuple_get<1>(t);
+    std::same_as<const std::string&> decltype(auto) s2 [[maybe_unused]]
+    = neo::tuple_get<1>(std::as_const(t2));
+}

@@ -330,6 +330,12 @@ concept convertible_to2 =
         fn(NEO_FWD(from));
     };
 
+template <typename LHS, typename RHS>
+concept assignable_from2 =
+    requires(LHS&& lhs, RHS&& rhs) {
+        { NEO_FWD(lhs) = NEO_FWD(rhs) } -> std::same_as<LHS&&>;
+    };
+
 // clang-format on
 
 }  // namespace neo
