@@ -30,4 +30,10 @@
 #   define NEO_NO_UNIQUE_ADDRESS [[no_unique_address]]
 #endif
 
+#ifdef __has_builtin
+#define NEO_HAS_BUILTIN(X) __has_builtin(X)
+#else
+#define NEO_HAS_BUILTIN(X) 0
+#endif
+
 // clang-format on

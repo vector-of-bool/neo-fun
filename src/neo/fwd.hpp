@@ -3,24 +3,23 @@
 namespace neo {
 
 template <typename T>
-struct as_rref {
-    using type = T&&;
-};
+T deduce_typeof_f(const T&);
 
 template <typename T>
-struct as_rref<T&> {
-    using type = T&&;
-};
-
-template <typename T>
-using as_rref_t = typename as_rref<T>::type;
+T deduce_typeof_f(const volatile T&);
 
 }  // namespace neo
+
+#if defined __GNUC__ || defined __clang__
+#define NEO_TYPEOF(X) __typeof__((X))
+#else
+#define NEO_TYPEOF(X) decltype(::neo::deduce_typeof_f((X)))
+#endif
 
 /**
  * @brief Like std::move, but less overhead
  */
-#define NEO_MOVE(...) static_cast<::neo::as_rref_t<decltype(__VA_ARGS__)>>(__VA_ARGS__)
+#define NEO_MOVE(...) static_cast<NEO_TYPEOF(__VA_ARGS__) &&>(__VA_ARGS__)
 
 /**
  * @brief Equivalent to std::forward<decltype(Expr)&&>(expr)
