@@ -1,20 +1,14 @@
 #pragma once
 
+#include "./attrib.hpp"
+
 // clang-format off
-#if defined(__has_builtin)
-    #if __has_builtin(__builtin_addressof)
-        #define NEO_HAS_BUILTIN 1
-    #else
-        #define NEO_HAS_BUILTIN 0
-    #endif
-#elif _MSC_VER
-    #define NEO_HAS_BUILTIN 1
-#else
-    #define NEO_HAS_BUILTIN 0
+#if (NEO_HAS_BUILTIN(__builtin_addressof) || defined(_MSC_VER))
+#define HAS_ADDROF_INTRIN 1
 #endif
 // clang-format on
 
-#if !NEO_HAS_BUILTIN
+#ifndef HAS_ADDROF_INTRIN
 #include <memory>
 #endif
 
@@ -26,7 +20,7 @@ namespace neo {
  */
 template <typename T>
 constexpr T* addressof(T& arg) noexcept {
-#if NEO_HAS_BUILTIN
+#if HAS_ADDROF_INTRIN
     return __builtin_addressof(arg);
 #else
     return std::addressof(arg);
@@ -36,6 +30,14 @@ constexpr T* addressof(T& arg) noexcept {
 template <typename T>
 const T& addressof(const T&&) = delete;
 
+#if HAS_ADDROF_INTRIN
+#define NEO_ADDRESSOF(X) __builtin_addressof((X))
+#else
+#define NEO_ADDRESSOF(X) std::addressof((X))
+#endif
+
 }  // namespace neo
 
-#undef NEO_HAS_BUILTIN
+#ifdef HAS_ADDROF_INTRIN
+#undef HAS_ADDROF_INTRIN
+#endif
