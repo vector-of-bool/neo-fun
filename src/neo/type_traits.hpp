@@ -2,7 +2,6 @@
 
 #include "./attrib.hpp"
 #include "./declval.hpp"
-#include "./enum.hpp"
 #include "./fwd.hpp"
 #include "./pp.hpp"
 
@@ -547,7 +546,7 @@ struct detail::common_reference<1> {
 
 template <>
 struct detail::common_reference<2> {
-    template <typename T, typename U, neo_ttparam Q>
+    template <typename T, typename U, template <class> class Q>
     struct impl_try_simple;
 
     template <typename T, typename U>
@@ -556,13 +555,13 @@ struct detail::common_reference<2> {
     template <typename T, typename U>
     struct impl_try_common_type;
 
-    template <typename T, typename U, neo_ttparam Q>
+    template <typename T, typename U, template <class> class Q>
     using impl_t = typename impl_try_simple<T, U, Q>::type;
 
     //* Simple common (both references):
 
     // 1: Both lrefs:
-    template <lvalue_reference_type T, lvalue_reference_type U, neo_ttparam Q>
+    template <lvalue_reference_type T, lvalue_reference_type U, template <class> class Q>
     // Require a common reference according to ternary:
         requires requires(Q<T> t, Q<U> u) { 0 ? t : u; }
     struct impl_try_simple<T, U, Q> {
@@ -570,7 +569,7 @@ struct detail::common_reference<2> {
     };
 
     // 2: Both rrefs:
-    template <rvalue_reference_type T, rvalue_reference_type U, neo_ttparam Q>
+    template <rvalue_reference_type T, rvalue_reference_type U, template <class> class Q>
     // Both must be convertible to the base type:
         requires requires(void (*fn)(remove_reference_t<impl_t<T&, U&, Q>>&&), T t, U u) {
                      fn(NEO_FWD(t));
@@ -581,16 +580,16 @@ struct detail::common_reference<2> {
     };
 
     // 3: Left is lref, Right is rref:
-    template <lvalue_reference_type T, rvalue_reference_type U, neo_ttparam Q>
+    template <lvalue_reference_type T, rvalue_reference_type U, template <class> class Q>
     struct impl_try_simple<T, U, Q> : impl_try_simple<T&, const U&, Q> {};
 
     // 3: Swap left/right:
-    template <rvalue_reference_type T, lvalue_reference_type U, neo_ttparam Q>
+    template <rvalue_reference_type T, lvalue_reference_type U, template <class> class Q>
     struct impl_try_simple<T, U, Q> : impl_try_simple<U&, T const&, Q> {};
 
     // 5: Fallback, no common reference type between two references, or one operand is not a
     // reference
-    template <typename T, typename U, neo_ttparam Q>
+    template <typename T, typename U, template <class> class Q>
     struct impl_try_simple : impl_try_basic<T, U> {};
 
     // 5: Use a specialization of basic_common_reference:
