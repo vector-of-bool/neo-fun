@@ -68,3 +68,14 @@
 #define NEO_FN_MACRO_END                                                                           \
     }                                                                                              \
     while (0)
+
+#define NEO_DISCARD(...)
+
+#define NEO_IIF(Cond, Then, Else)                                                                  \
+    NEO_DISCARD(#Then, #Else)                                                                      \
+    NEO_CONCAT(_neoIIF_, Cond)(Then, Else)
+
+#define _neoIIF(Cond) NEO_CONCAT(_neoIIF_, Cond)
+
+#define _neoIIF_0(Then, Else) Else NEO_DISCARD(#Then)
+#define _neoIIF_1(Then, Else) Then NEO_DISCARD(#Else)
