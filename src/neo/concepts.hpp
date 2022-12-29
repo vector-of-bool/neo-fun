@@ -52,8 +52,7 @@ template <typename From, typename To>
 concept explicit_convertible_to =
     requires(add_rvalue_reference_t<From>(&fn)()) {
         static_cast<To>(fn());
-    }
-    and constructible_from<To, From>;
+    };
 
 template <typename From, typename To>
 concept convertible_to =
