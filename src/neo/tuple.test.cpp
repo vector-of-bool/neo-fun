@@ -1,4 +1,3 @@
-
 #include "./tuple.hpp"
 
 #include <catch2/catch.hpp>
@@ -9,6 +8,8 @@
 
 using neo::tuple;
 using neo::tuple_get_t;
+
+static_assert(neo::convertible_to<tuple<int>, tuple<double>>);
 
 template <typename... Ts>
 static void semiregular_assertions() {
@@ -69,10 +70,21 @@ TEST_CASE("Simple usage") {
 
 TEST_CASE("Get<> on a std::tuple") {
     std::tuple<int, std::string>      t;
-    std::same_as<int&> decltype(auto) n [[maybe_unused]] = neo::tuple_get<0>(t);
+    std::same_as<int&> decltype(auto) n [[maybe_unused]] = neo::get_nth<0>(t);
 
     neo::tuple<int, std::string>                    t2;
-    std::same_as<std::string&> decltype(auto)       s [[maybe_unused]] = neo::tuple_get<1>(t);
+    std::same_as<std::string&> decltype(auto)       s [[maybe_unused]] = neo::get_nth<1>(t);
     std::same_as<const std::string&> decltype(auto) s2 [[maybe_unused]]
-    = neo::tuple_get<1>(std::as_const(t2));
+    = neo::get_nth<1>(std::as_const(t2));
 }
+
+static_assert(
+    neo::weak_same_as<neo::common_type_t<neo::tuple<double, int>, neo::tuple<int, double>>,
+                      neo::tuple<double, double>>);
+
+static_assert(not neo::has_common_type<neo::tuple<double, int>, neo::tuple<int, std::string>>);
+static_assert(neo::has_common_type<neo::tuple<double, const char*>, neo::tuple<int, std::string>>);
+
+static_assert(neo::weak_same_as<
+              neo::common_reference_t<neo::tuple<int&, double>, neo::tuple<int const&, double>>,
+              neo::tuple<int const&, double>>);
