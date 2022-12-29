@@ -36,14 +36,14 @@ TEST_CASE("Empty tuple") {
 struct not_equality_comparable {};
 
 TEST_CASE("Equality and compare") {
-    static_assert(not std::equality_comparable<tuple<not_equality_comparable>>);
-    static_assert(std::equality_comparable<tuple<int>>);
-    static_assert(std::equality_comparable<tuple<int, int>>);
-    static_assert(std::equality_comparable<tuple<std::string, int>>);
+    static_assert(not neo::equality_comparable<tuple<not_equality_comparable>>);
+    static_assert(neo::equality_comparable<tuple<int>>);
+    static_assert(neo::equality_comparable<tuple<int, int>>);
+    static_assert(neo::equality_comparable<tuple<std::string, int>>);
     static_assert(
-        std::equality_comparable_with<tuple<std::string_view, int>, tuple<const char*, int>>);
+        neo::equality_comparable_with<tuple<std::string_view, int>, tuple<const char*, int>>);
 
-    static_assert(not std::equality_comparable_with<tuple<std::string_view, int>,
+    static_assert(not neo::equality_comparable_with<tuple<std::string_view, int>,
                                                     tuple<const char*, not_equality_comparable>>);
 
     neo::tuple t1{1, 2};

@@ -9,7 +9,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Build and Test
-        run: bash tools/earthly.sh +build-alpine-gcc-11.2
+        run: |
+          bash tools/earthly.sh +build-alpine-gcc-11.2 \
+            --cxx_flags "-fconcepts-diagnostics-depth=10"
+
   build-gcc10:
     name: Build for GCC 10.3
     runs-on: ubuntu-latest
@@ -17,7 +20,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Build and Test
-        run: bash tools/earthly.sh +build-alpine-gcc-10.3 --cxx_flags "-fcoroutines"
+        run: |
+          bash tools/earthly.sh +build-alpine-gcc-10.3 \
+            --cxx_flags "-fcoroutines -fconcepts-diagnostics-depth=10"
 
   build-vs2019:
     name: Build for VS 2019
