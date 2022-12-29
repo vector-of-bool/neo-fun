@@ -50,10 +50,12 @@ NEO_TEST_CONCEPT(same_as<empty, empty>);
 NEO_TEST_CONCEPT(!same_as<empty, bool>);
 NEO_TEST_CONCEPT(same_as<void, void>);
 
-NEO_TEST_CONCEPT(convertible_to<int, float>);
-NEO_TEST_CONCEPT(convertible_to<void, void>);
-NEO_TEST_CONCEPT(convertible_to<const char*, std::string>);
-NEO_TEST_CONCEPT(!convertible_to<bool, std::string>);
+static_assert(convertible_to<int, float>);
+static_assert(convertible_to<void, void>);
+static_assert(convertible_to<int, void>);
+static_assert(not convertible_to<void, int>);
+static_assert(convertible_to<const char*, std::string>);
+static_assert(!convertible_to<bool, std::string>);
 
 NEO_TEST_CONCEPT(derived_from<empty_derived, empty>);
 NEO_TEST_CONCEPT(!derived_from<empty_derived, bool>);
@@ -155,6 +157,20 @@ NEO_TEST_CONCEPT(relation<int_comparer, int, int>);
 NEO_TEST_CONCEPT(relation<int_comparer, int, float>);
 NEO_TEST_CONCEPT(!relation<int_comparer, int, std::string>);
 
+NEO_TEST_CONCEPT(explicit_convertible_to<void, void>);
+NEO_TEST_CONCEPT(explicit_convertible_to<int, void>);
+NEO_TEST_CONCEPT(explicit_convertible_to<void, const void>);
+NEO_TEST_CONCEPT(not explicit_convertible_to<void, int>);
+
+static_assert(neo::destructible<int&>);
+static_assert(not neo::destructible<void>);
+static_assert(neo::destructible<int[3]>);
+
+struct destroy_throws {
+    ~destroy_throws() noexcept(false);
+};
+static_assert(not neo::destructible<destroy_throws>);
+
 template <neo::trivially_copyable T>
 std::true_type test_trivially_copyable_subsume(T);
 
@@ -163,4 +179,4 @@ std::false_type test_trivially_copyable_subsume(T);
 
 static_assert(decltype(test_trivially_copyable_subsume(5))::value);
 
-static_assert(destructible2<int&>);
+static_assert(destructible<int&>);
