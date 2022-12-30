@@ -235,7 +235,8 @@ public:
     tuple& operator=(const tuple&) = default;
     tuple& operator=(tuple&&) = default;
 
-    explicit(not (convertible_to<const Ts&, Ts> and ...))
+    /// XXX: MSVC has trouble with concepts in the conditional-explicit. Use an intrinsic instead:
+    explicit((neo_is_convertible_to(const Ts&, Ts) and ...))
     constexpr tuple(const Ts&... ts)
         noexcept((nothrow_constructible_from<Ts, const Ts&> and ...))
         requires (sizeof...(Ts) != 0)
@@ -245,7 +246,7 @@ public:
 
     template <explicit_convertible_to<Ts>... Args>
         requires (sizeof...(Ts) > 0)
-    explicit(not (convertible_to<Args, Ts> and ...))
+    explicit((neo_is_convertible_to(Args&&, Ts) and ...))
     constexpr tuple(Args&&... args)
         noexcept((nothrow_constructible_from<Ts, Args> and ...))
         : _base(tuple_construct_tag{}, static_cast<Ts>(NEO_FWD(args))...)
@@ -254,7 +255,7 @@ public:
     template <typename... Us>
         requires (sizeof...(Us) == sizeof...(Ts))
              and (constructible_from<Ts, const Us&> and ...)
-    explicit (not (convertible_to<const Us&, Ts> and ...))
+    explicit((neo_is_convertible_to(const Us&, Ts) and ...))
     constexpr tuple(const tuple<Us...>& other)
         noexcept((nothrow_constructible_from<Ts, const Us&> and ...))
         : _base(tuple_convert_tag{}, other, index_sequence{})
@@ -263,7 +264,7 @@ public:
     template <typename... Us>
         requires (sizeof...(Us) == sizeof...(Ts))
              and (constructible_from<Ts, Us&> and ...)
-    explicit (not (convertible_to<const Us&, Ts> and ...))
+    explicit((neo_is_convertible_to(Us&, Ts) and ...))
     constexpr tuple(tuple<Us...>& other)
         noexcept((nothrow_constructible_from<Ts, Us&> and ...))
         : _base(tuple_convert_tag{}, other, index_sequence{})
@@ -272,7 +273,7 @@ public:
     template <typename... Us>
         requires (sizeof...(Us) == sizeof...(Ts))
              and (constructible_from<Ts, Us&&> and ...)
-    explicit (not (convertible_to<Us&&, Ts> and ...))
+    explicit((neo_is_convertible_to(Us&&, Ts) and ...))
     constexpr tuple(tuple<Us...>&& other)
         noexcept((nothrow_constructible_from<Ts, Us&&> and ...))
         : _base(tuple_convert_tag{}, NEO_FWD(other), index_sequence{})
@@ -281,7 +282,7 @@ public:
     template <typename... Us>
         requires (sizeof...(Us) == sizeof...(Ts))
              and (constructible_from<Ts, const Us&&> and ...)
-    explicit (not (convertible_to<const Us&&, Ts> and ...))
+    explicit((neo_is_convertible_to(const Us&&, Ts) and ...))
     constexpr tuple(const tuple<Us...>&& other)
         noexcept((nothrow_constructible_from<Ts, const Us&&> and ...))
         : _base(tuple_convert_tag{}, NEO_FWD(other), index_sequence{})
@@ -306,6 +307,19 @@ public:
     operator<=>(const tuple<Us...>& other) const noexcept {
         return _tup_detail::compare_three_way(*this, other, index_sequence{});
     }
+};
+
+template <>
+class tuple<> : nano_tuple<> {
+    using _base = nano_tuple<>;
+
+public:
+    using index_sequence = typename _base::index_sequence;
+    using _base::get;
+    using _base::nano_tuple;
+
+    bool operator==(tuple const&) const  = default;
+    auto operator<=>(tuple const&) const = default;
 };
 
 template <typename Tuple>

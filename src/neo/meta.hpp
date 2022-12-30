@@ -353,46 +353,10 @@ struct split_at_<N,
                 L<Acc..., T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, Ta, Tb, Tc, Td, Te, Tf>,
                 L<Tail...>> {};
 
-template <u64 N>
-struct split_at_1 {
-    template <typename L>
-    using from = typename split_at_<N, clear<L>, L>::type;
-};
-
-template <tn, tn>
-concept fast_split_at_prefix = true;
-
-template <neo_ttparam L, tn Voids>
-struct fast_split_at_fn;
-
-template <neo_ttparam L, tn... Voids>
-struct fast_split_at_fn<L, list<Voids...>> {
-    template <fast_split_at_prefix<Voids>... Befores, tn... Afters>
-    static L<L<Befores...>, L<Afters...>> r(tag<Befores>*..., tag<Afters>*...);
-};
-
-template <auto N>
-struct fast_split_at {
-    using voids = meta::filled_list<void, N>;
-
-    template <tn L>
-    struct from;
-
-    template <neo_ttparam L, tn... Ts>
-    struct from<L<Ts...>> {
-        using type = decltype(fast_split_at_fn<L, voids>::r(static_cast<tag<Ts>*>(nullptr)...));
-    };
-};
-
 }  // namespace detail
 
-#if defined(_MSC_VER)
 template <tn L, u64 N>
-using split_at = typename detail::fast_split_at<N>::template from<L>::type;
-#else
-template <tn L, u64 N>
-using split_at = typename detail::split_at_1<N>::tl from<L>;
-#endif
+using split_at = typename detail::split_at_<N, clear<L>, L>::type;
 
 template <tn L, u64 N>
 using first_n = head<split_at<L, N>>;

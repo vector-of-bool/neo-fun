@@ -9,9 +9,9 @@
 
 namespace neo {
 
-#define NEO_ARGS_AS_TARGS(...) <__VA_ARGS__>
+#define _neo_tvar_args_rhs(...) <__VA_ARGS__> NEO_RPAREN
 
-#define NEO_CALLS_TVAR(...) __VA_ARGS__ NEO_ARGS_AS_TARGS
+#define NEO_CALLS_TVAR(...) NEO_LPAREN __VA_ARGS__ _neo_tvar_args_rhs
 
 #define NEO_TTRAIT_BUILTIN_OR_VARTMPL(Builtin, VarTmpl)                                            \
     NEO_EVAL_2(                                                                                    \
@@ -25,14 +25,10 @@ constexpr bool is_same_v = false;
 template <typename T>
 constexpr bool is_same_v<T, T> = true;
 
-#if NEO_HAS_BUILTIN(__is_same) || defined(_MSC_VER)
 /**
  * @brief Determine whether two types are the same type
  */
-#define neo_is_same __is_same
-#else
-#define neo_is_same(...) ::neo::is_same_v<__VA_ARGS__>
-#endif
+#define neo_is_same NEO_TTRAIT_BUILTIN_OR_VARTMPL(__is_same, ::neo::is_same_v)
 
 /**
  * @brief Test whether the type T is the same as any type given in U
@@ -96,6 +92,12 @@ BOOL(T) is_pointer_v<T* const>          = false;
 BOOL(T) is_pointer_v<T* const volatile> = false;
 BOOL(T) is_pointer_v<T* volatile>       = false;
 
+BOOL(T) is_null_pointer_v                                = false;
+BOOLX() is_null_pointer_v<std::nullptr_t>                = true;
+BOOLX() is_null_pointer_v<std::nullptr_t const>          = true;
+BOOLX() is_null_pointer_v<std::nullptr_t volatile>       = true;
+BOOLX() is_null_pointer_v<std::nullptr_t const volatile> = true;
+
 }  // namespace detail
 
 #define DECL_TRAIT_CONCEPT(Name, TraitMacro)                                                       \
@@ -114,10 +116,17 @@ BOOL(T) is_pointer_v<T* volatile>       = false;
 DECL_TRAIT_CONCEPT(void_type, neo_is_void);
 
 #define neo_is_null_pointer(...)                                                                   \
-    (neo_is_same(__VA_ARGS__, decltype(nullptr))                                                   \
-     or neo_is_same(__VA_ARGS__, decltype(nullptr) const)                                          \
-     or neo_is_same(__VA_ARGS__, decltype(nullptr) const volatile)                                 \
-     or neo_is_same(__VA_ARGS__, decltype(nullptr) volatile))
+    NEO_IIF(NEO_HAS_BUILTIN(__is_nullptr), __is_nullptr(__VA_ARGS__), _neo_is_nullptr(__VA_ARGS__))
+#define _neo_is_nullptr(...)                                                                       \
+    NEO_IIF(NEO_HAS_BUILTIN(__is_same),                                                            \
+            (neo_is_same(__VA_ARGS__, decltype(nullptr))                                           \
+             or neo_is_same(__VA_ARGS__, decltype(nullptr) const)                                  \
+             or neo_is_same(__VA_ARGS__, decltype(nullptr) const volatile)                         \
+             or neo_is_same(__VA_ARGS__, decltype(nullptr) volatile)),                             \
+            NEO_IIF(NEO_HAS_BUILTIN(__remove_cv),                                                  \
+                    neo_is_same(__remove_cv(__VA_ARGS__), decltype(nullptr)),                      \
+                    ::neo::detail::is_null_pointer_v<__VA_ARGS__>))
+DECL_TRAIT_CONCEPT(null_pointer, neo_is_null_pointer);
 
 #define neo_is_array NEO_TTRAIT_BUILTIN_OR_VARTMPL(__is_array, ::neo::detail::is_array_v)
 DECL_TRAIT_CONCEPT(array_type, neo_is_array);
@@ -184,7 +193,7 @@ DECL_TRAIT_CONCEPT(pointer_type, neo_is_pointer);
 #define DECL_UNARY_TRANSFORM(Name) declUnaryTransform(NEO_CONCAT(__, Name), NEO_CONCAT(Name, _t))
 #define declUnaryTransform(Builtin, Trait)                                                         \
     template <typename T>                                                                          \
-    using Trait = NEO_IF_ELSE(NEO_HAS_BUILTIN(Builtin))(Builtin(T))(std::Trait<T>)
+    using Trait = NEO_IF_ELSE(NEO_HAS_BUILTIN(Builtin))(Builtin(T))(::std::Trait<T>)
 
 DECL_UNARY_TRANSFORM(add_lvalue_reference);
 DECL_UNARY_TRANSFORM(add_pointer);
@@ -373,7 +382,10 @@ struct common_type;
 }
 
 template <typename... Ts>
-using common_type_t = typename detail::common_type<sizeof...(Ts)>::template f<Ts...>;
+using common_type_t = typename detail::common_type<sizeof...(Ts)>::template impl<Ts...>::type;
+
+template <typename... Ts>
+concept has_common_type = requires { typename common_type_t<Ts...>; };
 
 template <>
 struct detail::common_type<0> {};
@@ -415,24 +427,25 @@ struct detail::common_type<2> {
     };
 
     template <typename T, typename U>
-    using f = typename impl_try_ternary<T, U>::type;
+    struct impl : impl_try_ternary<T, U> {};
 };
 
 template <>
 struct detail::common_type<1> {
     template <typename T>
-    using f = common_type_t<T, T>;
+    struct impl {
+        using type = T;
+    };
 };
 
 template <std::size_t N>
 struct detail::common_type {
     template <typename T, typename U, typename... V>
-        requires requires { typename common_type_t<T, U>; }
-    using f = common_type_t<common_type_t<T, U>, common_type_t<V...>>;
+        requires has_common_type<T, U> and has_common_type<V...>
+    struct impl {
+        using type = common_type_t<common_type_t<T, U>, common_type_t<V...>>;
+    };
 };
-
-template <typename... Ts>
-concept has_common_type = requires { typename common_type_t<Ts...>; };
 
 enum class reference_kind { none, lvalue, rvalue };
 
@@ -523,7 +536,8 @@ struct common_reference;
 }  // namespace detail
 
 template <typename... Ts>
-using common_reference_t = typename detail::common_reference<sizeof...(Ts)>::template f<Ts...>;
+using common_reference_t =
+    typename detail::common_reference<sizeof...(Ts)>::template impl<Ts...>::type;
 
 template <typename... Ts>
 concept has_common_reference = requires { typename common_reference_t<Ts...>; };
@@ -541,7 +555,9 @@ struct detail::common_reference<0> {};
 template <>
 struct detail::common_reference<1> {
     template <typename T>
-    using f = T;
+    struct impl {
+        using type = T;
+    };
 };
 
 template <>
@@ -619,14 +635,15 @@ struct detail::common_reference<2> {
         = cvref_apply<cvref_kind_v<remove_reference_t<T>> | cvref_kind_v<remove_reference_t<U>>>;
 
     template <typename T, typename U>
-    using f = impl_t<T, U, shared_cv<T, U>::template f>;
+    struct impl : impl_try_simple<T, U, shared_cv<T, U>::template f> {};
 };
 
 template <std::size_t>
 struct detail::common_reference {
     template <typename T, typename U, typename... Vs>
-        requires has_common_reference<T, U>
-    using f = common_reference_t<common_reference_t<T, U>, common_reference_t<Vs...>>;
+        requires has_common_reference<T, U> and has_common_reference<Vs...>
+    struct impl : common_reference<1>::template impl<
+                      common_reference_t<common_reference_t<T, U>, common_reference_t<Vs...>>> {};
 };
 
 }  // namespace neo

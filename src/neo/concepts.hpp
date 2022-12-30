@@ -72,6 +72,8 @@ concept convertible_to =
             ;
     };
 
+#define neo_is_convertible_to NEO_TTRAIT_BUILTIN_OR_VARTMPL(__is_convertible_to, ::neo::convertible_to)
+
 template <typename Derived, typename Base>
 concept derived_from = requires { requires
         neo_is_base_of(Base, Derived)

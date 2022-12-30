@@ -1,25 +1,29 @@
 #pragma once
 
-namespace neo {
+namespace neo::move_detail {
 
 template <typename T>
-T deduce_typeof_f(const T&);
+struct strip_type {
+    using type = T;
+};
 
 template <typename T>
-T deduce_typeof_f(const volatile T&);
+struct strip_type<T&> {
+    using type = T;
+};
 
-}  // namespace neo
-
-#if defined __GNUC__ || defined __clang__
-#define NEO_TYPEOF(X) __typeof__((X))
+#ifdef __GNUC__
+#define _neo_move_not_lref(...) __typeof__((__VA_ARGS__))
 #else
-#define NEO_TYPEOF(X) decltype(::neo::deduce_typeof_f((X)))
+#define _neo_move_not_lref(...) typename ::neo::move_detail::strip_type<decltype(__VA_ARGS__)>::type
 #endif
+
+}  // namespace neo::move_detail
 
 /**
  * @brief Like std::move, but less overhead
  */
-#define NEO_MOVE(...) static_cast<NEO_TYPEOF(__VA_ARGS__) &&>(__VA_ARGS__)
+#define NEO_MOVE(...) static_cast<_neo_move_not_lref(__VA_ARGS__) &&>(__VA_ARGS__)
 
 /**
  * @brief Equivalent to std::forward<decltype(Expr)&&>(expr)

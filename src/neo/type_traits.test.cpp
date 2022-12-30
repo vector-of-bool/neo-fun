@@ -21,11 +21,16 @@ static_assert(not neo_is_floating_point(const void));
 static_assert(neo_is_floating_point(double));
 static_assert(neo_is_floating_point(double const));
 
+static_assert(neo_is_null_pointer(std::nullptr_t));
+
 static_assert(neo_array_rank(int[][2][1]) == 3);
 
-#if NEO_HAS_BUILTIN(__remove_cvref_t)
-#error 1
-#endif
+struct base {};
+
+struct derived : base {};
+
+static_assert(neo_is_base_of(base, derived));
+static_assert(not neo_is_base_of(derived, base));
 
 static_assert(neo::same_as<neo::common_type_t<double>, double>);
 static_assert(not neo::has_common_type<>);
@@ -41,6 +46,7 @@ static_assert(neo::same_as<neo::common_reference_t<int>, int>);
 static_assert(neo::same_as<neo::common_reference_t<int&>, int&>);
 
 static_assert(neo::same_as<neo::common_reference_t<int&, int&>, int&>);
+static_assert(neo::same_as<neo::common_reference_t<int&, int&, int&>, int&>);
 static_assert(neo::same_as<neo::common_reference_t<int&, const int&>, const int&>);
 static_assert(neo::same_as<neo::common_reference_t<const int&, int&>, const int&>);
 static_assert(neo::same_as<neo::common_reference_t<const int&&, int&&>, const int&&>);
