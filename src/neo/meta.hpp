@@ -1,7 +1,5 @@
 #pragma once
 
-#include "./declval.hpp"
-
 #include <utility>
 
 #define u64 unsigned long long
@@ -384,66 +382,11 @@ struct remove_prefix_ {
     template <neo_ttparam L, tn... Ts>
     struct from<L<Ts...>> {
         static_assert(sizeof...(Ts) >= N, "remove_prefix N is too large");
-        using type = decltype(remove_prefix_fn<L, voids>::r(NEO_DECLVAL(tag<Ts>*)...));
+        using type = decltype(remove_prefix_fn<L, voids>::r(static_cast<tag<Ts>*>(nullptr)...));
     };
 };
-
-template <tn Vs>
-struct at_fn;
-
-template <neo_ttparam L, tn... Voids>
-struct at_fn<L<Voids...>> {
-    template <tn T>
-    static tag<T> r(Voids*..., tag<T>*, ...);
-};
-
-template <u64 N>
-struct at_ {
-    using voids = meta::filled_list<void, N>;
-
-    template <tn L>
-    struct from;
-
-    template <neo_ttparam L, tn... Ts>
-    struct from<L<Ts...>> {
-        static_assert(sizeof...(Ts) > N, "N index is out-of-bounds for list");
-        using type = tn decltype(at_fn<voids>::r(NEO_DECLVAL(tag<Ts>*)...))::type;
-    };
-};
-
-/// XXX: In the future, we can use the concept-prefix trick to more quickly
-/// implement remove_suffix. GCC currently has issues with it
-
-// tl <tn T, tn Void>
-// concept okay = true;
-
-// tl <tn L>
-// struct remove_suffix_fn;
-
-// tl <tn... Voids>
-// struct remove_suffix_fn<list<Voids...>> {
-//     static auto r(okay<Voids> auto*..., ...);
-// };
-
-// tl <u64 N>
-// struct remove_suffix {
-//     tl <tn L>
-//     struct from;
-
-//     tl <neo_ttparam L, tn... Ts>
-//     struct from<L<Ts...>> {
-//         using type = decltype(remove_suffix_fn<meta::filled_list<void, sizeof...(Ts) - N>>::r(
-//             static_cast<tag<Ts>*>(nullptr)...));
-//     };
-// };
 
 }  // namespace detail
-
-/**
- * @brief Obtain the Nth element of the given typelist
- */
-template <tn L, u64 N>
-using at = tn detail::at_<N>::template from<L>::type;
 
 namespace tacit {
 
@@ -460,6 +403,12 @@ struct remove_prefix {
  */
 template <tn L, u64 N>
 using remove_prefix = tn detail::remove_prefix_<N>::tl from<L>::type;
+
+/**
+ * @brief Obtain the Nth element of the given typelist
+ */
+template <tn L, u64 N>
+using at = head<remove_prefix<L, N>>;
 
 namespace tacit {
 
