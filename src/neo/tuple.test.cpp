@@ -9,6 +9,7 @@
 using neo::tuple;
 using neo::tuple_get_t;
 
+static_assert(neo::explicit_convertible_to<tuple<int>, tuple<double>>);
 static_assert(neo::convertible_to<tuple<int>, tuple<double>>);
 
 template <typename... Ts>
