@@ -392,7 +392,7 @@ struct at_fn;
 template <neo_ttparam L, tn... Voids>
 struct at_fn<L<Voids...>> {
     template <tn T>
-    static tag<T> r(Voids*..., list<T>*, ...);
+    static tag<T> r(Voids*..., tag<T>*, ...);
 };
 
 template <u64 N>
@@ -405,7 +405,7 @@ struct at_ {
     template <neo_ttparam L, tn... Ts>
     struct from<L<Ts...>> {
         static_assert(sizeof...(Ts) > N, "N index is out-of-bounds for list");
-        using type = tn decltype(at_fn<voids>::r(static_cast<list<Ts>*>(nullptr)...))::type;
+        using type = tn decltype(at_fn<voids>::r(static_cast<tag<Ts>*>(nullptr)...))::type;
     };
 };
 
