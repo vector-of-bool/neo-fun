@@ -1,5 +1,7 @@
 #pragma once
 
+#include "./declval.hpp"
+
 #include <utility>
 
 #define u64 unsigned long long
@@ -382,7 +384,7 @@ struct remove_prefix_ {
     template <neo_ttparam L, tn... Ts>
     struct from<L<Ts...>> {
         static_assert(sizeof...(Ts) >= N, "remove_prefix N is too large");
-        using type = decltype(remove_prefix_fn<L, voids>::r(static_cast<tag<Ts>*>(nullptr)...));
+        using type = decltype(remove_prefix_fn<L, voids>::r(NEO_DECLVAL(tag<Ts>*)...));
     };
 };
 
@@ -405,7 +407,7 @@ struct at_ {
     template <neo_ttparam L, tn... Ts>
     struct from<L<Ts...>> {
         static_assert(sizeof...(Ts) > N, "N index is out-of-bounds for list");
-        using type = tn decltype(at_fn<voids>::r(static_cast<tag<Ts>*>(nullptr)...))::type;
+        using type = tn decltype(at_fn<voids>::r(NEO_DECLVAL(tag<Ts>*)...))::type;
     };
 };
 
