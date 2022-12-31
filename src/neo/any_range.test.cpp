@@ -131,30 +131,30 @@ TEMPLATE_TEST_CASE("Various combinations",
     using container_tag = neo::iter_concept_t<std::ranges::iterator_t<container>>;
     using ref_type      = std::ranges::range_reference_t<container&>;
 
-    static_assert(std::convertible_to<container, neo::any_range<ref_type, container_tag>>);
+    static_assert(neo::convertible_to<container, neo::any_range<ref_type, container_tag>>);
 
     if constexpr (std::ranges::random_access_range<container>) {
-        static_assert(std::convertible_to<container, neo::any_random_access_range<ref_type>>);
+        static_assert(neo::convertible_to<container, neo::any_random_access_range<ref_type>>);
     } else {
-        static_assert(!std::convertible_to<container, neo::any_random_access_range<ref_type>>);
+        static_assert(!neo::convertible_to<container, neo::any_random_access_range<ref_type>>);
     }
 
     if constexpr (std::ranges::bidirectional_range<container>) {
-        static_assert(std::convertible_to<container, neo::any_bidirectional_range<ref_type>>);
+        static_assert(neo::convertible_to<container, neo::any_bidirectional_range<ref_type>>);
     } else {
-        static_assert(!std::convertible_to<container, neo::any_bidirectional_range<ref_type>>);
+        static_assert(!neo::convertible_to<container, neo::any_bidirectional_range<ref_type>>);
     }
 
     if constexpr (std::ranges::forward_range<container>) {
-        static_assert(std::convertible_to<container, neo::any_forward_range<ref_type>>);
-        static_assert(std::convertible_to<container, neo::any_forward_range<ref_type>>);
+        static_assert(neo::convertible_to<container, neo::any_forward_range<ref_type>>);
+        static_assert(neo::convertible_to<container, neo::any_forward_range<ref_type>>);
     } else {
-        static_assert(!std::convertible_to<container, neo::any_forward_range<ref_type>>);
+        static_assert(!neo::convertible_to<container, neo::any_forward_range<ref_type>>);
     }
 
     if constexpr (std::ranges::input_range<container>) {
-        static_assert(std::convertible_to<container, neo::any_input_range<ref_type>>);
+        static_assert(neo::convertible_to<container, neo::any_input_range<ref_type>>);
     } else {
-        static_assert(!std::convertible_to<container, neo::any_input_range<ref_type>>);
+        static_assert(!neo::convertible_to<container, neo::any_input_range<ref_type>>);
     }
 }

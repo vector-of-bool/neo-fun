@@ -213,16 +213,13 @@ constexpr bool can_std_ranges_swap = (
        can_shuffle_swap<T, U, Tv, Uv>
     or can_swap_prog_defined_adl<T, U, Tv, Uv>
     // Otherwise, if it is two arrays of equal extent:
-    or (
-        (neo_is_bounded_array(Tv) and neo_is_bounded_array(Uv)
-        and neo_array_rank(Tv) == neo_array_rank(Uv)
-        and std::extent_v<Tv> == std::extent_v<Uv>)
+    or requires(T&& t, U&& u) {
+        requires neo_is_bounded_array(Tv) and neo_is_bounded_array(Uv);
+        requires neo_array_rank(Tv) == neo_array_rank(Uv);
+        requires std::extent_v<Tv> == std::extent_v<Uv>;
         // Check that elements are swappable:
-        and requires(T&& t, U&& u) {
-            requires can_std_ranges_swap<decltype(t[0]), decltype(u[0])>;
-            // requires false;
-        }
-    )
+        requires  can_std_ranges_swap<decltype(t[0]), decltype(u[0])>;
+    }
 );
 
 template <typename T, typename U>
@@ -335,7 +332,7 @@ template <typename T>
 concept semiregular = copyable<T> and default_initializable<T>;
 
 template <typename T>
-concept regular = semiregular<T> and equality_comparable<T>;
+concept regular = equality_comparable<T> and semiregular<T>;
 
 
 template <typename F, typename... Args>
