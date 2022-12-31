@@ -34,9 +34,8 @@ public:
 };
 
 template <typename Func>
-requires(not std::is_member_object_pointer_v<std::remove_cvref_t<Func>>           //
-         and not std::is_member_object_pointer_v<std::remove_reference_t<Func>>)  //
-    class overload_fn<Func> {
+    requires(not neo_is_member_pointer(remove_cvref_t<Func>))
+class overload_fn<Func> {
     NEO_NO_UNIQUE_ADDRESS neo::scalar_box<Func> _func;
 
 public:
@@ -96,15 +95,14 @@ struct ordered_overload_impl<Fn, Tail...> : ordered_overload_impl<Tail...> {
 
     // Construct this invocable, and its parent
     constexpr explicit ordered_overload_impl(Fn&& fn, Tail&&... tail) noexcept(
-        std::is_nothrow_constructible_v<base_type, Tail...>and
-            std::is_nothrow_constructible_v<Fn, Fn>)
+        nothrow_constructible_from<base_type, Tail...>and nothrow_constructible_from<Fn, Fn>)
         : base_type(NEO_FWD(tail)...)
         , _my_fn(NEO_FWD(fn)) {}
 
     // clang-format off
     template <typename... Args>
     constexpr decltype(auto) operator()(Args&&... args) const
-        noexcept(std::is_nothrow_invocable_v<const Fn&, Args&&...>)
+        noexcept(nothrow_invocable<const Fn&, Args&&...>)
         requires neo::invocable2<const Fn&, Args&&...>
     {
         return NEO_INVOKE(_my_fn.get(), NEO_FWD(args)...);
@@ -112,7 +110,7 @@ struct ordered_overload_impl<Fn, Tail...> : ordered_overload_impl<Tail...> {
 
     template <typename... Args>
     constexpr decltype(auto) operator()(Args&&... args) const
-        noexcept(std::is_nothrow_invocable_v<base_type&, Args&&...>)
+        noexcept(nothrow_invocable<base_type&, Args&&...>)
         requires (not neo::invocable2<Fn&, Args&&...>)
              and neo::invocable2<base_type&, Args&&...>
     {
@@ -121,7 +119,7 @@ struct ordered_overload_impl<Fn, Tail...> : ordered_overload_impl<Tail...> {
 
     template <typename... Args>
     constexpr decltype(auto) operator()(Args&&... args)
-        noexcept(std::is_nothrow_invocable_v<Fn&, Args&&...>)
+        noexcept(nothrow_invocable<Fn&, Args&&...>)
         requires neo::invocable2<Fn&, Args&&...>
     {
         return NEO_INVOKE(_my_fn.get(), NEO_FWD(args)...);
@@ -129,7 +127,7 @@ struct ordered_overload_impl<Fn, Tail...> : ordered_overload_impl<Tail...> {
 
     template <typename... Args>
     constexpr decltype(auto) operator()(Args&&... args)
-        noexcept(std::is_nothrow_invocable_v<base_type&, Args&&...>)
+        noexcept(nothrow_invocable<base_type&, Args&&...>)
         requires (not neo::invocable2<Fn&, Args&&...>)
              and neo::invocable2<base_type&, Args&&...>
     {

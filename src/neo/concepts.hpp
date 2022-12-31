@@ -263,22 +263,6 @@ concept weakly_equality_comparable_with =
         { u != t } -> simple_boolean;
     });
 
-} // namespace detail
-
-template <typename T>
-concept equality_comparable = detail::weakly_equality_comparable_with<T, T>;
-
-template <typename T, typename U>
-concept equality_comparable_with =
-        detail::weakly_equality_comparable_with<T, U>
-    and equality_comparable<T>
-    and equality_comparable<U>
-    and common_reference_with<T, U>
-    and equality_comparable<std::common_reference_t<T, U>>
-    ;
-
-namespace detail {
-
 template <typename T, typename U>
 concept partially_ordered_with =
     requires (const_reference_t<T> t,
@@ -293,7 +277,22 @@ concept partially_ordered_with =
         { u >= t } -> simple_boolean;
     };
 
+template <typename T, typename Cat>
+concept compares_as = weak_same_as<std::common_comparison_category_t<T, Cat>, Cat>;
+
 } // namespace detail
+
+template <typename T>
+concept equality_comparable = detail::weakly_equality_comparable_with<T, T>;
+
+template <typename T, typename U>
+concept equality_comparable_with =
+        detail::weakly_equality_comparable_with<T, U>
+    and equality_comparable<T>
+    and equality_comparable<U>
+    and common_reference_with<T, U>
+    and equality_comparable<std::common_reference_t<T, U>>
+    ;
 
 template <typename T>
 concept totally_ordered =
@@ -310,6 +309,27 @@ concept totally_ordered_with =
     and totally_ordered<
         std::common_reference_t<const_reference_t<T>,
                                 const_reference_t<U>>>;
+
+template <typename T, typename Cat = std::partial_ordering>
+concept three_way_comparable =
+        detail::weakly_equality_comparable_with<T, T>
+    and detail::partially_ordered_with<T, T>
+    and requires (const_reference_t<T> a, const_reference_t<T> b) {
+        { a <=> b } -> detail::compares_as<Cat>;
+    };
+
+template <typename T, typename U, typename Cat = std::partial_ordering>
+concept three_way_comparable_with =
+        detail::weakly_equality_comparable_with<T, U>
+    and detail::partially_ordered_with<T, U>
+    and requires (const_reference_t<T> t, const_reference_t<U> u) {
+        { t <=> u } -> detail::compares_as<Cat>;
+        { u <=> t } -> detail::compares_as<Cat>;
+    }
+    and three_way_comparable<T, Cat>
+    and three_way_comparable<U, Cat>
+    and common_reference_with<const_reference_t<T>, const_reference_t<U>>
+    and three_way_comparable<common_reference_t<const_reference_t<T>, const_reference_t<U>>>;
 
 template <typename T>
 concept movable =

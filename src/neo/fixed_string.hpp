@@ -7,7 +7,9 @@
 
 #else
 
+#include <neo/concepts.hpp>
 #include <neo/fwd.hpp>
+#include <neo/iterator_concepts.hpp>
 
 #include <algorithm>
 #include <cassert>
@@ -67,7 +69,7 @@ public:
      * @pre The size of the range MUST be exactly `size()`
      */
     template <std::ranges::input_range R>
-    requires std::convertible_to<std::ranges::range_value_t<R>, value_type>  //
+        requires convertible_to<std::ranges::range_value_t<R>, value_type>  //
     constexpr basic_fixed_string(R&& r)
         : basic_fixed_string(std::ranges::begin(r), std::ranges::end(r)) {}
 
@@ -76,9 +78,11 @@ public:
         : basic_fixed_string(arr, arr + Size) {}
 
     /// Initialize the string with the given range defined by [first, last)
-    template <std::input_iterator I, std::sentinel_for<I> S>
-    requires std::convertible_to<std::iter_value_t<I>, value_type>  //
-    constexpr basic_fixed_string(I first, S last) { assign(first, last); }
+    template <input_iterator I, sentinel_for<I> S>
+        requires convertible_to<std::iter_value_t<I>, value_type>  //
+    constexpr basic_fixed_string(I first, S last) {
+        assign(first, last);
+    }
 
     /// Convert to a string_view implicitly
     constexpr operator string_view_type() const noexcept {
@@ -128,13 +132,15 @@ public:
      * range view must have the same length as this string.
      */
     template <std::ranges::input_range R>
-    requires std::convertible_to<std::ranges::range_reference_t<R>, value_type>  //
-    constexpr void assign(R&& r) noexcept { assign(std::ranges::cbegin(r), std::ranges::cend(r)); }
+        requires convertible_to<std::ranges::range_reference_t<R>, value_type>  //
+    constexpr void assign(R&& r) noexcept {
+        assign(std::ranges::cbegin(r), std::ranges::cend(r));
+    }
 
     /**
      * @brief Replace the contents of the string with the given range
      */
-    template <std::input_iterator I, std::sentinel_for<I> S>
+    template <input_iterator I, sentinel_for<I> S>
     constexpr void assign(I it, S stop) noexcept {
         if constexpr (std::forward_iterator<I>) {
             assert(static_cast<size_type>(std::distance(it, stop)) == size());
@@ -189,8 +195,8 @@ public:
     template <size_type S>
     friend constexpr auto operator+(const basic_fixed_string&                left,
                                     const basic_fixed_string<value_type, S>& right) noexcept {
-        constexpr size_type new_size = std::remove_cvref_t<decltype(left)>::size()
-            + std::remove_cvref_t<decltype(right)>::size();
+        constexpr size_type new_size
+            = remove_cvref_t<decltype(left)>::size() + remove_cvref_t<decltype(right)>::size();
         using ret_type = basic_fixed_string<value_type, new_size>;
         ret_type ret;
         auto     out = ret.begin();
@@ -221,7 +227,7 @@ public:
 
     friend constexpr void do_repr(auto out, basic_fixed_string const* self) noexcept {
         if constexpr (out.just_type) {
-            if constexpr (std::same_as<Char, char>) {
+            if constexpr (weak_same_as<Char, char>) {
                 out.append("neo::fixed_string<{}>", out.repr_value(Size));
             } else {
                 out.append("neo::basic_fixed_string<{}, {}>",
@@ -231,7 +237,7 @@ public:
         } else if constexpr (out.just_value) {
             out.append("{}", out.repr_value(self->string_view()));
         } else {
-            if constexpr (std::same_as<Char, char>) {
+            if constexpr (weak_same_as<Char, char>) {
                 out.append("neo::fixed_string{{}}", out.repr_value(*self));
             } else {
                 out.append("neo::basic_fixed_string{{}}", out.repr_value(*self));
@@ -279,7 +285,7 @@ struct tstring_view {
     /// The `tstring` that wrapps the string that we view
     using tstring_type = T;
 
-    using fixed_string_type = std::remove_cvref_t<decltype(tstring_type::string)>;
+    using fixed_string_type = remove_cvref_t<decltype(tstring_type::string)>;
     using size_type         = typename fixed_string_type::size_type;
     using value_type        = typename fixed_string_type::value_type;
     using string_view_type  = typename fixed_string_type::string_view_type;
@@ -338,10 +344,11 @@ struct tstring_view {
 #define DEF_WRAP(Name, Qual)                                                                       \
     template <typename... Args>                                                                    \
     constexpr decltype(auto) Name(Args&&... args)                                                  \
-        Qual noexcept(noexcept(this->string_view().Name(NEO_FWD(args)...))) requires requires {    \
-        this->string_view().Name(NEO_FWD(args)...);                                                \
+        Qual noexcept(noexcept(this->string_view().Name(NEO_FWD(args)...)))                        \
+        requires requires { this->string_view().Name(NEO_FWD(args)...); }                          \
+    {                                                                                              \
+        return string_view().Name(NEO_FWD(args)...);                                               \
     }                                                                                              \
-    { return string_view().Name(NEO_FWD(args)...); }                                               \
     static_assert(true)
 
     DEF_WRAP(compare, const);

@@ -56,7 +56,7 @@ struct simple_token_splitter {
 };
 
 template <typename C>
-requires std::predicate<C, char32_t>
+    requires predicate<C, char32_t>
 struct charclass_splitter {
     NEO_NO_UNIQUE_ADDRESS scalar_box<C> _classifier{};
 
@@ -113,14 +113,17 @@ struct whitespace_splitter : simple_token_splitter<charclass_splitter<is_whitesp
 struct line_splitter : simple_token_splitter<find_newline_fn> {};
 
 template <typename T, typename Text>
-concept token_type = requires(T&& token) {
-    { std::ranges::begin(token.view) } -> std::convertible_to<std::ranges::iterator_t<Text>>;
-};
+concept token_type =  //
+    requires(T&& token) {
+        { std::ranges::begin(token.view) } -> convertible_to<std::ranges::iterator_t<Text>>;
+    };
 
 template <typename T, typename Text>
-concept token_result = neo::simple_boolean<T> && requires(T&& token) {
-    { *token } -> token_type<Text>;
-};
+concept token_result =      //
+    neo::simple_boolean<T>  //
+    && requires(T&& token) {
+           { *token } -> token_type<Text>;
+       };
 
 template <typename Func, typename Text>
 concept tokenizer_fn =  //
@@ -146,7 +149,7 @@ class tokenizer {
     NEO_NO_UNIQUE_ADDRESS scalar_box<Tok> _get_next_token;
 
     constexpr static bool _is_nothrow
-        = ranges::nothrow_range<R> and std::is_nothrow_invocable_v<Tok, View, View>;
+        = ranges::nothrow_range<R> and nothrow_invocable<Tok, View, View>;
 
 public:
     using borrowed_text = substring_t<View>;
@@ -174,7 +177,7 @@ public:
         NEO_NO_UNIQUE_ADDRESS borrowed_text _tail;
         NEO_NO_UNIQUE_ADDRESS token_result  _current;
 
-        std::remove_reference_t<Tok>* _tokenize = nullptr;
+        remove_reference_t<Tok>* _tokenize = nullptr;
 
     public:
         iterator() = default;
@@ -183,8 +186,8 @@ public:
 
         explicit iterator(borrowed_text v, Tok& tok)
             : _tail(v)
-            , _tokenize(neo::addressof(tok)) {
-            _current = neo::invoke(*_tokenize, borrowed_text(_tail.begin(), _tail.begin()), _tail);
+            , _tokenize(NEO_ADDRESSOF(tok)) {
+            _current = NEO_INVOKE(*_tokenize, borrowed_text(_tail.begin(), _tail.begin()), _tail);
             if (_current) {
                 _tail = borrowed_text(_current->skip, _tail.end());
             }
@@ -195,7 +198,7 @@ public:
         }
 
         constexpr void increment() noexcept(_is_nothrow) {
-            _current = neo::invoke(*_tokenize, substring(_current->view), _tail);
+            _current = NEO_INVOKE(*_tokenize, substring(_current->view), _tail);
             // Reconstruct the tail:
             if (_current) {
                 _tail = borrowed_text(_current->skip, _tail.end());
@@ -231,12 +234,15 @@ struct text_lines_view : std::ranges::view_interface<text_lines_view<Text>> {
     constexpr auto begin() noexcept(neo::ranges::nothrow_range<inner_view>) {
         return _view.begin();
     }
-    constexpr auto begin() const noexcept(
-        neo::ranges::nothrow_range<inner_view>) requires std::ranges::range<const inner_view> {
+    constexpr auto begin() const noexcept(neo::ranges::nothrow_range<inner_view>)
+        requires std::ranges::range<const inner_view>
+    {
         return _view.begin();
     }
     constexpr auto end() noexcept { return _view.end(); }
-    constexpr auto end() const noexcept requires std::ranges::range<const inner_view> {
+    constexpr auto end() const noexcept
+        requires std::ranges::range<const inner_view>
+    {
         return _view.end();
     }
 };
@@ -260,8 +266,8 @@ template <typename R, typename Tok>
 constexpr bool enable_borrowed_range<neo::tokenizer<R, Tok>> = std::ranges::borrowed_range<R>;
 
 template <typename R, typename Tok>
-constexpr bool enable_view<neo::tokenizer<R, Tok>> = std::ranges::viewable_range<R>and
-               std::is_trivially_copyable_v<Tok>;
+constexpr bool enable_view<neo::tokenizer<R, Tok>>
+    = std::ranges::viewable_range<R> and neo::trivially_constructible<Tok, const Tok&>;
 
 template <neo::text_range R>
 constexpr bool enable_borrowed_range<neo::text_lines_view<R>> = std::ranges::borrowed_range<R>;

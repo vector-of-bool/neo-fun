@@ -1,11 +1,11 @@
 #pragma once
 
 #include "./addressof.hpp"
+#include "./concepts.hpp"
+#include "./iterator_concepts.hpp"
 
-#include <concepts>
 #include <coroutine>
 #include <stdexcept>
-#include <type_traits>
 
 namespace neo {
 
@@ -22,13 +22,13 @@ public:
     class promise_type {
     public:
         using reference_type = yield_type&;
-        using pointer_type   = std::add_pointer_t<reference_type>;
-        using value_type     = std::remove_cvref_t<yield_type>;
+        using pointer_type   = add_pointer_t<reference_type>;
+        using value_type     = remove_cvref_t<yield_type>;
 
     private:
         std::exception_ptr    _exc     = nullptr;
         pointer_type          _current = nullptr;
-        constexpr static bool is_ref   = std::is_reference_v<yield_type>;
+        constexpr static bool is_ref   = neo_is_reference(yield_type);
 
         using lref  = value_type&;
         using rref  = value_type&&;
@@ -40,18 +40,24 @@ public:
         constexpr auto initial_suspend() const noexcept { return std::suspend_always{}; }
         constexpr auto final_suspend() const noexcept { return std::suspend_always{}; }
 
-        constexpr auto yield_value(lref v) noexcept requires std::constructible_from<T, lref> {
-            _current = neo::addressof(v);
+        constexpr auto yield_value(lref v) noexcept
+            requires constructible_from<T, lref>
+        {
+            _current = NEO_ADDRESSOF(v);
             return std::suspend_always{};
         }
 
-        constexpr auto yield_value(clref v) noexcept requires std::constructible_from<T, clref> {
-            _current = neo::addressof(v);
+        constexpr auto yield_value(clref v) noexcept
+            requires constructible_from<T, clref>
+        {
+            _current = NEO_ADDRESSOF(v);
             return std::suspend_always{};
         }
 
-        constexpr auto yield_value(rref v) noexcept requires std::constructible_from<T, rref> {
-            _current = neo::addressof(v);
+        constexpr auto yield_value(rref v) noexcept
+            requires constructible_from<T, rref>
+        {
+            _current = NEO_ADDRESSOF(v);
             return std::suspend_always{};
         }
 
@@ -86,7 +92,7 @@ public:
 
         using iterator_category = std::input_iterator_tag;
         using difference_type   = std::ptrdiff_t;
-        using value_type        = std::remove_cvref_t<yield_type>;
+        using value_type        = remove_cvref_t<yield_type>;
         using reference         = T&&;
         using pointer           = typename promise_type::pointer_type;
 
@@ -152,7 +158,7 @@ public:
      *
      * @return A new iterator.
      */
-    [[nodiscard]] constexpr std::input_iterator auto begin() {
+    [[nodiscard]] constexpr input_iterator auto begin() {
         if (_coro) {
             _coro.resume();
             if (_coro.done()) {

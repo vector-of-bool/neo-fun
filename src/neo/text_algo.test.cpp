@@ -1,9 +1,10 @@
 #include "./text_algo.hpp"
 
+#include "./ranges.hpp"
+#include "./ufmt.hpp"
 #include "./zstring_view.hpp"
 
 #include <catch2/catch.hpp>
-#include <neo/ranges.hpp>
 
 #include <sstream>
 
@@ -105,5 +106,8 @@ TEST_CASE("Concatenating strings") {
 
         auto stdstr = neo::to_std_string(s2);
         CHECK(stdstr == "foobarbaz meow");
+
+        auto s3 = neo::ufmt("foo {}", neo::text_range_formatter{s2});
+        CHECK(s3 == "foo foobarbaz meow");
     }
 }

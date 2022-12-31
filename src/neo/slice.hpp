@@ -1,6 +1,7 @@
 #pragma once
 
 #include "./assert.hpp"
+#include "./concepts.hpp"
 #include "./declval.hpp"
 #include "./reconstruct.hpp"
 #include "./returns.hpp"
@@ -15,9 +16,9 @@ namespace _sr = std::ranges;
 namespace _sv = std::views;
 
 template <typename R>
-concept sliceable_range = _sr::input_range<R>          //
-    and(reconstructible_range<std::remove_cvref_t<R>>  //
-        or _sr::borrowed_range<std::remove_cvref_t<R>>);
+concept sliceable_range = _sr::input_range<R>      //
+    and (reconstructible_range<remove_cvref_t<R>>  //
+         or _sr::borrowed_range<remove_cvref_t<R>>);
 
 namespace _slice_detail {
 
@@ -39,12 +40,12 @@ struct slice_fn_base {
 
     template <typename R>
     constexpr static bool _is_nothrow = ranges::nothrow_range<R>  //
-        or is_nothrow_reconstructible_range_v<std::remove_cvref_t<R>>;
+        or is_nothrow_reconstructible_range_v<remove_cvref_t<R>>;
 
     template <sliceable_range R,
               typename It = _sr::iterator_t<R>,
-              std::sentinel_for<It> Stop,
-              typename R_ = std::remove_cvref_t<R>>
+              sentinel_for<It> Stop,
+              typename R_ = remove_cvref_t<R>>
     constexpr sliceable_range auto  // sole_type_t<decltype(_slice_detail::slice_type<R_>())>
     operator()(R&& rng, std::type_identity_t<It> first, Stop stop) const noexcept(_is_nothrow<R>) {
         if constexpr (reconstructible_range<R_>) {
@@ -57,7 +58,7 @@ struct slice_fn_base {
     }
 
     template <_sr::forward_range R>
-    requires sliceable_range<R>
+        requires sliceable_range<R>
     constexpr auto operator()(R&&                        rng,
                               _sr::range_difference_t<R> start_pos,
                               _sr::range_difference_t<R> end_pos) const
@@ -108,7 +109,7 @@ inline constexpr struct slice_fn {
 
     constexpr static inline struct view_fn {
         template <_sr::viewable_range R>
-        requires sliceable_range<_sv::all_t<R>>
+            requires sliceable_range<_sv::all_t<R>>
         constexpr auto operator()(R&& rng, auto&&... args) const
             noexcept(_slice_detail::slice_fn_base::_is_nothrow<_sv::all_t<R>>) {
             return _slice_detail::slice_fn_base{}(_sv::all(NEO_FWD(rng)), NEO_FWD(args)...);

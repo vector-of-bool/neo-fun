@@ -2,9 +2,9 @@
 
 #include "./declval.hpp"
 #include "./fwd.hpp"
+#include "./meta.hpp"
 #include "./returns.hpp"
-
-#include <type_traits>
+#include "./type_traits.hpp"
 
 namespace neo {
 
@@ -16,8 +16,9 @@ namespace neo {
  */
 template <typename Fn, typename... Args>
 concept simple_invocable = requires(Fn&& fn, Args&&... args) {
-    NEO_FWD(fn)(NEO_FWD(args)...);
-};
+                               NEO_FWD(fn)
+                               (NEO_FWD(args)...);
+                           };
 
 namespace invoke_detail {
 
@@ -68,22 +69,16 @@ struct memobj_invoker {
 
 struct call_invoker {
     template <typename Function, typename... Args>
-    requires simple_invocable<Function&&, Args&&...>
+        requires simple_invocable<Function&&, Args&&...>
     constexpr static auto invoke(Function&& fn, Args&&... args)
         NEO_RETURNS(NEO_FWD(fn)(NEO_FWD(args)...));
 };
 
-template <typename Fn>
-auto pick_invoker() {
-    using Decay = std::remove_cvref_t<Fn>;
-    if constexpr (std::is_member_function_pointer_v<Decay>) {
-        return memfun_invoker{};
-    } else if constexpr (std::is_member_object_pointer_v<Decay>) {
-        return memobj_invoker{};
-    } else {
-        return call_invoker{};
-    }
-}
+template <typename Fn, typename D = remove_cvref_t<Fn>>
+using pick_invoker_t = conditional_t<
+    not neo_is_member_pointer(D),
+    call_invoker,
+    conditional_t<neo_is_member_function_pointer(D), memfun_invoker, memobj_invoker>>;
 
 }  // namespace invoke_detail
 
@@ -95,8 +90,7 @@ struct invoke_fn {
 
     template <typename Func, typename... Args>
     constexpr auto operator()(Func&& fn, Args&&... args) const
-        NEO_RETURNS(decltype(invoke_detail::pick_invoker<Func>())::invoke(NEO_FWD(fn),
-                                                                          NEO_FWD(args)...));
+        NEO_RETURNS(invoke_detail::pick_invoker_t<Func>::invoke(NEO_FWD(fn), NEO_FWD(args)...));
 };
 
 /**
@@ -110,13 +104,11 @@ struct invoke_fn {
 inline constexpr invoke_fn invoke{};
 
 #define NEO_INVOKE(F, ...)                                                                         \
-    (decltype(::neo::invoke_detail::pick_invoker<decltype(F)>())::invoke(F __VA_OPT__(, )          \
-                                                                             __VA_ARGS__))
+    (::neo::invoke_detail::pick_invoker_t<decltype(F)>::invoke(F __VA_OPT__(, ) __VA_ARGS__))
 
 template <typename Fn, typename... Args>
-concept invocable2 = simple_invocable<Fn, Args...> or requires(Fn&& fn, Args&&... args) {
-    neo::invoke(NEO_FWD(fn), NEO_FWD(args)...);
-};
+concept invocable2 = simple_invocable<Fn, Args...>
+    or requires(Fn&& fn, Args&&... args) { neo::invoke(NEO_FWD(fn), NEO_FWD(args)...); };
 
 /**
  * @brief The result type of a neo::invoke with the given argument types
@@ -125,7 +117,7 @@ concept invocable2 = simple_invocable<Fn, Args...> or requires(Fn&& fn, Args&&..
  * @tparam Args Arguments for the invocable
  */
 template <typename Func, typename... Args>
-requires invocable2<Func, Args...>
-using invoke_result_t = decltype(invoke(NEO_DECLVAL(Func), NEO_DECLVAL(Args)...));
+    requires invocable2<Func, Args...>
+using invoke_result_t = decltype(NEO_INVOKE(NEO_DECLVAL(Func), NEO_DECLVAL(Args)...));
 
 }  // namespace neo

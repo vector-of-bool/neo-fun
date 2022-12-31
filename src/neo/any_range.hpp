@@ -7,6 +7,7 @@
 #include "./fwd.hpp"
 #include "./meta.hpp"
 #include "./ref_member.hpp"
+#include "./type_traits.hpp"
 #include "./unref.hpp"
 
 #include <memory>
@@ -72,7 +73,7 @@ class any_range {
             return NEO_FWD(r)._impl;
         } else {
             return std::make_unique<
-                range_detail::erased_range_impl<Ref, Category, std::remove_cvref_t<R>>>(NEO_FWD(r));
+                range_detail::erased_range_impl<Ref, Category, remove_cvref_t<R>>>(NEO_FWD(r));
         }
     }
 

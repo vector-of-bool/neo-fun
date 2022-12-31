@@ -2,6 +2,7 @@
 
 #include "./concepts.hpp"
 #include "./declval.hpp"
+#include "./iterator_concepts.hpp"
 #include "./memory.hpp"
 #include "./ranges.hpp"
 #include "./version.hpp"
@@ -13,27 +14,6 @@
 
 namespace neo {
 
-/**
- * @brief Variable template to check if a given type is a character type. Can be specialized.
- */
-template <typename C>
-constexpr bool is_char_type_v = false;
-
-template <>
-constexpr bool is_char_type_v<char> = true;
-
-template <>
-constexpr bool is_char_type_v<wchar_t> = true;
-
-template <>
-constexpr bool is_char_type_v<char8_t> = true;
-
-template <>
-constexpr bool is_char_type_v<char16_t> = true;
-
-template <>
-constexpr bool is_char_type_v<char32_t> = true;
-
 // clang-format off
 /**
  * @brief Match a type that is a character type.
@@ -41,7 +21,7 @@ constexpr bool is_char_type_v<char32_t> = true;
  * @tparam T A character type
  */
 template <typename T>
-concept character_type = is_char_type_v<T>;
+concept character_type = weak_same_as<T, char, wchar_t, char8_t, char16_t, char32_t>;
 
 /**
  * @brief Match an iterator whose value type is a character type.
@@ -50,7 +30,7 @@ concept character_type = is_char_type_v<T>;
  */
 template <typename Iter>
 concept text_iterator =
-    std::input_or_output_iterator<Iter>
+    input_or_output_iterator<Iter>
     and character_type<std::iter_value_t<Iter>>
     ;
 
@@ -180,12 +160,12 @@ constexpr std::ranges::range_difference_t<R> text_range_distance(const R& r) noe
 template <typename T>
 concept mutable_text_range =
     text_range<T>
-    && std::regular<std::remove_cvref_t<T>>
-    && std::constructible_from<std::remove_cvref_t<T>,
-                               text_char_t<T> const*,
-                               std::ranges::range_size_t<T>>
+    && regular<remove_cvref_t<T>>
+    && constructible_from<remove_cvref_t<T>,
+                          text_char_t<T> const*,
+                          std::ranges::range_size_t<T>>
     && requires (T string,
-                 const std::remove_cvref_t<T> const_str,
+                 const remove_cvref_t<T> const_str,
                  std::ranges::range_size_t<T> size,
                  text_char_t<T> const* cptr,
                  text_char_t<T> chr,
@@ -193,9 +173,9 @@ concept mutable_text_range =
                  std::ranges::sentinel_t<T> sentinel) {
         string.append(cptr, size);
         { std::ranges::data(const_str) } noexcept
-            -> std::same_as<text_char_t<T> const*>;
+            -> weak_same_as<text_char_t<T> const*>;
         { std::ranges::data(string) } noexcept
-            -> std::same_as<text_char_t<T>*>;
+            -> weak_same_as<text_char_t<T>*>;
         string.push_back(chr);
         string.pop_back();
         string.erase(iter, sentinel);
@@ -219,7 +199,7 @@ struct char_traits_of {
 };
 
 template <typename R, typename C>
-requires requires { typename R::traits_type; }
+    requires requires { typename R::traits_type; }
 struct char_traits_of<R, C> {
     using type = typename R::traits_type;
 };
@@ -265,7 +245,7 @@ using text_allocator_t = decltype(neo::text_allocator(NEO_DECLVAL(R)));
  * @return requires constexpr A new std::basic_string_view of the appropriate character type
  */
 template <contiguous_text_range R>
-requires viewable_text_range<R>
+    requires viewable_text_range<R>
 constexpr auto to_std_string_view(R&& str) noexcept {
     using traits    = text_char_traits_t<R>;
     using view_type = std::basic_string_view<text_char_t<R>, traits>;
@@ -281,7 +261,7 @@ constexpr auto to_std_string_view(R&& str) noexcept {
  * std::basic_string_view for the contents of the text range
  */
 template <input_text_range R>
-requires viewable_text_range<R>
+    requires viewable_text_range<R>
 constexpr text_view auto view_text(R&& r) noexcept {
     if constexpr (text_array_ref<R>) {
         return to_std_string_view(r);
@@ -304,7 +284,9 @@ using view_text_t = decltype(neo::view_text(NEO_DECLVAL(R)));
  */
 template <text_range R>
 constexpr auto text_range_end(R&& r) noexcept {
-    if constexpr (text_array_ref<R> or std::ranges::common_range<R>) {
+    if constexpr ((text_array_ref<R>                 //
+                   or std::ranges::common_range<R>)  //
+                  and std::ranges::sized_range<R>) {
         return std::ranges::next(std::ranges::begin(r), neo::text_range_size(r));
     } else {
         return std::ranges::end(r);
@@ -332,7 +314,7 @@ inline constexpr struct to_std_string_fn : ranges::pipable {
             const auto ptr = std::ranges::data(str);
             const auto sz  = neo::text_range_size(str);
             return str_type(ptr, sz, alloc);
-        } else if constexpr (std::constructible_from<str_type, R, Alloc>) {
+        } else if constexpr (constructible_from<str_type, R, Alloc>) {
             /// We can convert directly
             return str_type(NEO_FWD(str), alloc);
         } else if constexpr (std::ranges::common_range<R> and random_access_text_range<R>) {
@@ -413,7 +395,7 @@ inline constexpr struct to_std_string_fn : ranges::pipable {
  */
 template <input_text_range R>
 constexpr auto copy_text(R&& r, auto alloc) noexcept {
-    using R1 = std::remove_cvref_t<R>;
+    using R1 = remove_cvref_t<R>;
     if constexpr (mutable_text_range<R1>) {
         return R1(std::ranges::data(r), neo::text_range_size(r), alloc);
     } else {

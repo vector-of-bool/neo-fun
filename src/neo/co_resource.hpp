@@ -112,7 +112,7 @@ public:
         return *this;
     }
 
-    auto operator->() const noexcept { return neo::addressof(**this); }
+    auto operator->() const noexcept { return NEO_ADDRESSOF(**this); }
 
     auto&& operator*() const noexcept {
         if (_coro.done() || !_coro.promise().value_ptr) {

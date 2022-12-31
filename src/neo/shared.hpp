@@ -1,7 +1,9 @@
 #pragma once
 
+#include "./concepts.hpp"
 #include "./fwd.hpp"
 #include "./shared_fwd.hpp"
+#include "./type_traits.hpp"
 
 #include <memory>
 #include <optional>
@@ -19,8 +21,7 @@ private:
     using state_type = typename referred_type::state_type;
 
     // Decide whether we are pointing-to-const or not
-    using pointee_type
-        = std::conditional_t<std::is_const_v<referred_type>, const state_type, state_type>;
+    using pointee_type = conditional_t<neo_is_const(referred_type), const state_type, state_type>;
 
     std::weak_ptr<pointee_type> _weak;
 
@@ -123,9 +124,9 @@ private:
 
     /// Construct from a given shared state
     static derived_type _from_ptr(std::shared_ptr<state_type> p) noexcept {
-        static_assert(std::is_constructible_v<derived_type,
-                                              _emplace_ptr_tag,
-                                              std::shared_ptr<state_type>>,
+        static_assert(constructible_from<derived_type,
+                                         _emplace_ptr_tag,
+                                         std::shared_ptr<state_type>>,
                       "The shared_state<> derived class must explicitly inherit the constructors "
                       "of the shared_state<> base class");
         return derived_type{_emplace_ptr_tag{}, std::move(p)};

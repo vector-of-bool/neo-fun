@@ -161,7 +161,7 @@ DECL_TRAIT_CONCEPT(enum_type, neo_is_enum);
 DECL_TRAIT_CONCEPT(union_type, neo_is_union);
 
 #define neo_is_class NEO_TTRAIT_BUILTIN_OR_VARTMPL(__is_class, ::std::is_class_v)
-DECL_TRAIT_CONCEPT(class_type, neo_is_union);
+DECL_TRAIT_CONCEPT(class_type, neo_is_class);
 
 #define neo_is_lvalue_reference                                                                    \
     NEO_TTRAIT_BUILTIN_OR_VARTMPL(__is_lvalue_reference, ::neo::detail::is_lref_v)

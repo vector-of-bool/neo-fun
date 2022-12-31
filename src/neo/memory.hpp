@@ -1,7 +1,9 @@
 #pragma once
 
+#include "./concepts.hpp"
 #include "./declval.hpp"
 #include "./fwd.hpp"
+#include "./type_traits.hpp"
 
 #include <memory>
 #include <type_traits>
@@ -32,30 +34,26 @@ constexpr rebind_alloc_t<Allocator, T> rebind_alloc(Allocator alloc) noexcept {
 /**
  * @brief Create a decay-copy of the given object wrapped in a shared_ptr
  */
-template <typename T, typename R = std::remove_cvref_t<T>>
-constexpr auto copy_shared(T&& t) noexcept(std::is_nothrow_constructible_v<R, T>) {
+template <typename T, typename R = remove_cvref_t<T>>
+constexpr auto copy_shared(T&& t) noexcept(nothrow_constructible_from<R, T>) {
     return std::shared_ptr<R>(new R(NEO_FWD(t)));
 }
 
 /**
  * @brief Create a decay-copy of the given object wrapped in a unique_ptr
  */
-template <typename T, typename R = std::remove_cvref_t<T>>
-constexpr auto copy_unique(T&& t) noexcept(std::is_nothrow_constructible_v<R, T>) {
+template <typename T, typename R = remove_cvref_t<T>>
+constexpr auto copy_unique(T&& t) noexcept(nothrow_constructible_from<R, T>) {
     return std::unique_ptr<R>(new R(NEO_FWD(t)));
 }
 
 namespace _memory_detail {
 
 template <typename T>
-constexpr bool has_value_type = requires {
-    typename T::value_type;
-};
+constexpr bool has_value_type = requires { typename T::value_type; };
 
 template <typename T>
-constexpr bool has_get_allocator = requires(T& t) {
-    t.get_allocator();
-};
+constexpr bool has_get_allocator = requires(T & t) { t.get_allocator(); };
 
 }  // namespace _memory_detail
 

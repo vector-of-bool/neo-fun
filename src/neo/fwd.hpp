@@ -12,10 +12,15 @@ struct strip_type<T&> {
     using type = T;
 };
 
+template <typename T>
+struct strip_type<T&&> {
+    using type = T;
+};
+
 #ifdef __GNUC__
-#define _neo_move_not_lref(...) __typeof__((__VA_ARGS__))
+#define _neo_typeof_noref(...) __typeof__((__VA_ARGS__))
 #else
-#define _neo_move_not_lref(...) typename ::neo::move_detail::strip_type<decltype(__VA_ARGS__)>::type
+#define _neo_typeof_noref(...) typename ::neo::move_detail::strip_type<decltype(__VA_ARGS__)>::type
 #endif
 
 }  // namespace neo::move_detail
@@ -23,7 +28,7 @@ struct strip_type<T&> {
 /**
  * @brief Like std::move, but less overhead
  */
-#define NEO_MOVE(...) static_cast<_neo_move_not_lref(__VA_ARGS__) &&>(__VA_ARGS__)
+#define NEO_MOVE(...) static_cast<_neo_typeof_noref(__VA_ARGS__) &&>(__VA_ARGS__)
 
 /**
  * @brief Equivalent to std::forward<decltype(Expr)&&>(expr)

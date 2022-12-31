@@ -52,10 +52,10 @@ template <typename Range>
 concept simple_view =
     view<Range> &&
     range<const Range> &&
-    std::same_as<iterator_t<Range>,
-                 iterator_t<const Range>> &&
-    std::same_as<sentinel_t<Range>,
-                 sentinel_t<const Range>>;
+    same_as<iterator_t<Range>,
+            iterator_t<const Range>> &&
+    same_as<sentinel_t<Range>,
+            sentinel_t<const Range>>;
 
 template <typename Range>
 concept nothrow_range =
@@ -124,7 +124,7 @@ public:
         : _fn(NEO_FWD(fn)) {}
 
     template <std::ranges::range Range>
-    requires neo::invocable2<Func&, range_reference_t<Range>>  //
+        requires neo::invocable2<Func&, range_reference_t<Range>>  //
     constexpr void
     operator()(Range&& range) noexcept(nothrow_invocable<Func&, range_reference_t<Range>>) {
         for (auto&& elem : range) {
@@ -146,7 +146,7 @@ struct each_fn {
 inline constexpr each_fn each;
 
 template <typename R, typename T>
-concept range_of = range<R> && std::same_as<range_value_t<R>, T>;
+concept range_of = range<R> && same_as<range_value_t<R>, T>;
 
 template <typename R, typename T>
 concept input_range_of = range_of<R, T> && std::ranges::input_range<R>;
@@ -169,10 +169,11 @@ struct write_into {
     Dest _dest;
 
     template <typename Arg>
-    void operator()(Arg&& arg) requires requires {
+    void operator()(Arg&& arg)
+        requires requires { *_dest = NEO_FWD(arg); }
+    {
         *_dest = NEO_FWD(arg);
     }
-    { *_dest = NEO_FWD(arg); }
 };
 
 template <typename D>
@@ -185,7 +186,7 @@ private:
     std::tuple<Handlers...> _handlers;
 
     template <std::size_t... Is>
-    void _dist(auto&& elem, std::integral auto select, std::index_sequence<Is...>) {
+    void _dist(auto&& elem, integral auto select, std::index_sequence<Is...>) {
         bool did_select
             = ((static_cast<std::size_t>(select) == Is
                 && (static_cast<void>(NEO_INVOKE(std::get<Is>(_handlers), NEO_FWD(elem))), 1))
@@ -210,7 +211,7 @@ public:
     constexpr void operator()(R&& r) noexcept(nothrow_range<R>) {
         // clang-format on
         for (auto&& elem : r) {
-            std::integral auto idx = _select(std::as_const(elem));
+            integral auto idx = _select(std::as_const(elem));
             _dist(NEO_FWD(elem), idx, std::index_sequence_for<Handlers...>{});
         }
     }

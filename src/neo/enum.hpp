@@ -1,8 +1,7 @@
 #pragma once
 
+#include "./concepts.hpp"
 #include "./tag.hpp"
-
-#include <type_traits>
 
 /**
  * @brief Declare the given enum type to be a set of bitwise-flags.
@@ -12,27 +11,27 @@
  */
 #define NEO_DECL_ENUM_BITOPS(Type)                                                                 \
     constexpr Type operator|(Type left, Type right) noexcept {                                     \
-        using Int = std::underlying_type_t<Type>;                                                  \
+        using Int = ::neo::underlying_type_t<Type>;                                                \
         return Type(Int(left) | Int(right));                                                       \
     }                                                                                              \
     constexpr Type& operator|=(Type& left, Type right) noexcept { return left = left | right; }    \
     constexpr Type  operator&(Type left, Type right) noexcept {                                    \
-        using Int = std::underlying_type_t<Type>;                                                 \
+        using Int = ::neo::underlying_type_t<Type>;                                               \
         return Type(Int(left) & Int(right));                                                      \
     }                                                                                              \
     constexpr Type& operator&=(Type& left, Type right) noexcept { return left = left & right; }    \
     constexpr Type  operator^(Type left, Type right) noexcept {                                    \
-        using Int = std::underlying_type_t<Type>;                                                 \
+        using Int = ::neo::underlying_type_t<Type>;                                               \
         return Type(Int(left) ^ Int(right));                                                      \
     }                                                                                              \
     constexpr Type& operator^=(Type& left, Type right) noexcept { return left = left ^ right; }    \
     constexpr Type  operator~(Type op) noexcept {                                                  \
-        using Int = std::underlying_type_t<Type>;                                                 \
+        using Int = ::neo::underlying_type_t<Type>;                                               \
         return Type(~Int(op));                                                                    \
     }                                                                                              \
     constexpr bool _neo_is_bitset_(neo::tag<Type>, int) noexcept { return true; }                  \
-    static_assert(std::is_enum_v<                                                                  \
-                      Type> && !std::is_convertible_v<Type, std::underlying_type_t<Type>>,         \
+    static_assert(neo_is_enum(Type)                                                                \
+                      and not ::neo::convertible_to<Type, ::neo::underlying_type_t<Type>>,         \
                   "NEO_DECL_ENUM_BITOPS may only be used with `enum class` types")
 
 namespace neo {
@@ -162,6 +161,6 @@ constexpr bool is_bitset_enum_v = detail::check_is_bitset<E>();
  * @brief Any type that is a (possibly qualified) enum type annotated by 'NEO_DECL_ENUM_BITOPS'
  */
 template <typename T>
-concept bitset_enum = is_bitset_enum_v<std::remove_cvref_t<T>>;
+concept bitset_enum = is_bitset_enum_v<remove_cvref_t<T>>;
 
 }  // namespace neo

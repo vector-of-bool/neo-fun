@@ -2,6 +2,8 @@
 
 #include "./concepts.hpp"
 #include "./fwd.hpp"
+#include "./iterator_concepts.hpp"
+#include "./type_traits.hpp"
 #include <neo/arrow_proxy.hpp>
 #include <neo/ref.hpp>
 
@@ -36,7 +38,7 @@ using infer_difference_type_t = typename infer_difference_type<T>::type;
 template <typename T>
 struct infer_value_type {
     static const T& _it;
-    using type = std::remove_const_t<std::remove_reference_t<decltype(*_it)>>;
+    using type = remove_cvref_t<decltype(*_it)>;
 };
 
 template <typename T>
@@ -69,7 +71,7 @@ concept can_advance =
 template <typename T>
 concept can_to_address =
     requires (const T& t) {
-        { t.to_address() } -> std::contiguous_iterator;
+        { t.to_address() } -> contiguous_iterator;
     };
 
 template <typename T>
@@ -99,21 +101,18 @@ concept iter_is_forward = !iter_is_single_pass<T> && requires(const T& item) {
 
 template <typename T>
 concept noexcept_incrementable = requires(T& iter) {
-    { iter.increment() }
-    noexcept;
-}
-|| requires(T& item) {
-    { item += 1 }
-    noexcept;
-};
+                                     { iter.increment() } noexcept;
+                                 } || requires(T& item) {
+                                          { item += 1 } noexcept;
+                                      };
 
 template <typename T, typename Iter>
-concept iter_diff = std::is_convertible_v<T, infer_difference_type_t<Iter>>;
+concept iter_diff = convertible_to<T, infer_difference_type_t<Iter>>;
 
 struct iterator_facade_base;
 
 template <typename T>
-concept iter_facade_type = std::is_base_of_v<iterator_facade_base, std::remove_cvref_t<T>>;
+concept iter_facade_type = neo_is_base_of(iterator_facade_base, remove_cvref_t<T>);
 
 template <typename T>
 concept iter_self = iter_facade_type<T>;
@@ -190,7 +189,7 @@ struct iterator_facade_base {
     std::conditional_t<
         detail::iter_is_single_pass<Self>,
             void,
-            std::remove_cvref_t<Self>>
+            remove_cvref_t<Self>>
     operator++(Self& self, int) noexcept(noexcept_incrementable<Self>) {
         // clang-format on
         if constexpr (detail::iter_is_single_pass<Self>) {
@@ -215,7 +214,7 @@ struct iterator_facade_base {
     }
 
     template <bidirectional_iter_self Self>
-    constexpr friend std::remove_cvref_t<Self> operator--(Self& self, int) noexcept {
+    constexpr friend remove_cvref_t<Self> operator--(Self& self, int) noexcept {
         auto cp = self;
         --self;
         return cp;
@@ -339,9 +338,9 @@ public:
     constexpr decltype(auto) operator->() const noexcept(noexcept(_self().dereference())) {
         if constexpr (detail::can_to_address<self_type>) {
             return _self().to_address();
-        } else if constexpr (std::is_reference_v<std::iter_reference_t<self_type>>) {
+        } else if constexpr (neo_is_reference(std::iter_reference_t<self_type>)) {
             // If operator*() returns a reference, just return that address
-            return std::addressof(**this);
+            return NEO_ADDRESSOF(**this);
         } else {
             // It returned a value, so we need to wrap it in an arrow_proxy for the caller
             return arrow_proxy{**this};
@@ -391,8 +390,7 @@ public:
 namespace std {
 
 template <typename Derived>
-requires std::is_base_of_v<neo::detail::iterator_facade_base,
-                           Derived>  //
+    requires neo_is_base_of(neo::detail::iterator_facade_base, Derived)
 struct iterator_traits<Derived> {
     static const Derived& _const_it;
     using reference       = decltype(*_const_it);
@@ -428,11 +426,11 @@ struct iterator_traits<Derived> {
 };
 
 template <typename Derived>
-requires neo::detail::can_to_address<Derived>  //
-    and std::derived_from<Derived, neo::iterator_facade<Derived>>
+    requires neo::detail::can_to_address<Derived>  //
+    and neo::derived_from<Derived, neo::iterator_facade<Derived>>
 struct pointer_traits<Derived> {
     using pointer         = decltype(std::addressof(*NEO_DECLVAL(Derived)));
-    using element_type    = std::remove_pointer_t<pointer>;
+    using element_type    = neo::remove_pointer_t<pointer>;
     using difference_type = std::ptrdiff_t;
 };
 

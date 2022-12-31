@@ -19,9 +19,9 @@ class mutref {
 
 public:
     constexpr mutref(T& t) noexcept
-        : _ref(neo::addressof(t)) {}
+        : _ref(NEO_ADDRESSOF(t)) {}
     constexpr mutref(T&& t) noexcept
-        : _ref(neo::addressof(t)) {}
+        : _ref(NEO_ADDRESSOF(t)) {}
 
     constexpr    operator T&() const noexcept { return *_ref; }
     constexpr T& get() const noexcept { return *_ref; }

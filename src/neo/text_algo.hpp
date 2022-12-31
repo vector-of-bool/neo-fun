@@ -20,9 +20,7 @@ namespace neo {
 namespace text_algo_detail {
 
 template <typename Into, typename... Args>
-concept can_append_to = requires(Into& into, Args&&... args) {
-    into.append(NEO_FWD(args)...);
-};
+concept can_append_to = requires(Into& into, Args&&... args) { into.append(NEO_FWD(args)...); };
 
 }  // namespace text_algo_detail
 
@@ -51,7 +49,7 @@ constexpr void text_append(Out& into, R&& from) noexcept(ranges::nothrow_range<R
 }
 
 inline constexpr struct trim_fn {
-    template <text_range R, std::predicate<char32_t> Predicate>
+    template <text_range R, predicate<char32_t> Predicate>
     constexpr substring_t<R> operator()(R&& text, Predicate&& pred) const
         noexcept(ranges::nothrow_range<R>) {
         // Find the first non-matching
@@ -82,7 +80,7 @@ struct join_text_closure : neo::ranges::pipable {
         : _join(neo::view_text(NEO_FWD(j))) {}
 
     template <std::ranges::input_range R>
-    requires input_text_range<std::ranges::range_reference_t<R>>
+        requires input_text_range<std::ranges::range_reference_t<R>>
     constexpr auto operator()(R&& strings) const noexcept {
         auto acc = neo::make_empty_string_from(_join);
         if constexpr (stdr::forward_range<R>) {
@@ -113,8 +111,8 @@ struct join_text_closure : neo::ranges::pipable {
 
 template <typename... Ts>
 struct str_concat_types {
-    using char_type = std::common_type_t<std::ranges::range_value_t<Ts>...>;
-    using reference = std::common_reference_t<std::ranges::range_reference_t<Ts>...>;
+    using char_type = common_type_t<std::ranges::range_value_t<Ts>...>;
+    using reference = common_reference_t<std::ranges::range_reference_t<Ts>...>;
 };
 
 template <>
@@ -135,8 +133,10 @@ inline constexpr struct join_text_fn {
     }
 
     template <std::ranges::input_range R, text_range Joiner>
-    requires neo::text_range<std::ranges::range_reference_t<R>>
-    constexpr auto operator()(R&& r, Joiner&& j) const noexcept { return (*this)(j)(r); }
+        requires neo::text_range<std::ranges::range_reference_t<R>>
+    constexpr auto operator()(R&& r, Joiner&& j) const noexcept {
+        return (*this)(j)(r);
+    }
 } join_text;
 
 namespace text_algo_detail {
@@ -165,19 +165,24 @@ class str_concat_tuple {
     using reference       = typename text_algo_detail::str_concat_types<Ts...>::reference;
 
 public:
-    constexpr str_concat_tuple() requires((std::is_default_constructible_v<Ts> and ...)) = default;
+    constexpr str_concat_tuple()
+        requires((default_initializable<Ts> and ...))
+    = default;
 
     constexpr explicit str_concat_tuple(Ts&&... strings) noexcept
         : _strs(NEO_FWD(strings)...) {}
 
-    constexpr size_type size() const noexcept requires(std::ranges::sized_range<Ts>and...) {
+    constexpr size_type size() const noexcept
+        requires(std::ranges::sized_range<Ts> and ...)
+    {
         return std::
             apply([](auto&&... elems) { return (neo::text_range_size(elems.get()) + ... + 0ull); },
                   _strs);
     }
 
     constexpr auto data() const noexcept
-        requires(sizeof...(Ts) == 1 and (std::ranges::contiguous_range<Ts> and ...)) {
+        requires(sizeof...(Ts) == 1 and (std::ranges::contiguous_range<Ts> and ...))
+    {
         return std::ranges::data(_nth<0>());
     }
 
@@ -325,7 +330,8 @@ public:
         }
 
         constexpr auto to_address() const noexcept
-            requires(sizeof...(Ts) == 1 and (std::ranges::contiguous_range<Ts> and ...)) {
+            requires(sizeof...(Ts) == 1 and (std::ranges::contiguous_range<Ts> and ...))
+        {
             return std::addressof(dereference());
         }
     };
@@ -338,7 +344,9 @@ public:
     }
 
     constexpr reference operator[](size_type off) const
-        noexcept((ranges::nothrow_range<Ts> and ...)) requires(random_access_text_range<Ts>and...) {
+        noexcept((ranges::nothrow_range<Ts> and ...))
+        requires(random_access_text_range<Ts> and ...)
+    {
         return begin()[off];
     }
 
@@ -367,14 +375,14 @@ template <text_range... Ts>
 using str_concat_t = decltype(neo::str_concat(NEO_DECLVAL(Ts)...));
 
 inline constexpr struct starts_with_fn {
-    template <std::forward_iterator                           Left,
-              std::forward_iterator                           Right,
+    template <forward_iterator                                Left,
+              forward_iterator                                Right,
               std::indirect_equivalence_relation<Left, Right> Compare = std::equal_to<>>
-    constexpr bool operator()(Left                                left,
-                              std::sentinel_for<Left> auto const  left_end,
-                              Right                               right,
-                              std::sentinel_for<Right> auto const right_end,
-                              Compare&&                           compare = {}) const noexcept {
+    constexpr bool operator()(Left                           left,
+                              sentinel_for<Left> auto const  left_end,
+                              Right                          right,
+                              sentinel_for<Right> auto const right_end,
+                              Compare&&                      compare = {}) const noexcept {
         for (; left != left_end and right != right_end; ++left, ++right) {
             if (not compare(*left, *right)) {
                 return false;
@@ -387,10 +395,10 @@ inline constexpr struct starts_with_fn {
         return false;
     }
 
-    template <std::ranges::forward_range                                       Left,
-              std::ranges::forward_range                                       Right,
-              std::equivalence_relation<std::ranges::range_reference_t<Left>,
-                                        std::ranges::range_reference_t<Right>> Compare
+    template <std::ranges::forward_range                                  Left,
+              std::ranges::forward_range                                  Right,
+              equivalence_relation<std::ranges::range_reference_t<Left>,
+                                   std::ranges::range_reference_t<Right>> Compare
               = std::equal_to<>>
     constexpr bool operator()(Left&& left, Right&& right, Compare compare = {}) const noexcept {
         auto lit  = std::ranges::begin(left);
@@ -400,20 +408,36 @@ inline constexpr struct starts_with_fn {
         return (*this)(lit, lend, rit, rend, compare);
     }
 
-    template <std::ranges::forward_range Left, std::forward_iterator RightIter>
-    constexpr bool
-    operator()(Left&& left, RightIter it, std::sentinel_for<RightIter> auto const stop) {
+    template <std::ranges::forward_range Left, forward_iterator RightIter>
+    constexpr bool operator()(Left&& left, RightIter it, sentinel_for<RightIter> auto const stop) {
         return (
             *this)(std::ranges::begin(left), std::ranges::end(left), it, stop, std::equal_to<>{});
     }
 
     template <std::forward_iterator LeftIter, std::ranges::forward_range Right>
-    constexpr bool operator()(LeftIter                               left,
-                              std::sentinel_for<LeftIter> auto const stop,
-                              Right&&                                right) const noexcept {
+    constexpr bool operator()(LeftIter                          left,
+                              sentinel_for<LeftIter> auto const stop,
+                              Right&&                           right) const noexcept {
         return (*this)(left, stop, std::ranges::begin(right), std::ranges::end(right));
     }
 } starts_with;
+
+template <text_range R>
+struct text_range_formatter {
+    neo::scalar_box<R> _r;
+
+    text_range_formatter(R&& r) noexcept
+        : _r(NEO_FWD(r)) {}
+
+    inline friend void
+    ufmt_append(std::string&                out,
+                text_range_formatter const& self) noexcept(ranges::nothrow_range<R>) {
+        text_append(out, self._r.get());
+    }
+};
+
+template <text_range R>
+explicit text_range_formatter(R&&) -> text_range_formatter<R>;
 
 template <typename CharEqual = std::ranges::equal_to>
 struct text_range_equal_to {
@@ -423,9 +447,9 @@ struct text_range_equal_to {
               forward_text_range R,
               typename Lv = view_text_t<L>,
               typename Rv = view_text_t<R>>
-    requires neo::invocable2<CharEqual,
-                             std::ranges::range_reference_t<Lv>,
-                             std::ranges::range_reference_t<Rv>>
+        requires neo::invocable2<CharEqual,
+                                 std::ranges::range_reference_t<Lv>,
+                                 std::ranges::range_reference_t<Rv>>
     constexpr inline bool operator()(L&& left, R&& right) const
         noexcept(ranges::nothrow_range<L>and ranges::nothrow_range<R>) {
         return std::ranges::equal(neo::view_text(left), neo::view_text(right), _equal);
@@ -442,7 +466,7 @@ struct text_range_compare_3way {
               typename Rv = view_text_t<R>,
               typename Lc = text_char_t<Lv>,
               typename Rc = text_char_t<Rv>>
-    requires neo::invocable2<Compare, Lc, Rc>
+        requires neo::invocable2<Compare, Lc, Rc>
     constexpr neo::invoke_result_t<Compare, Lc, Rc> operator()(L&& left, R&& right) const
         noexcept(ranges::nothrow_range<L>and ranges::nothrow_range<R>) {
         const auto vl   = neo::view_text(left);
@@ -494,12 +518,12 @@ constexpr inline auto operator<=>(L&& left, R&& right)
 inline namespace stream_insertion {
 
 template <typename Os, forward_text_range R, typename View = view_text_t<R>>
-constexpr inline Os& operator<<(Os& out, R&& str) noexcept(ranges::nothrow_range<R>) requires
-    requires(std::add_pointer_t<std::ranges::range_value_t<View>> sptr,
-             std::ranges::range_size_t<View>                      size) {
-    out.put(*std::ranges::begin(str));
-    out.write(sptr, size);
-}
+constexpr inline Os& operator<<(Os& out, R&& str) noexcept(ranges::nothrow_range<R>)
+    requires requires(std::add_pointer_t<std::ranges::range_value_t<View>> sptr,
+                      std::ranges::range_size_t<View>                      size) {
+                 out.put(*std::ranges::begin(str));
+                 out.write(sptr, size);
+             }
 {
     auto view = neo::view_text(str);
     if constexpr (contiguous_text_range<View>) {
@@ -521,11 +545,11 @@ constexpr inline Os& operator<<(Os& out, R&& str) noexcept(ranges::nothrow_range
 namespace std::ranges {
 
 template <typename... Ts>
-constexpr bool enable_borrowed_range<
-    neo::text_algo_detail::str_concat_tuple<Ts...>> = (std::ranges::borrowed_range<Ts> and ...);
+constexpr bool enable_borrowed_range<neo::text_algo_detail::str_concat_tuple<Ts...>>
+    = (std::ranges::borrowed_range<Ts> and ...);
 
 template <typename... Ts>
-constexpr bool
-    enable_view<neo::text_algo_detail::str_concat_tuple<Ts...>> = (std::ranges::view<Ts> and ...);
+constexpr bool enable_view<neo::text_algo_detail::str_concat_tuple<Ts...>>
+    = (std::ranges::view<Ts> and ...);
 
 }  // namespace std::ranges

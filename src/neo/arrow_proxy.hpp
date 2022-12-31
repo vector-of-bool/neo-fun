@@ -21,8 +21,8 @@ public:
     constexpr auto& operator*() noexcept { return _value.get(); }
     constexpr auto& operator*() const noexcept { return _value.get(); }
 
-    constexpr auto operator->() noexcept { return neo::addressof(**this); }
-    constexpr auto operator->() const noexcept { return neo::addressof(**this); }
+    constexpr auto operator->() noexcept { return NEO_ADDRESSOF(**this); }
+    constexpr auto operator->() const noexcept { return NEO_ADDRESSOF(**this); }
 };
 
 template <typename T>

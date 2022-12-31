@@ -1,11 +1,11 @@
 #pragma once
 
+#include "./addressof.hpp"
 #include "./concepts.hpp"
 #include "./ufmt.hpp"
 
 #include <charconv>
 #include <cinttypes>
-#include <concepts>
 #include <iosfwd>
 #include <ranges>
 #include <string>
@@ -30,9 +30,7 @@ template <typename T>
 struct repr_builtin;
 
 template <typename T>
-concept repr_builtin_guard = requires {
-    repr_builtin<T>{};
-};
+concept repr_builtin_guard = requires { repr_builtin<T>{}; };
 
 // clang-format off
 template <typename T>
@@ -75,7 +73,7 @@ concept has_repr_builtin =   //
 
 /// Check that we can write a repr of T via ADL, member, or a fallback
 template <typename T>
-concept reprable_impl = has_repr_builtin<std::remove_cvref_t<T>> || has_adl_do_repr<T>;
+concept reprable_impl = has_repr_builtin<remove_cvref_t<T>> || has_adl_do_repr<T>;
 
 struct item_repr_base {
     virtual std::string string() const noexcept = 0;
@@ -226,10 +224,10 @@ struct type_repr : item_repr_base {
     friend void ufmt_append(std::string& out, type_repr) noexcept {
         repr_detail::repr_writer_impl<false, true> wr{out};
         if constexpr (repr_detail::has_adl_do_repr_exact<T>) {
-            do_repr(wr, (const std::remove_reference_t<T>*)(nullptr));
+            do_repr(wr, (const remove_reference_t<T>*)(nullptr));
         } else {
             using repr_detail::repr_builtin;
-            repr_builtin<T>::write(wr, (const std::remove_reference_t<T>*)(0));
+            repr_builtin<T>::write(wr, (const remove_reference_t<T>*)(0));
         }
     }
 };
@@ -256,10 +254,10 @@ struct value_repr : item_repr_base {
     constexpr friend void ufmt_append(std::string& out, value_repr self) noexcept {
         repr_detail::repr_writer_impl<true, WantType> wr{out};
         if constexpr (repr_detail::has_adl_do_repr_exact<T>) {
-            do_repr(wr, std::addressof(self.value));
+            do_repr(wr, NEO_ADDRESSOF(self.value));
         } else {
             using repr_detail::repr_builtin;
-            repr_builtin<T>::write(wr, std::addressof(self.value));
+            repr_builtin<T>::write(wr, NEO_ADDRESSOF(self.value));
         }
     }
 };
@@ -270,7 +268,7 @@ struct value_repr : item_repr_base {
  * @brief Concept that represents a type that is valid for passing to repr()
  */
 template <typename T>
-concept reprable = repr_detail::reprable_impl<std::remove_cvref_t<T>>;
+concept reprable = repr_detail::reprable_impl<remove_cvref_t<T>>;
 
 /// Variable-template version of reprable<T>
 template <typename T>
@@ -291,7 +289,7 @@ constexpr auto repr_type(const T&) noexcept {
     return repr_type<T>();
 }
 
-template <typename T, std::convertible_to<std::string> Sv>
+template <typename T, convertible_to<std::string> Sv>
 constexpr auto repr_type(Sv&& sv) noexcept {
     if constexpr (reprable<T>) {
         return repr_type<T>();
@@ -367,18 +365,18 @@ constexpr auto repr_writer::repr(const T& arg) const noexcept {
 
 /// repr a cvr-qualified `T` with its qualifiers
 template <typename T>
-requires(!std::same_as<T, std::remove_cvref_t<T>> && reprable_impl<std::remove_cvref_t<T>>)  //
-    struct repr_builtin<T> {
+    requires(not weak_same_as<T, remove_cvref_t<T>> && reprable_impl<remove_cvref_t<T>>)
+struct repr_builtin<T> {
     constexpr static void write(auto out, auto*) noexcept {
         static_assert(out.just_type);
-        if constexpr (std::is_const_v<T>) {
-            out.append("{} const", repr_type<std::remove_const_t<T>>());
-        } else if constexpr (std::is_volatile_v<T>) {
-            out.append("{} volatile", repr_type<std::remove_volatile_t<T>>());
-        } else if constexpr (std::is_lvalue_reference_v<T>) {
-            out.append("{}&", repr_type<std::remove_reference_t<T>>());
-        } else if constexpr (std::is_rvalue_reference_v<T>) {
-            out.append("{}&&", repr_type<std::remove_reference_t<T>>());
+        if constexpr (neo_is_const(T)) {
+            out.append("{} const", repr_type<remove_const_t<T>>());
+        } else if constexpr (neo_is_volatile(T)) {
+            out.append("{} volatile", repr_type<remove_volatile_t<T>>());
+        } else if constexpr (neo_is_lvalue_reference(T)) {
+            out.append("{}&", repr_type<remove_reference_t<T>>());
+        } else if constexpr (neo_is_rvalue_reference(T)) {
+            out.append("{}&&", repr_type<remove_reference_t<T>>());
         }
     }
 };
@@ -397,7 +395,7 @@ struct repr_builtin<void> {
 template <typename T>
 struct repr_builtin<T*> {
     constexpr static void write(auto out, auto* value) noexcept {
-        if constexpr (std::is_void_v<T>) {
+        if constexpr (neo_is_void(T)) {
             // Special case for void*
             if constexpr (out.just_type) {
                 out.append("{}*", neo::repr_type<T>());
@@ -462,7 +460,7 @@ struct repr_builtin<float> {
 };
 
 #define DECL_REPR_TYPE_CASE(Type, TypeName)                                                        \
-    else if constexpr (std::same_as<Integral, Type>) {                                             \
+    else if constexpr (weak_same_as<Integral, Type>) {                                             \
         if constexpr (out.just_type) {                                                             \
             out.append(TypeName);                                                                  \
         } else if constexpr (out.just_value) {                                                     \
@@ -473,40 +471,40 @@ struct repr_builtin<float> {
     }
 
 template <std::integral Integral>
-requires(!std::is_pointer_v<Integral> && std::same_as<Integral, std::remove_cvref_t<Integral>>)  //
-    struct repr_builtin<Integral> {
+    requires(not neo_is_pointer(Integral) && weak_same_as<Integral, remove_cvref_t<Integral>>)  //
+struct repr_builtin<Integral> {
     constexpr static void write(auto out, auto* value) noexcept {
-        if constexpr (std::same_as<Integral, bool>) {
+        if constexpr (weak_same_as<Integral, bool>) {
             if constexpr (out.just_type) {
                 out.append("bool");
             } else {
                 out.append(*value ? "true" : "false");
             }
-        } else if constexpr (std::same_as<Integral, char>) {
+        } else if constexpr (weak_same_as<Integral, char>) {
             if constexpr (out.just_type) {
                 out.append("char");
             } else {
                 out.append("'{}'", *value);
             }
-        } else if constexpr (std::same_as<Integral, wchar_t>) {
+        } else if constexpr (weak_same_as<Integral, wchar_t>) {
             if constexpr (out.just_type) {
                 out.append("wchar_t");
             } else {
                 out.append("L'{}'", *value);
             }
-        } else if constexpr (std::same_as<Integral, char8_t>) {
+        } else if constexpr (weak_same_as<Integral, char8_t>) {
             if constexpr (out.just_type) {
                 out.append("char8_t");
             } else {
                 out.append("u8'{}'", *value);
             }
-        } else if constexpr (std::same_as<Integral, char16_t>) {
+        } else if constexpr (weak_same_as<Integral, char16_t>) {
             if constexpr (out.just_type) {
                 out.append("char16_t");
             } else {
                 out.append("u'{}'", *value);
             }
-        } else if constexpr (std::same_as<Integral, char32_t>) {
+        } else if constexpr (weak_same_as<Integral, char32_t>) {
             if constexpr (out.just_type) {
                 out.append("char32_t");
             } else {
@@ -529,86 +527,89 @@ requires(!std::is_pointer_v<Integral> && std::same_as<Integral, std::remove_cvre
         DECL_REPR_TYPE_CASE(long long, "long long")
         DECL_REPR_TYPE_CASE(unsigned long long, "unsigned long long")
         else {
-            static_assert(std::is_void_v<Integral>, "Unhandled built-in integral type");
+            static_assert(neo_is_void(Integral), "Unhandled built-in integral type");
         }
     }
 };
 
 #undef DECL_REPR_TYPE_CASE
 
-template <typename T>
-requires std::is_class_v<T>
-struct inherit_from : std::remove_cvref_t<T> {
-};
+template <class_type T>
+    requires(not neo_is_final(T))
+struct inherit_from : remove_cvref_t<T> {};
 
 template <typename T>
-concept detect_vector = requires(T vec, std::ranges::range_value_t<T> item) {
-    typename T::value_type;
-    typename T::allocator_type;
-    requires std::same_as<T, typename inherit_from<T>::vector>;
-    vec.push_back(std::move(item));
-    vec.pop_back();
-};
+concept detect_vector =  //
+    requires(T vec, std::ranges::range_value_t<T> item) {
+        typename T::value_type;
+        typename T::allocator_type;
+        requires weak_same_as<T, typename inherit_from<T>::vector>;
+        vec.push_back(std::move(item));
+        vec.pop_back();
+    };
 
 template <typename T>
-concept detect_map = std::ranges::forward_range<T>  //
+concept detect_map =  //
+    std::ranges::forward_range<T>
     && requires(T& map, std::ranges::range_value_t<T> pair, typename T::key_type key) {
-    typename T::key_type;
-    typename T::mapped_type;
-    map.insert(pair);
-    map.find(key);
-};
+           typename T::key_type;
+           typename T::mapped_type;
+           map.insert(pair);
+           map.find(key);
+       };
 
 template <typename T>
-concept detect_std_array = requires(T arr, std::ranges::range_value_t<T> item) {
-    arr.data();
-    requires std::same_as<T, typename inherit_from<T>::array>;
-};
+concept detect_std_array =  //
+    requires(T arr, std::ranges::range_value_t<T> item) {
+        arr.data();
+        requires weak_same_as<T, typename inherit_from<T>::array>;
+    };
 
 template <typename Tuple>
 concept detect_tuple = requires {
-    requires(
-        requires(Tuple t) { std::get<0>(t); } ||  //
-        requires(Tuple t) { t.template get<0>(); });
-    typename std::tuple_element_t<0, Tuple>;
-    std::tuple_size_v<Tuple>;
-    requires !detect_std_array<Tuple>;
-};
+                           requires(
+                               requires(Tuple t) { std::get<0>(t); } ||  //
+                               requires(Tuple t) { t.template get<0>(); });
+                           typename std::tuple_element_t<0, Tuple>;
+                           std::tuple_size_v<Tuple>;
+                           requires !detect_std_array<Tuple>;
+                       };
 
 template <typename Pair>
-concept detect_pair = detect_tuple<Pair> && requires(std::remove_cvref_t<Pair>& p,
-                                                     typename Pair::first_type  f,
-                                                     typename Pair::second_type s) {
-    typename Pair::first_type;
-    typename Pair::second_type;
-    requires std::same_as<Pair, typename inherit_from<Pair>::pair>;
-    requires alike<decltype(p.first), typename Pair::first_type>;
-    requires alike<decltype(p.second), typename Pair::second_type>;
-};
+concept detect_pair = detect_tuple<Pair>
+    && requires(remove_cvref_t<Pair>&      p,
+                typename Pair::first_type  f,
+                typename Pair::second_type s) {
+           typename Pair::first_type;
+           typename Pair::second_type;
+           requires weak_same_as<Pair, typename inherit_from<Pair>::pair>;
+           requires alike<decltype(p.first), typename Pair::first_type>;
+           requires alike<decltype(p.second), typename Pair::second_type>;
+       };
 
 template <typename Opt>
 concept detect_optional = requires(Opt opt) {
-    typename Opt::value_type;
-    {opt.has_value()};
-    {opt.value()};
-    {*opt};
-    {opt.reset()};
-};
+                              typename Opt::value_type;
+                              { opt.has_value() };
+                              { opt.value() };
+                              { *opt };
+                              { opt.reset() };
+                          };
 
 template <typename Path>
 concept detect_path = requires(Path path) {
-    typename inherit_from<Path>::path;
-    std::same_as<typename inherit_from<Path>::path, Path>;
-    path.native();
-    path.generic_string();
-    path.make_preferred();
-    path.root_name();
-    path.root_directory();
-    path.root_path();
-    path.filename();
-    path.stem();
-    path.extension();
-};
+                          typename inherit_from<Path>::path;
+                          weak_same_as<typename inherit_from<Path>::path, Path>;
+                          path.native();
+                          path.generic_string();
+                          path.make_preferred();
+                          path.root_name();
+                          path.root_directory();
+                          path.root_path();
+                          path.filename();
+                          path.stem();
+                          path.extension();
+                      };
 
 template <detect_path Path>
 struct repr_builtin<Path> {
@@ -681,19 +682,20 @@ constexpr void repr_write_string_val(auto out, std::basic_string_view<Char, Trai
 
 template <typename Char, typename Traits>
 struct repr_builtin<std::basic_string_view<Char, Traits>> {
-    constexpr static void write(auto out, auto* value) noexcept requires reprable<Char> {
+    constexpr static void write(auto out, auto* value) noexcept
+        requires reprable<Char>
+    {
         using view = std::basic_string_view<Char, Traits>;
-        using std::same_as;
         if constexpr (out.just_type) {
-            if constexpr (same_as<view, std::string_view>) {
+            if constexpr (weak_same_as<view, std::string_view>) {
                 out.append("std::string_view");
-            } else if constexpr (same_as<view, std::wstring_view>) {
+            } else if constexpr (weak_same_as<view, std::wstring_view>) {
                 out.append("std::wstring_view");
-            } else if constexpr (same_as<view, std::u8string_view>) {
+            } else if constexpr (weak_same_as<view, std::u8string_view>) {
                 out.append("std::u8string_view");
-            } else if constexpr (same_as<view, std::u16string_view>) {
+            } else if constexpr (weak_same_as<view, std::u16string_view>) {
                 out.append("std::16string_view");
-            } else if constexpr (same_as<view, std::u32string_view>) {
+            } else if constexpr (weak_same_as<view, std::u32string_view>) {
                 out.append("std::u32string_view");
             } else {
                 out.append("std::basic_string_view<{}, [traits]>", repr_type<Char>());
@@ -709,19 +711,20 @@ struct repr_builtin<std::basic_string_view<Char, Traits>> {
 
 template <typename Char, typename Traits, typename Alloc>
 struct repr_builtin<std::basic_string<Char, Traits, Alloc>> {
-    constexpr static void write(auto out, auto* value) noexcept requires reprable<Char> {
+    constexpr static void write(auto out, auto* value) noexcept
+        requires reprable<Char>
+    {
         using string = std::basic_string<Char, Traits, Alloc>;
-        using std::same_as;
         if constexpr (out.just_type) {
-            if constexpr (same_as<string, std::string>) {
+            if constexpr (weak_same_as<string, std::string>) {
                 out.append("std::string");
-            } else if constexpr (same_as<string, std::wstring>) {
+            } else if constexpr (weak_same_as<string, std::wstring>) {
                 out.append("std::wstring");
-            } else if constexpr (same_as<string, std::u8string>) {
+            } else if constexpr (weak_same_as<string, std::u8string>) {
                 out.append("std::u8string");
-            } else if constexpr (same_as<string, std::u16string>) {
+            } else if constexpr (weak_same_as<string, std::u16string>) {
                 out.append("std::16string");
-            } else if constexpr (same_as<string, std::u32string>) {
+            } else if constexpr (weak_same_as<string, std::u32string>) {
                 out.append("std::u32string");
             } else {
                 out.append("std::basic_string<{}, [traits], [alloc]>", repr_type<Char>());
@@ -738,7 +741,9 @@ struct repr_builtin<std::basic_string<Char, Traits, Alloc>> {
 template <detect_map Map>
 struct repr_builtin<Map> {
     using pair_type = typename Map::value_type;
-    constexpr static void write(auto out, auto* value) noexcept requires reprable<pair_type> {
+    constexpr static void write(auto out, auto* value) noexcept
+        requires reprable<pair_type>
+    {
         if constexpr (not out.just_value) {
             out.append("map<{}, {}>",
                        repr_type<typename Map::key_type>(),
@@ -764,18 +769,18 @@ struct repr_builtin<Map> {
 };
 
 template <typename R>
-requires requires {
-    requires std::ranges::forward_range<R>;
-    requires !alike<std::string, R> && !alike<std::string_view, R>;
-    requires !detect_map<R>;
-    requires !detect_path<R>;
-}
+    requires requires {
+                 requires std::ranges::forward_range<R>;
+                 requires !alike<std::string, R> && !alike<std::string_view, R>;
+                 requires !detect_map<R>;
+                 requires !detect_path<R>;
+             }
 struct repr_builtin<R> {
     constexpr static void write(auto out, auto* value) noexcept {
         auto value_type_str = repr_type<std::ranges::range_value_t<R>>("?");
         if constexpr (detect_vector<R>) {
             out.type("vector<{}>", value_type_str);
-        } else if constexpr (std::is_array_v<R>) {
+        } else if constexpr (neo_is_array(R)) {
             out.type("{}[]", value_type_str);
         } else if constexpr (detect_std_array<R>) {
             out.type("array<{}>", value_type_str);
@@ -813,10 +818,10 @@ tuple_out_next(auto out, std::index_sequence<First, Idx...>, const Tuple* tup [[
 }
 
 template <typename Tuple>
-requires requires {
-    requires detect_tuple<Tuple>;
-    requires !detect_pair<Tuple>;
-}
+    requires requires {
+                 requires detect_tuple<Tuple>;
+                 requires !detect_pair<Tuple>;
+             }
 struct repr_builtin<Tuple> {
     constexpr static void write(auto out, auto* value) noexcept {
         if constexpr (out.just_type) {

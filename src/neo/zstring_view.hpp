@@ -1,9 +1,9 @@
 #pragma once
 
 #include "./assert.hpp"
+#include "./concepts.hpp"
+#include "./iterator_concepts.hpp"
 
-#include <concepts>
-#include <iterator>
 #include <ranges>
 #include <string_view>
 
@@ -64,8 +64,8 @@ public:
      *
      * Asserts that the resulting string contains a null terminator
      */
-    template <std::contiguous_iterator Iter, std::sized_sentinel_for<Iter> Sent>
-    requires std::same_as<std::iter_value_t<Iter>, value_type>  //
+    template <contiguous_iterator Iter, sized_sentinel_for<Iter> Sent>
+        requires weak_same_as<std::iter_value_t<Iter>, value_type>  //
     constexpr basic_zstring_view(Iter first, Sent sent) noexcept
         : basic_zstring_view(std::to_address(first), static_cast<std::size_t>(sent - first)) {}
 
@@ -75,7 +75,7 @@ public:
      * Asserts that the resulting string contains a null terminator
      */
     template <std::ranges::contiguous_range R>
-    requires std::same_as<std::ranges::range_value_t<R>, value_type>  //
+        requires weak_same_as<std::ranges::range_value_t<R>, value_type>  //
     explicit constexpr basic_zstring_view(R&& r) noexcept
         : basic_zstring_view(std::ranges::begin(r), std::ranges::end(r)) {}
 
@@ -96,15 +96,15 @@ public:
         : _base(arr, N - 1) {}
 
     friend constexpr void do_repr(auto out, const basic_zstring_view* self) noexcept {
-        if constexpr (std::same_as<string_view_type, std::string_view>) {
+        if constexpr (weak_same_as<string_view_type, std::string_view>) {
             out.type("neo::zstring_view");
-        } else if constexpr (std::same_as<string_view_type, std::wstring_view>) {
+        } else if constexpr (weak_same_as<string_view_type, std::wstring_view>) {
             out.type("neo::wzstring_view");
-        } else if constexpr (std::same_as<string_view_type, std::u8string_view>) {
+        } else if constexpr (weak_same_as<string_view_type, std::u8string_view>) {
             out.type("neo::u8zstring_view");
-        } else if constexpr (std::same_as<string_view_type, std::u16string_view>) {
+        } else if constexpr (weak_same_as<string_view_type, std::u16string_view>) {
             out.type("neo::u16string_view");
-        } else if constexpr (std::same_as<string_view_type, std::u32string_view>) {
+        } else if constexpr (weak_same_as<string_view_type, std::u32string_view>) {
             out.type("neo::u32string_view");
         } else {
             out.type("neo::basic_zstring_view<{}>", out.template repr_type<value_type>());

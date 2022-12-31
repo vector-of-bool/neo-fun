@@ -4,6 +4,7 @@
 
 #include "./addressof.hpp"
 #include "./attrib.hpp"
+#include "./concepts.hpp"
 #include "./fwd.hpp"
 #include "./like.hpp"
 
@@ -47,8 +48,7 @@ struct box_base {
 template <typename T>
 class scalar_box;
 
-template <typename T>
-requires std::is_object_v<T>
+template <object_type T>
 class scalar_box<T> : public _obox_detail::box_base<T> {
     // The contained object
     NEO_NO_UNIQUE_ADDRESS T _value;
@@ -64,19 +64,22 @@ class scalar_box<T> : public _obox_detail::box_base<T> {
 public:
     scalar_box() = default;
 
-    template <typename U>
-    requires std::constructible_from<T, U&&>
-    explicit(not std::convertible_to<U&&, T>)  //
-        constexpr scalar_box(U&& arg) noexcept(noexcept(T(NEO_FWD(arg))))
+    // clang-format off
+    template <explicit_convertible_to<T> U>
+        explicit(not convertible_to<U&&, T>)
+    constexpr scalar_box(U&& arg)
+        noexcept(noexcept(T(NEO_FWD(arg))))
         : _value(NEO_FWD(arg)) {}
 
     template <typename Elem, std::size_t Len>
-    requires std::is_array_v<T> and std::convertible_to<Elem, std::remove_all_extents_t<T>>
+    requires std::is_array_v<T>
+         and convertible_to<Elem, std::remove_all_extents_t<T>>
     constexpr scalar_box(Elem (&&arr)[Len]) noexcept
         : scalar_box(_array_construct{}, NEO_FWD(arr), std::make_index_sequence<Len>{}) {}
 
     template <typename Elem, std::size_t Len>
-    requires std::is_array_v<T> and std::convertible_to<Elem, std::remove_all_extents_t<T>>
+    requires std::is_array_v<T>
+         and convertible_to<Elem, std::remove_all_extents_t<T>>
     constexpr scalar_box(Elem (&arr)[Len]) noexcept
         : scalar_box(_array_construct{}, NEO_FWD(arr), std::make_index_sequence<Len>{}) {}
 
@@ -97,8 +100,7 @@ public:
     }
 };
 
-template <typename Ref>
-requires std::is_reference_v<Ref>
+template <reference_type Ref>
 class scalar_box<Ref> : public _obox_detail::box_base<Ref> {
     using Pointer = std::add_pointer_t<Ref>;
     Pointer _ptr;
@@ -125,8 +127,7 @@ public:
     }
 };
 
-template <typename Void>
-requires std::is_void_v<Void>
+template <void_type Void>
 class scalar_box<Void> : public _obox_detail::box_base<Void> {
 public:
     constexpr Void get() const noexcept {}
