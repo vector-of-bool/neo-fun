@@ -185,6 +185,10 @@ DECL_TRAIT_CONCEPT(pointer_type, neo_is_pointer);
 
 #if NEO_HAS_BUILTIN(__is_function)
 #define neo_is_function __is_function
+#elif defined(_MSC_VER)
+// MSVC emits a warning about our trickery with 'const', so just defined it in terms of the actual
+// stdlib impl
+#define neo_is_function(...) (::std::is_function_v<__VA_ARGS__>)
 #else
 #define neo_is_function(...)                                                                       \
     (not neo_is_const(__VA_ARGS__ const) and not neo_is_reference(__VA_ARGS__))
