@@ -153,7 +153,7 @@ DECL_MEM_INFER(const volatile&&, const volatile&&);
 
 // Overload for member object pointers too
 template <typename T, typename Owner>
-    requires std::is_member_object_pointer_v<T Owner::*>  //
+    requires neo_is_member_object_pointer(T Owner::*)  //
 struct invocable_signature<T Owner::*> : signature_tag<T&(Owner&) noexcept> {};
 
 namespace detail {

@@ -51,8 +51,8 @@ public:
     }
 
     constexpr pimpl& operator=(const pimpl& other)
-        noexcept(noexcept(NEO_DECLVAL(T) = NEO_DECLVAL(T)))
-        requires requires { NEO_DECLVAL(T) = NEO_DECLVAL(T); }
+        noexcept(noexcept(NEO_DECLVAL(T&) = NEO_DECLVAL(const T&)))
+        requires requires { NEO_DECLVAL(T&) = NEO_DECLVAL(const T&); }
         { **this = *other; return *this; }
 
     constexpr pimpl& operator=(pimpl&& o) noexcept {

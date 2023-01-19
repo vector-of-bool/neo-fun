@@ -151,9 +151,9 @@ concept reconstructible_range = (_sr::range<T>  //
 template <typename R>
 constexpr bool is_nothrow_reconstructible_range_v =  //
     (reconstructible_range<R>                        //
-     and std::is_nothrow_constructible_v<remove_cvref_t<R>,
-                                         _sr::iterator_t<R>,
-                                         _sr::sentinel_t<R>>)  //
+     and nothrow_constructible_from<remove_cvref_t<R>,
+                                    _sr::iterator_t<R>,
+                                    _sr::sentinel_t<R>>)  //
     or range_detail::is_nothrow_special_reconstruct_v<remove_cvref_t<R>>;
 
 template <typename R>

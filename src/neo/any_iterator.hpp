@@ -384,7 +384,7 @@ template <typename From, typename To>
 concept iter_ref_conversion_is_safe =
        // Converting to a value is always safe
        not neo_is_reference(To)
-    || requires (std::add_pointer_t<From> from, std::add_pointer_t<To> to) {
+    || requires (add_pointer_t<From> from, add_pointer_t<To> to) {
         // If 'from' is a value type and the 'to' is a reference type, thas is never safe:
         requires neo_is_reference(From);
         // Only valid if rebinding those as pointers is safe (i.e. no conversion operators occur:

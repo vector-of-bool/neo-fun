@@ -20,7 +20,7 @@ struct make_weakly_incrementable : semiregular {
 template <typename Reference>
 struct make_indirectly_readable {
     Reference operator*() const;
-    using value_type = std::remove_cvref_t<Reference>;
+    using value_type = remove_cvref_t<Reference>;
 };
 
 template <typename Derived>
@@ -98,7 +98,7 @@ struct contiguous_iterator : make_incrementable<contiguous_iterator<T>>,
 
     T operator[](int) const;
 
-    std::remove_reference_t<T>* operator->() const;
+    remove_reference_t<T>* operator->() const;
 };
 
 template <typename Out>

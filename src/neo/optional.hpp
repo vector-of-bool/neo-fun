@@ -10,8 +10,7 @@ namespace neo {
 
 namespace opt_detail {
 
-template <typename T>
-    requires std::is_class_v<T>
+template <class_type T>
 struct inherit_from : T {};
 
 // Hack: A concept that matches a type T that is a in_place_t tag
@@ -21,7 +20,7 @@ concept in_place_t_tag = requires {
     typename inherit_from<T>::in_place_t;
 }
 // And that the nested name is the same as the enclosing class
-&&std::is_same_v<T, typename inherit_from<T>::in_place_t>;
+&&weak_same_as<T, typename inherit_from<T>::in_place_t>;
 
 // A tiny in-place tag we can use
 struct opt_in_place_t {
@@ -94,16 +93,16 @@ public:
 
     // Construct as a new T
     template <typename Arg>
-        requires std::is_same_v<std::remove_cvref_t<Arg>, T>  //
+        requires weak_same_as<remove_cvref_t<Arg>, T>  //
     constexpr nano_opt(Arg&& arg)
         : _storage(opt_detail::opt_in_place_t{}, (Arg &&)(arg))
         , _active(true) {}
 
     // Construct as a new T with the given arguments
     template <opt_detail::in_place_t_tag InPlace, typename... Args>
-    constexpr explicit nano_opt(InPlace tag, Args&&... args)   //
-        noexcept(std::is_nothrow_constructible_v<T, Args...>)  //
-        requires std::is_constructible_v<T, Args...>           //
+    constexpr explicit nano_opt(InPlace tag, Args&&... args)  //
+        noexcept(nothrow_constructible_from<T, Args...>)      //
+        requires constructible_from<T, Args...>               //
         : _storage(tag, (Args &&)(args)...)
         , _active(true) {}
 
@@ -111,7 +110,7 @@ public:
     // destructible
     NEO_CONSTEXPR_DESTRUCTOR ~nano_opt() = default;
     NEO_CONSTEXPR_DESTRUCTOR ~nano_opt()
-        requires(!std::is_trivially_destructible_v<T>)
+        requires(not trivially_destructible<T>)
     {
         if (has_value()) {
             _destroy_nocheck();
@@ -122,8 +121,8 @@ public:
     constexpr nano_opt(const nano_opt&) = default;
     // If not trivial copy:
     constexpr nano_opt(const nano_opt& other)              //
-        noexcept(std::is_nothrow_copy_constructible_v<T>)  //
-        requires(!std::is_trivially_copyable_v<T>)
+        noexcept(nothrow_constructible_from<T, const T&>)  //
+        requires(not trivially_copyable<T>)
     {
         if (other.has_value()) {
             emplace(other.get());

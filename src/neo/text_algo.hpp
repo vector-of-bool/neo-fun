@@ -333,7 +333,7 @@ public:
         constexpr auto to_address() const noexcept
             requires(sizeof...(Ts) == 1 and (std::ranges::contiguous_range<Ts> and ...))
         {
-            return std::addressof(dereference());
+            return NEO_ADDRESSOF(dereference());
         }
     };
 
@@ -508,8 +508,8 @@ struct text_range_ostream_inserter {
     template <typename Os, typename View = view_text_t<R>>
     constexpr friend Os&
     operator<<(Os& out, text_range_ostream_inserter&& self) noexcept(ranges::nothrow_range<R>)
-        requires requires(std::add_pointer_t<std::ranges::range_value_t<View>> sptr,
-                          std::ranges::range_size_t<View>                      size) {
+        requires requires(add_pointer_t<std::ranges::range_value_t<View>> sptr,
+                          std::ranges::range_size_t<View>                 size) {
                      out.put(*std::ranges::begin(self._range.get()));
                      out.write(sptr, size);
                  }

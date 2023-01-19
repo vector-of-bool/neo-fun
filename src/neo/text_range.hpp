@@ -98,11 +98,11 @@ template <typename T>
 constexpr bool is_text_array_ref_v = false;
 
 template <typename Char, std::size_t N>
-    requires character_type<std::remove_const_t<Char>>
+    requires character_type<remove_const_t<Char>>
 constexpr bool is_text_array_ref_v<Char (&)[N]> = true;
 
 template <typename Char, std::size_t N>
-    requires character_type<std::remove_const_t<Char>>
+    requires character_type<remove_const_t<Char>>
 constexpr bool is_text_array_ref_v<Char (&&)[N]> = true;
 
 /// Match an argument that is a text array

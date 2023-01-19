@@ -32,7 +32,7 @@ class enumerate_view : public std::ranges::view_interface<enumerate_view<R>> {
             : _base_sentinel(s) {}
 
         constexpr _sentinel_t(_sentinel_t<!Const> o)  //
-            requires Const && std::convertible_to<ranges::sentinel_t<R>, BaseSentinel>
+            requires Const && convertible_to<ranges::sentinel_t<R>, BaseSentinel>
             : _base_sentinel(o.base()) {}
 
         constexpr auto base() const noexcept { return _base_sentinel; }
@@ -55,7 +55,11 @@ class enumerate_view : public std::ranges::view_interface<enumerate_view<R>> {
         // using iterator_category = std::iterator_traits<BaseIter>::iterator_category;
         using sentinel_type = _sentinel_t<Const>;
 
-        constexpr auto base() const noexcept requires std::copyable<BaseIter> { return _base_iter; }
+        constexpr auto base() const noexcept
+            requires copyable<BaseIter>
+        {
+            return _base_iter;
+        }
         constexpr auto position() const noexcept { return _pos; }
 
         constexpr _iter_t() = default;
@@ -63,16 +67,18 @@ class enumerate_view : public std::ranges::view_interface<enumerate_view<R>> {
             : _base_iter(it)
             , _pos(pos) {}
 
-        constexpr _iter_t(_iter_t<!Const> o)                                        //
-            requires Const && std::convertible_to<ranges::iterator_t<R>, BaseIter>  //
-            : _base_iter(o.base()), _pos(o.position()) {}
+        constexpr _iter_t(_iter_t<!Const> o)                                   //
+            requires Const && convertible_to<ranges::iterator_t<R>, BaseIter>  //
+            : _base_iter(o.base())
+            , _pos(o.position()) {}
 
         using reference = enumerator_reference<Base>;
 
         using difference_type = ranges::range_difference_t<Base>;
 
-        constexpr void
-        advance(difference_type diff) requires std::ranges::random_access_range<Base> {
+        constexpr void advance(difference_type diff)
+            requires std::ranges::random_access_range<Base>
+        {
             _base_iter += diff;
             _pos = static_cast<count_type>(static_cast<difference_type>(_pos) + diff);
         }
@@ -82,7 +88,9 @@ class enumerate_view : public std::ranges::view_interface<enumerate_view<R>> {
             ++_pos;
         }
 
-        constexpr void decrement() requires std::ranges::bidirectional_range<Base> {
+        constexpr void decrement()
+            requires std::ranges::bidirectional_range<Base>
+        {
             --_base_iter;
             --_pos;
         }
@@ -92,12 +100,14 @@ class enumerate_view : public std::ranges::view_interface<enumerate_view<R>> {
         }
 
         constexpr bool operator==(const _iter_t& other) const noexcept  //
-            requires std::equality_comparable<BaseIter> {
+            requires equality_comparable<BaseIter>
+        {
             return _base_iter == other._base_iter;
         }
 
         constexpr auto distance_to(const _iter_t& other) const noexcept  //
-            requires std::random_access_iterator<BaseIter> {
+            requires random_access_iterator<BaseIter>
+        {
             return _base_iter - other._base_iter;
         }
     };
@@ -108,13 +118,16 @@ public:
         : _range(NEO_FWD(r)) {}
 
     // Non-const begin for non-simple views use non-const-iterators
-    constexpr auto begin() noexcept(ranges::nothrow_range<R>) requires(!ranges::simple_view<R>) {
+    constexpr auto begin() noexcept(ranges::nothrow_range<R>)
+        requires(!ranges::simple_view<R>)
+    {
         return _iter_t<false>(std::ranges::begin(_range), 0);
     }
 
     // Begin for simple views are always const-iterators
-    constexpr auto begin() const
-        noexcept(ranges::nothrow_range<R>) requires ranges::simple_view<R> {
+    constexpr auto begin() const noexcept(ranges::nothrow_range<R>)
+        requires ranges::simple_view<R>
+    {
         return _iter_t<true>(std::ranges::begin(_range), 0);
     }
 
@@ -143,11 +156,17 @@ public:
         }
     }
 
-    constexpr auto size() const noexcept requires std::ranges::sized_range<R> {
+    constexpr auto size() const noexcept
+        requires std::ranges::sized_range<R>
+    {
         return std::ranges::size(_range);
     }
     // Obtain the underlying range:
-    constexpr R base() const& requires std::copy_constructible<R> { return _range; }
+    constexpr R base() const&
+        requires copy_constructible<R>
+    {
+        return _range;
+    }
     constexpr R base() && { return NEO_MOVE(_range); }
 };
 

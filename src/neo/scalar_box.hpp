@@ -21,13 +21,13 @@ struct box_base {
     using boxed_type = T;
 
     /// Whether the box contains a scalar type
-    static constexpr inline bool contains_scalar = std::is_scalar_v<T>;
+    static constexpr inline bool contains_scalar = scalar_type<T>;
     /// Whether the box contains an object type
-    static constexpr inline bool contains_object = std::is_object_v<T>;
+    static constexpr inline bool contains_object = object_type<T>;
     /// Whether the box wraps a reference
-    static constexpr inline bool contains_ref = std::is_reference_v<T>;
+    static constexpr inline bool contains_ref = reference_type<T>;
     /// Whether the box wraps a void type
-    static constexpr inline bool contains_void = std::is_void_v<T>;
+    static constexpr inline bool contains_void = void_type<T>;
 };
 
 }  // namespace _obox_detail
@@ -73,14 +73,14 @@ public:
         : _value(NEO_FWD(arg)) {}
 
     template <typename Elem, std::size_t Len>
-    requires std::is_array_v<T>
-         and convertible_to<Elem, std::remove_all_extents_t<T>>
+    requires array_type<T>
+         and convertible_to<Elem, remove_all_extents_t<T>>
     constexpr scalar_box(Elem (&&arr)[Len]) noexcept
         : scalar_box(_array_construct{}, NEO_FWD(arr), std::make_index_sequence<Len>{}) {}
 
     template <typename Elem, std::size_t Len>
-    requires std::is_array_v<T>
-         and convertible_to<Elem, std::remove_all_extents_t<T>>
+    requires array_type<T>
+         and convertible_to<Elem, remove_all_extents_t<T>>
     constexpr scalar_box(Elem (&arr)[Len]) noexcept
         : scalar_box(_array_construct{}, NEO_FWD(arr), std::make_index_sequence<Len>{}) {}
 
@@ -103,7 +103,7 @@ public:
 
 template <reference_type Ref>
 class scalar_box<Ref> : public _obox_detail::box_base<Ref> {
-    using Pointer = std::add_pointer_t<Ref>;
+    using Pointer = add_pointer_t<Ref>;
     Pointer _ptr;
 
 public:

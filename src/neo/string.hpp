@@ -1,6 +1,7 @@
 #pragma once
 
 #include "./fwd.hpp"
+#include "./type_traits.hpp"
 
 #include <memory>
 #include <string>
@@ -142,10 +143,10 @@ constexpr auto get_string_allocator(const std::basic_string_view<C, T>&, Alloc a
  * @param t A string or string-view from which to create a new string
  * @param a The fallback allocator to use with the new string.
  */
-template <typename T, typename Alloc = string_allocator_type_t<std::remove_cvref_t<T>>>
-constexpr string_type_t<std::remove_cvref_t<T>> make_string(T&& t, Alloc a = {}) noexcept {
+template <typename T, typename Alloc = string_allocator_type_t<remove_cvref_t<T>>>
+constexpr string_type_t<remove_cvref_t<T>> make_string(T&& t, Alloc a = {}) noexcept {
     auto alloc = get_string_allocator(t, a);
-    return string_type_t<std::remove_cvref_t<T>>(NEO_FWD(t), alloc);
+    return string_type_t<remove_cvref_t<T>>(NEO_FWD(t), alloc);
 }
 
 /**

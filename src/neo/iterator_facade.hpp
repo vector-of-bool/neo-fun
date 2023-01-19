@@ -1,5 +1,6 @@
 #pragma once
 
+#include "./addressof.hpp"
 #include "./concepts.hpp"
 #include "./fwd.hpp"
 #include "./iterator_concepts.hpp"
@@ -307,7 +308,7 @@ struct iterator_facade_base {
  * `iterator_traits<Derived>::value_type`.
  */
 template <typename Derived>
-class iterator_facade : detail::iterator_facade_base {
+class iterator_facade : public detail::iterator_facade_base {
 public:
     using self_type = Derived;
 
@@ -373,9 +374,10 @@ public:
 
     // clang-format off
     constexpr auto distance_to(const self_type& other) const noexcept
-        requires std::is_base_of_v<
-            typename std::iterator_traits<InnerIterator>::iterator_category,
-            std::random_access_iterator_tag> {
+        requires derived_from<
+            std::random_access_iterator_tag,
+            typename std::iterator_traits<InnerIterator>::iterator_category
+            > {
         return other.wrapped_iterator - wrapped_iterator;
     }
     // clang-format on
@@ -429,7 +431,7 @@ template <typename Derived>
     requires neo::detail::can_to_address<Derived>  //
     and neo::derived_from<Derived, neo::iterator_facade<Derived>>
 struct pointer_traits<Derived> {
-    using pointer         = decltype(std::addressof(*NEO_DECLVAL(Derived)));
+    using pointer         = decltype(NEO_ADDRESSOF(*NEO_DECLVAL(Derived)));
     using element_type    = neo::remove_pointer_t<pointer>;
     using difference_type = std::ptrdiff_t;
 };

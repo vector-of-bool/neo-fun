@@ -19,25 +19,28 @@ void try_get(...) = delete;
 
 template <typename Result, typename Alt>
 concept try_get_result = requires(Result res, void (*fn)(Alt& ref)) {
-    { res ? 0 : 0 }
-    noexcept;
-    fn(*res);
-};
+                             { res ? 0 : 0 } noexcept;
+                             fn(*res);
+                         };
 
 template <typename Variant, typename Alt>
 concept has_adl_try_get = requires(Variant&& var) {
-    { try_get<Alt>(var) } -> try_get_result<forward_like_t<Variant, Alt>>;
-};
+                              { try_get<Alt>(var) } -> try_get_result<forward_like_t<Variant, Alt>>;
+                          };
 
 template <typename Variant, typename Alt>
 concept has_member_try_get = requires(Variant&& var) {
-    { var.template try_get<Alt>() } -> try_get_result<forward_like_t<Variant, Alt>>;
-};
+                                 {
+                                     var.template try_get<Alt>()
+                                     } -> try_get_result<forward_like_t<Variant, Alt>>;
+                             };
 
 template <typename Variant, typename Alt>
 concept has_adl_get_if = requires(Variant&& var) {
-    { get_if<Alt>(neo::addressof(var)) } -> try_get_result<forward_like_t<Variant, Alt>>;
-};
+                             {
+                                 get_if<Alt>(neo::addressof(var))
+                                 } -> try_get_result<forward_like_t<Variant, Alt>>;
+                         };
 
 #if NEO_COMPILER_IS_GNU
 template <typename Alt>
@@ -68,13 +71,14 @@ template <typename T>
 struct inherit_from : T {};
 
 template <template <class...> class VariantTmpl, typename... Types, typename Alt>
-requires std::same_as<typename inherit_from<VariantTmpl<Types...>>::variant, VariantTmpl<Types...>>
-constexpr bool std_variant_mask<VariantTmpl<Types...>, Alt> = (std::same_as<Types, Alt> || ...);
+    requires weak_same_as<typename inherit_from<VariantTmpl<Types...>>::variant,
+                          VariantTmpl<Types...>>
+constexpr bool std_variant_mask<VariantTmpl<Types...>, Alt> = (weak_same_as<Types, Alt> || ...);
 
 template <typename Variant, typename Alt>
 concept supports_alternative =    //
     has_try_get<Variant, Alt> &&  //
-    std_variant_mask<std::remove_cvref_t<Variant>, Alt>;
+    std_variant_mask<remove_cvref_t<Variant>, Alt>;
 
 }  // namespace var_detail
 
@@ -88,8 +92,8 @@ concept supports_alternative =    //
 template <typename Variant, typename Alt>
 concept supports_alternative
       = var_detail::supports_alternative<Variant, Alt>
-    and std::assignable_from<std::remove_cvref_t<Variant>&, Alt&&>
-    and std::convertible_to<Alt&&, std::remove_cvref_t<Variant>>;
+    and assignable_from<remove_cvref_t<Variant>&, Alt&&>
+    and convertible_to<Alt&&, remove_cvref_t<Variant>>;
 // clang-format on
 
 template <typename Alternative>
@@ -129,10 +133,10 @@ struct get_fn {
         if (not static_cast<bool>(maybe)) {
             var_detail::throw_bad_variant_access();
         }
-        if constexpr (std::is_reference_v<Alternative>) {
+        if constexpr (reference_type<Alternative>) {
             return static_cast<Alternative>(*maybe);
         } else {
-            if constexpr (std::is_rvalue_reference_v<Variant&&>) {
+            if constexpr (rvalue_reference_type<Variant&&>) {
                 return NEO_MOVE(*maybe);
             } else {
                 return *maybe;

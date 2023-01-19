@@ -1,6 +1,7 @@
 #pragma once
 
 #include "./attrib.hpp"
+#include "./concepts.hpp"
 #include "./map_ref.hpp"
 #include "./mutref.hpp"
 #include "./unref.hpp"
@@ -21,10 +22,9 @@ struct wrap_refs {
     using type = T;
 };
 
-template <typename T>
-requires std::is_reference_v<T>  //
+template <reference_type T>
 struct wrap_refs<T> {
-    using type = std::reference_wrapper<std::remove_reference_t<T>>;
+    using type = std::reference_wrapper<remove_reference_t<T>>;
 };
 
 /**
@@ -51,7 +51,9 @@ using wrap_if_reference_t [[deprecated("Use wrap_ref_member_t and ref_member")]]
  * @param MemName The member variable declared with wrap_refs_t to rebind
  */
 #define NEO_DECL_REF_REBINDER(FuncName, Type, MemName)                                             \
-    constexpr auto&& FuncName(Type& arg) noexcept requires(std::is_reference_v<Type>) {            \
+    constexpr auto&& FuncName(Type& arg) noexcept                                                  \
+        requires(reference_typeType >)                                                             \
+    {                                                                                              \
         MemName = std::ref(arg);                                                                   \
         return MemName.get();                                                                      \
     }                                                                                              \
