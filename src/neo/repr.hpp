@@ -599,7 +599,7 @@ concept detect_optional = requires(Opt opt) {
 template <typename Path>
 concept detect_path = requires(Path path) {
                           typename inherit_from<Path>::path;
-                          weak_same_as<typename inherit_from<Path>::path, Path>;
+                          requires weak_same_as<typename inherit_from<Path>::path, Path>;
                           path.native();
                           path.generic_string();
                           path.make_preferred();

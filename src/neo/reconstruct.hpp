@@ -74,7 +74,8 @@ concept detect_string = detect_str_common<T>  //
 template <typename T>
 concept detect_string_or_view = detect_string_view<T> || detect_string<T>;
 
-#define TYPENAME_IS(Type, Name) (requires { weak_same_as<typename inherit_from<T>::Name, Type>; })
+#define TYPENAME_IS(Type, Name)                                                                    \
+    (requires { requires weak_same_as<typename inherit_from<T>::Name, Type>; })
 template <typename T>
 constexpr bool detect_std_container_name =  //
     TYPENAME_IS(T, vector)                  //
