@@ -66,10 +66,10 @@
 
 #define NEO_IS_EMPTY(...) NEO_FIRST(__VA_OPT__(0, ) 1, ~)
 
-#define NEO_FN_MACRO_BEGIN do {
+#define NEO_FN_MACRO_BEGIN if (true) {
 #define NEO_FN_MACRO_END                                                                           \
     }                                                                                              \
-    while (0)
+    else(void(0))
 
 #define NEO_DISCARD(...)
 

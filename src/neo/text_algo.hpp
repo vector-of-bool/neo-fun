@@ -238,14 +238,15 @@ public:
                 std::terminate();
             } else {
                 if (N == _index) {
-                    return *(std::ranges::next(std::ranges::begin(_nth<N>()), _inner_idx));
+                    auto idx = static_cast<difference_type>(_inner_idx);
+                    return *(std::ranges::next(std::ranges::begin(_nth<N>()), idx));
                 } else {
                     return _deref<N + 1>();
                 }
             }
         }
 
-        constexpr void _advance(std::size_t off) {
+        constexpr void _advance(size_type off) {
             while (off >= _remaining_in_cur_subrange() and _index < sizeof...(Ts)) {
                 off -= _remaining_in_cur_subrange();
                 ++_index;
@@ -260,7 +261,7 @@ public:
             _inner_idx += off;
         }
 
-        constexpr void _rewind(std::size_t off) noexcept {
+        constexpr void _rewind(size_type off) noexcept {
             while (off >= _inner_idx and _index > 0) {
                 off -= _inner_idx;
                 --_index;
@@ -275,49 +276,49 @@ public:
             _inner_idx -= off;
         }
 
-        constexpr std::ptrdiff_t _dist_fwd(const iterator& other) const {
+        constexpr difference_type _dist_fwd(const iterator& other) const {
             neo_assert(invariant, _index < other._index, "Invalid dist-fwd");
-            auto           idx = _index;
-            std::ptrdiff_t off = _remaining_in_cur_subrange();
+            auto      idx = _index;
+            size_type off = _remaining_in_cur_subrange();
             ++idx;
             while (idx < other._index) {
                 off += _nth_size(idx);
                 ++idx;
             }
             off += other._inner_idx;
-            return off;
+            return static_cast<difference_type>(off);
         }
 
-        constexpr std::ptrdiff_t _dist_bwd(const iterator& other) const noexcept {
+        constexpr difference_type _dist_bwd(const iterator& other) const noexcept {
             neo_assert(invariant, _index > other._index, "Invalid dist-bwd");
-            auto           idx = _index;
-            std::ptrdiff_t off = _inner_idx;
+            auto      idx = _index;
+            size_type off = _inner_idx;
             --idx;
             while (idx > other._index) {
                 off += _nth_size(idx);
                 --idx;
             }
             off += other._remaining_in_cur_subrange();
-            return -off;
+            return -static_cast<difference_type>(off);
         }
 
     public:
-        constexpr void advance(std::ptrdiff_t off) noexcept((ranges::nothrow_range<Ts> and ...)) {
+        constexpr void advance(difference_type off) noexcept((ranges::nothrow_range<Ts> and ...)) {
             if (off > 0) {
-                _advance(off);
+                _advance(static_cast<size_type>(off));
             } else if (off < 0) {
                 _rewind(static_cast<std::size_t>(-off));
             }
         }
 
-        constexpr std::ptrdiff_t distance_to(iterator const& other) const
+        constexpr difference_type distance_to(iterator const& other) const
             noexcept((ranges::nothrow_range<Ts> and ...)) {
             if (_index > other._index) {
                 return _dist_bwd(other);
             } else if (_index < other._index) {
                 return _dist_fwd(other);
             } else {
-                return other._inner_idx - _inner_idx;
+                return static_cast<difference_type>(other._inner_idx - _inner_idx);
             }
         }
 

@@ -1,3 +1,6 @@
+#include "./platform.hpp"
+NEO_CLANG_PRAGMA(clang diagnostic ignored "-Wsign-conversion");
+
 #include "./overload.hpp"
 
 #include <catch2/catch.hpp>

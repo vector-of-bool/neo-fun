@@ -74,7 +74,7 @@ class enumerate_view : public std::ranges::view_interface<enumerate_view<R>> {
         constexpr void
         advance(difference_type diff) requires std::ranges::random_access_range<Base> {
             _base_iter += diff;
-            _pos += diff;
+            _pos = static_cast<count_type>(static_cast<difference_type>(_pos) + diff);
         }
 
         constexpr void increment() {

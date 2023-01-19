@@ -12,6 +12,7 @@ static_assert(std::assignable_from<neo::scalar_box<int>&, neo::scalar_box<int>>)
 static_assert(std::assignable_from<neo::scalar_box<int&>&, neo::scalar_box<int&>>);
 
 static_assert(std::copyable<neo::scalar_box<int>>);
+static_assert(std::semiregular<neo::scalar_box<int>>);
 static_assert(std::copyable<neo::scalar_box<int&>>);
 static_assert(std::copyable<neo::scalar_box<const int&>>);
 static_assert(not std::copyable<neo::scalar_box<const int>>);
@@ -33,14 +34,15 @@ TEST_CASE("Construct some boxes") {
 }
 
 TEST_CASE("Void box") {
-    static_assert(std::semiregular<neo::scalar_box<void>>);
-    static_assert(std::semiregular<neo::scalar_box<const void>>);
-    static_assert(std::semiregular<neo::scalar_box<volatile void>>);
-    static_assert(std::semiregular<neo::scalar_box<const volatile void>>);
+    static_assert(neo::semiregular<neo::scalar_box<void>>);
+    static_assert(neo::semiregular<neo::scalar_box<const void>>);
+    static_assert(neo::semiregular<neo::scalar_box<volatile void>>);
+    static_assert(neo::semiregular<neo::scalar_box<const volatile void>>);
 }
 
 TEST_CASE("Array box") {
-    static_assert(std::semiregular<neo::scalar_box<int[12]>>);
+    static_assert(neo::object_type<int[12]>);
+    static_assert(neo::semiregular<neo::scalar_box<int[12]>>);
     int  carr[3] = {1, 2, 3};
     auto arr     = neo::scalar_box{std::as_const(carr)};
     CHECK(arr.get()[0] == 1);

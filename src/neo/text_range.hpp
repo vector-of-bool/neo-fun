@@ -287,7 +287,8 @@ constexpr auto text_range_end(R&& r) noexcept {
     if constexpr ((text_array_ref<R>                 //
                    or std::ranges::common_range<R>)  //
                   and std::ranges::sized_range<R>) {
-        return std::ranges::next(std::ranges::begin(r), neo::text_range_size(r));
+        auto end_pos = static_cast<std::ranges::range_difference_t<R>>(neo::text_range_size(r));
+        return std::ranges::next(std::ranges::begin(r), end_pos);
     } else {
         return std::ranges::end(r);
     }

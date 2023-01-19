@@ -65,8 +65,9 @@ public:
     scalar_box() = default;
 
     // clang-format off
-    template <explicit_convertible_to<T> U>
-        explicit(not convertible_to<U&&, T>)
+    template <unalike<scalar_box> U>
+        requires explicit_convertible_to<U&&, T>
+        explicit(not implicit_convertible_to<U&&, T>)
     constexpr scalar_box(U&& arg)
         noexcept(noexcept(T(NEO_FWD(arg))))
         : _value(NEO_FWD(arg)) {}
@@ -130,7 +131,7 @@ public:
 template <void_type Void>
 class scalar_box<Void> : public _obox_detail::box_base<Void> {
 public:
-    constexpr Void get() const noexcept {}
+    constexpr remove_cv_t<Void> get() const noexcept {}
 
     constexpr void friend do_repr(auto out, const scalar_box* self) noexcept {
         out.type("[boxed {}]", out.template repr_type<Void>());

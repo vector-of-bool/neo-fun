@@ -153,7 +153,7 @@ struct iterator_facade_base {
 
     template <random_access_iter_self Self, iter_diff<Self> Diff>
     constexpr friend Self& operator+=(Self& self, Diff off) noexcept {
-        self.advance(off);
+        self.advance(static_cast<detail::infer_difference_type_t<Self>>(off));
         return self;
     }
 

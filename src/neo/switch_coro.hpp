@@ -16,6 +16,7 @@ namespace neo {
                           false,                                                                   \
                           "neo-switch-coroutine encountered an invalid state",                     \
                           _neo_coro_lineno_storage_);                                              \
+        neo::unreachable();                                                                        \
     case 0:
 
 #define NEO_CORO_YIELD(...)                                                                        \

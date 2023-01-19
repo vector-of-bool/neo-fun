@@ -44,7 +44,7 @@ concept destructible = requires {
 template <typename T, typename... Args>
 concept constructible_from =
         destructible<T>
-    and requires(T value, Args&&... args) { T(NEO_FWD(args)...); }
+    and requires(Args&&... args) { T(NEO_FWD(args)...); }
     ;
 
 /// Check whether one can static_cast<To>(From)
@@ -55,9 +55,8 @@ concept explicit_convertible_to =
     };
 
 template <typename From, typename To>
-concept convertible_to =
-        explicit_convertible_to<From, To>
-    and requires {
+concept implicit_convertible_to =
+    requires {
         requires
             neo_is_void(To) or
             #if NEO_HAS_BUILTIN(__is_convertible_to) || _MSC_VER
@@ -71,6 +70,11 @@ concept convertible_to =
             #endif
             ;
     };
+
+template <typename From, typename To>
+concept convertible_to =
+        explicit_convertible_to<From, To>
+    and implicit_convertible_to<From, To>;
 
 #define neo_is_convertible_to NEO_TTRAIT_BUILTIN_OR_VARTMPL(__is_convertible_to, ::neo::convertible_to)
 

@@ -432,7 +432,7 @@ template <u64 Pos, u64 Len = ~(u64)(0)>
 struct slice {
     template <tn L>
         requires(Pos + Len <= len_v<L>)
-    using f = pipe<remove_prefix<Pos>, remove_suffix<(len_v<L> - Pos - Len)>>::tl f<L>;
+    using f = typename pipe<remove_prefix<Pos>, remove_suffix<(len_v<L> - Pos - Len)>>::tl f<L>;
 };
 
 template <u64 Pos>
