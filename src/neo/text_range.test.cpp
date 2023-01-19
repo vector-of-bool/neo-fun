@@ -4,8 +4,6 @@
 
 #include <catch2/catch.hpp>
 
-using namespace neo::text_range_operators;
-
 TEST_CASE("Test") {
     std::string s = "Hello!";
     static_assert(neo::text_range<std::string>);
@@ -28,7 +26,7 @@ TEST_CASE("Test") {
 
     neo::text_view auto s1 = neo::view_text("hello!");
     CHECK(s1.size() == 6);
-    CHECK(s1 == "hello!");
+    CHECK(neo::text_range_equal_to{}(s1, "hello!"));
     auto s2 = neo::to_std_string(s1);
 
     auto s3 = neo::to_std_string("I am a string");
@@ -40,11 +38,11 @@ TEST_CASE("Test") {
     CHECK(dup == s);
 
     auto view1 = neo::view_text(s);
-    CHECK(view1 == "Hello!");
+    CHECK(neo::text_range_equal_to{}(view1, "Hello!"));
     auto view2 = neo::view_text(view1);
-    CHECK(view1 == view2);
+    CHECK(neo::text_range_equal_to{}(view1, view2));
 
     std::same_as<std::wstring> auto w     = neo::copy_text(L"Wide string");
     auto                            wview = neo::view_text(w);
-    CHECK(wview == L"Wide string");
+    CHECK(neo::text_range_equal_to{}(wview, L"Wide string"));
 }

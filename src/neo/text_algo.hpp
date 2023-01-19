@@ -445,8 +445,8 @@ struct text_range_equal_to {
 
     template <forward_text_range L,
               forward_text_range R,
-              typename Lv = view_text_t<L>,
-              typename Rv = view_text_t<R>>
+              typename Lv = view_text_t<L&>,
+              typename Rv = view_text_t<R&>>
         requires neo::invocable2<CharEqual,
                                  std::ranges::range_reference_t<Lv>,
                                  std::ranges::range_reference_t<Rv>>
@@ -497,48 +497,36 @@ struct text_range_compare_3way {
     }
 };
 
-namespace text_range_operators {
+template <forward_text_range R>
+struct text_range_ostream_inserter {
+    NEO_NO_UNIQUE_ADDRESS neo::scalar_box<R> _range;
 
-inline namespace equality {
+    constexpr explicit text_range_ostream_inserter(R&& r) noexcept
+        : _range(NEO_FWD(r)) {}
 
-template <forward_text_range L, forward_text_range R>
-constexpr inline auto operator==(L&& left, R&& right)
-    NEO_RETURNS(text_range_equal_to<>{}(left, right));
-
-}
-
-inline namespace compare_3way {
-
-template <forward_text_range L, forward_text_range R>
-constexpr inline auto operator<=>(L&& left, R&& right)
-    NEO_RETURNS(text_range_compare_3way{}(left, right));
-
-}
-
-inline namespace stream_insertion {
-
-template <typename Os, forward_text_range R, typename View = view_text_t<R>>
-constexpr inline Os& operator<<(Os& out, R&& str) noexcept(ranges::nothrow_range<R>)
-    requires requires(std::add_pointer_t<std::ranges::range_value_t<View>> sptr,
-                      std::ranges::range_size_t<View>                      size) {
-                 out.put(*std::ranges::begin(str));
-                 out.write(sptr, size);
-             }
-{
-    auto view = neo::view_text(str);
-    if constexpr (contiguous_text_range<View>) {
-        out.write(std::ranges::data(view), std::ranges::size(view));
-    } else {
-        for (auto&& c : view) {
-            out.put(c);
+    template <typename Os, typename View = view_text_t<R>>
+    constexpr friend Os&
+    operator<<(Os& out, text_range_ostream_inserter&& self) noexcept(ranges::nothrow_range<R>)
+        requires requires(std::add_pointer_t<std::ranges::range_value_t<View>> sptr,
+                          std::ranges::range_size_t<View>                      size) {
+                     out.put(*std::ranges::begin(self._range.get()));
+                     out.write(sptr, size);
+                 }
+    {
+        auto view = neo::view_text(self._range.get());
+        if constexpr (contiguous_text_range<View>) {
+            out.write(std::ranges::data(view), std::ranges::size(view));
+        } else {
+            for (auto&& c : view) {
+                out.put(c);
+            }
         }
+        return out;
     }
-    return out;
-}
+};
 
-}  // namespace stream_insertion
-
-}  // namespace text_range_operators
+template <forward_text_range R>
+explicit text_range_ostream_inserter(R&&) -> text_range_ostream_inserter<R>;
 
 }  // namespace neo
 

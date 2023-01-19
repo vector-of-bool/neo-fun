@@ -11,8 +11,6 @@ namespace sv = std::views;
 
 using namespace std::literals;
 
-using namespace neo::text_range_operators::equality;
-
 TEST_CASE("Single range case") {
     std::string s;
     // A single viewable range is an sv::all_t of itself:
