@@ -7,6 +7,7 @@
 #include "../iterator_facade.hpp"
 #include "../ranges.hpp"
 #include "../scalar_box.hpp"
+#include "../tuple.hpp"
 
 #include <compare>
 #include <tuple>
@@ -29,9 +30,9 @@ struct sentinel {
 template <typename... Rs>
 class iterator {
 public:
-    using difference_type = std::common_type_t<SR::range_difference_t<Rs>...>;
-    using value_type      = std::common_type_t<SR::range_value_t<Rs>...>;
-    using reference_type  = std::common_reference_t<SR::range_reference_t<Rs>...>;
+    using difference_type = common_type_t<SR::range_difference_t<Rs>...>;
+    using value_type      = common_type_t<SR::range_value_t<Rs>...>;
+    using reference_type  = common_reference_t<SR::range_reference_t<Rs>...>;
 
 private:
     using view_type = concat_view<Rs...>;
@@ -39,7 +40,7 @@ private:
     const view_type* _view;
 
     constexpr static inline bool _is_random_access
-        = (std::random_access_iterator<SR::iterator_t<Rs>> and ...);
+        = (random_access_iterator<SR::iterator_t<Rs>> and ...);
     constexpr static inline bool _is_nothrow = (ranges::nothrow_range<Rs> and ...);
     constexpr static inline bool _is_nothrow_advancing
         = (nothrow_advancing_iterator<SR::iterator_t<Rs>> and ...);
@@ -60,7 +61,7 @@ private:
 
     template <std::size_t N>
     constexpr auto& _nth_range() const noexcept {
-        return std::get<N>(_view->_tuple);
+        return _view->_tuple.template get<N>().get();
     }
 
     template <std::size_t N>
@@ -343,14 +344,16 @@ public:
 
     constexpr iterator&
     operator--() noexcept(noexcept((--NEO_DECLVAL(SR::iterator_t<Rs>&), ...)))  //
-        requires(SR::bidirectional_range<Rs>and...) {
+        requires(SR::bidirectional_range<Rs> and ...)
+    {
         _decrement();
         return *this;
     }
 
     constexpr iterator
     operator--(int) noexcept(noexcept((--NEO_DECLVAL(SR::iterator_t<Rs>&), ...)))  //
-        requires(SR::bidirectional_range<Rs>and...) {
+        requires(SR::bidirectional_range<Rs> and ...)
+    {
         auto old = *this;
         _decrement();
         return old;
@@ -358,14 +361,16 @@ public:
 
     constexpr iterator& operator+=(difference_type offset)  //
         noexcept(_is_nothrow_advancing)                     //
-        requires _is_random_access {
+        requires _is_random_access
+    {
         _shift(offset);
         return *this;
     }
 
     constexpr iterator operator+(difference_type offset) const  //
         noexcept(_is_nothrow_advancing)                         //
-        requires _is_random_access {
+        requires _is_random_access
+    {
         auto dup = *this;
         dup += offset;
         return dup;
@@ -374,13 +379,15 @@ public:
     friend constexpr iterator operator+(difference_type l,
                                         const iterator& self)  //
         noexcept(_is_nothrow_advancing)                        //
-        requires _is_random_access {
+        requires _is_random_access
+    {
         return self + l;
     }
 
     constexpr iterator operator-(difference_type offset) const  //
         noexcept(_is_nothrow_advancing)                         //
-        requires _is_random_access {
+        requires _is_random_access
+    {
         auto dup = *this;
         dup += -offset;
         return dup;
@@ -388,13 +395,15 @@ public:
 
     constexpr iterator& operator-=(difference_type off)  //
         noexcept(_is_nothrow_advancing)                  //
-        requires _is_random_access {
+        requires _is_random_access
+    {
         return *this += -off;
     }
 
     constexpr difference_type operator-(const iterator& other) const
         noexcept(_is_nothrow_advancing)  //
-        requires _is_random_access {
+        requires _is_random_access
+    {
         auto idx_diff = _var.index() <=> other._var.index();
         if (idx_diff == 0) {
             // We refer to the same subrange
@@ -417,7 +426,8 @@ public:
     }
 
     constexpr bool operator==(const iterator& other) const noexcept
-        requires(std::equality_comparable<SR::iterator_t<Rs>>and...) {
+        requires(equality_comparable<SR::iterator_t<Rs>> and ...)
+    {
         return _var == other._var;
     }
 
@@ -425,7 +435,8 @@ public:
 
     constexpr auto operator<=>(const iterator& other) const  //
         noexcept(_is_nothrow_advancing)                      //
-        requires(_is_random_access) {
+        requires(_is_random_access)
+    {
         auto idx_off = _var.index() <=> other._var.index();
         if (not std::is_eq(idx_off)) {
             return idx_off;
@@ -439,29 +450,34 @@ public:
 
 template <SR::view... Rs>
 class concat_view : public SR::view_interface<concat_view<Rs...>> {
-    using tuple_type = std::tuple<Rs...>;
+    using tuple_type = neo::nano_tuple<scalar_box<Rs>...>;
     NEO_NO_UNIQUE_ADDRESS tuple_type _tuple;
 
     using _iterator = _concat_detail::iterator<Rs...>;
     friend _iterator;
 
+    template <auto... Ns>
+    constexpr std::size_t _size(std::index_sequence<Ns...>) const noexcept {
+        return (static_cast<std::common_type_t<SR::range_size_t<Rs>...>>(
+                    SR::size(_tuple.template get<Ns>().get()))
+                + ...);
+    }
+
 public:
     constexpr concat_view() = default;
 
-    constexpr concat_view(Rs... args) noexcept(noexcept(tuple_type(Rs(NEO_FWD(args))...)))
-        : _tuple(Rs(NEO_FWD(args))...) {}
+    constexpr concat_view(Rs&&... args) noexcept(noexcept(tuple_type(tuple_construct_tag{},
+                                                                     Rs(NEO_FWD(args))...)))
+        : _tuple(tuple_construct_tag{}, Rs(NEO_FWD(args))...) {}
 
-    constexpr auto size() const noexcept requires(SR::sized_range<Rs>and...) {
-        return std::apply(
-            [&](auto&&... els) {
-                return (static_cast<std::common_type_t<SR::range_size_t<Rs>...>>(SR::size(els))
-                        + ...);
-            },
-            _tuple);
+    constexpr auto size() const noexcept
+        requires(SR::sized_range<Rs> and ...)
+    {
+        return this->_size(std::make_index_sequence<sizeof...(Rs)>{});
     }
 
     constexpr auto begin() const noexcept {
-        return _iterator{*this, std::in_place_index<0>, SR::begin(std::get<0>(_tuple))};
+        return _iterator{*this, std::in_place_index<0>, SR::begin(_tuple.template get<0>().get())};
     }
 
     constexpr auto end() const noexcept {
@@ -484,7 +500,7 @@ explicit concat_view(Rs&&...) -> concat_view<SV::all_t<Rs>...>;
  */
 inline constexpr struct concat_fn {
     template <SR::viewable_range... Rs>
-    requires requires { typename std::common_reference_t<SR::range_reference_t<Rs>...>; }
+        requires requires { typename common_reference_t<SR::range_reference_t<Rs>...>; }
     constexpr auto operator()(Rs&&... ranges) const noexcept {
         if constexpr (sizeof...(ranges) == 1) {
             return SV::all(ranges...);
