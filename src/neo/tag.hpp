@@ -1,5 +1,7 @@
 #pragma once
 
+#include "./meta.hpp"
+
 namespace neo {
 
 template <typename T>
@@ -25,18 +27,13 @@ struct tag {};
  * Variable template of a tag type
  */
 template <typename... Ts>
-constexpr tag<Ts...> tag_v;
+constexpr tag<Ts...> tag_v = {};
 
-/**
- * Get the number of elements in a tag type.
- */
-template <typename Tag>
-requires is_type_parameterized_template_v<Tag>
-int tag_size_v = 0;
+template <typename T>
+constexpr auto tag_size_v = nullptr;
 
-template <template <class...> class Tmpl, typename... Ts>
-requires is_type_parameterized_template_v<Tmpl<Ts...>>
-constexpr unsigned tag_size_v<Tmpl<Ts...>> = static_cast<unsigned>(sizeof...(Ts));
+template <typename... Ts>
+constexpr auto tag_size_v<tag<Ts...>> = sizeof...(Ts);
 
 /**
  * @brief An object that represents a compile-type type.

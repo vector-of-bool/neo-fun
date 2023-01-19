@@ -4,6 +4,7 @@
 #include "./assert.hpp"
 #include "./fwd.hpp"
 #include "./optional.hpp"
+#include "./type_traits.hpp"
 
 #include <coroutine>
 #include <type_traits>
@@ -24,10 +25,10 @@ class immediate;
  *
  * @tparam T The result type of the immediate
  * @param value The value
- * @return immediate<std::remove_cvref_t<T>>
+ * @return immediate<remove_cvref_t<T>>
  */
 template <typename T>
-immediate<std::remove_cvref_t<T>> make_immediate(T&& value) noexcept {
+immediate<remove_cvref_t<T>> make_immediate(T&& value) noexcept {
     co_return NEO_FWD(value);
 }
 
@@ -57,7 +58,7 @@ struct immediate_promise : immediate_promise_base {
 
     auto get_return_object() noexcept { return defer_convert<T>{*this}; }
 
-    template <std::convertible_to<T> U>
+    template <convertible_to<T> U>
     void return_value(U&& v) noexcept(noexcept(T(NEO_FWD(v)))) {
         new (neo::addressof(_value.value)) T(NEO_FWD(v));
     }
@@ -97,7 +98,7 @@ public:
 
         void           await_suspend(std::coroutine_handle<>) { neo::unreachable(); }
         decltype(auto) await_resume() const noexcept {
-            if constexpr (std::is_void_v<T>) {
+            if constexpr (neo_is_void(T)) {
                 // No data to return
             } else {
                 return static_cast<Ref&&>(_co.promise().value());
@@ -106,11 +107,15 @@ public:
     };
 
 private:
-    constexpr static bool is_void = std::is_void_v<T>;
-    using NonVoid                 = std::conditional_t<is_void, decltype(nullptr), T>;
+    constexpr static bool is_void = neo_is_void(T);
+    using NonVoid                 = conditional_t<is_void, decltype(nullptr), T>;
     co_type _co;
 
-    NonVoid& _value() const noexcept requires(not is_void) { return _co.promise().value(); }
+    NonVoid& _value() const noexcept
+        requires(not is_void)
+    {
+        return _co.promise().value();
+    }
 
 public:
     explicit immediate(co_type co) noexcept
@@ -133,7 +138,9 @@ public:
     immediate(NonVoid&& init) noexcept
         : immediate(make_immediate(NEO_FWD(init))) {}
 
-    immediate() noexcept requires is_void : immediate(make_immediate()) {}
+    immediate() noexcept
+        requires is_void
+        : immediate(make_immediate()) {}
 
     ~immediate() {
         if (_co) {
@@ -141,15 +148,37 @@ public:
         }
     }
 
-    NonVoid&       operator*() & noexcept requires(not is_void) { return _value(); }
-    const NonVoid& operator*() const& noexcept requires(not is_void) { return _value(); }
-    NonVoid        operator*() && noexcept requires(not is_void) { return std::move(_value()); }
-    const NonVoid& operator*() const&& noexcept requires(not is_void) {
+    NonVoid& operator*() & noexcept
+        requires(not is_void)
+    {
+        return _value();
+    }
+    const NonVoid& operator*() const& noexcept
+        requires(not is_void)
+    {
+        return _value();
+    }
+    NonVoid operator*() && noexcept
+        requires(not is_void)
+    {
+        return std::move(_value());
+    }
+    const NonVoid& operator*() const&& noexcept
+        requires(not is_void)
+    {
         return std::move(_value());
     }
 
-    auto operator->() noexcept requires(not is_void) { return neo::addressof(_value()); }
-    auto operator->() const noexcept requires(not is_void) { return neo::addressof(_value()); }
+    auto operator->() noexcept
+        requires(not is_void)
+    {
+        return neo::addressof(_value());
+    }
+    auto operator->() const noexcept
+        requires(not is_void)
+    {
+        return neo::addressof(_value());
+    }
 
     auto operator co_await() & noexcept { return awaiter<NonVoid&>{_co}; }
     auto operator co_await() const& noexcept { return awaiter<const NonVoid&>{_co}; }

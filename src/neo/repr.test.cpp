@@ -22,7 +22,7 @@ static_assert(neo::reprable<DWORD>);
 struct unknown_thing {};
 
 /// Fails:
-// static_assert(neo::reprable<std::map<std::string, unknown_thing>>);
+// static_assert(neo::reprable<unknown_thing>);
 // ^^ This static assert should be uncommented to guage the readability of error
 // messages involving repr() on un-reprable types
 
@@ -53,6 +53,9 @@ TEST_CASE("repr() some vectors/arrays") {
 
     std::array<i32, 5> arr{};
     CHECK(neo::repr(arr).string() == "array<int32>{0, 0, 0, 0, 0}");
+
+    std::array<unknown_thing, 4> unk;
+    CHECK(neo::repr(unk).string() == "array<?>{?, ?, ?, ?}");
 }
 
 TEST_CASE("Repr a tuple and a pair") {
@@ -63,6 +66,9 @@ TEST_CASE("Repr a tuple and a pair") {
     CHECK(neo::repr(tup).string() == "tuple{1:int32, 3:int32, \"eggs\"s}");
     CHECK(neo::repr_type<decltype(tup)>().string() == "tuple<int32, int32, std::string>");
     CHECK(neo::repr_value(tup).string() == "{1, 3, \"eggs\"}");
+
+    auto unk = std::tuple{std::string{"hello"}, unknown_thing{}, 42};
+    CHECK(neo::repr(unk).string() == "tuple{\"hello\"s, ?, 42:int32}");
 }
 
 TEST_CASE("Repr some strings") {
@@ -92,8 +98,8 @@ TEST_CASE("repr() some pointers") {
     i32  i  = 4;
     auto p  = &i;
     auto p1 = &p;
-    CHECK(neo::repr(p).string() == "[int32* ->4]");
-    CHECK(neo::repr(p1).string() == "[int32** ->->4]");
+    CHECK_THAT(neo::repr(p).string(), Catch::StartsWith("[int32* (0x"));
+    CHECK_THAT(neo::repr(p1).string(), Catch::StartsWith("[int32** (0x"));
 
     void*       vp  = &i;
     const void* cvp = &i;
@@ -101,7 +107,7 @@ TEST_CASE("repr() some pointers") {
     CHECK_THAT(neo::repr(cvp).string(), Catch::StartsWith("[void const* 0x"));
 
     unknown_thing thing;
-    CHECK_THAT(neo::repr(&thing).string(), Catch::StartsWith("[unknown-pointer 0x"));
+    CHECK_THAT(neo::repr(&thing).string(), Catch::StartsWith("[unknown-type* 0x"));
 }
 
 TEST_CASE("repr() an optional") {
@@ -109,6 +115,9 @@ TEST_CASE("repr() an optional") {
     CHECK(neo::repr(opt).string() == "optional<int32>{->332}");
     opt.reset();
     CHECK(neo::repr(opt).string() == "optional<int32>{nullopt}");
+
+    std::optional<unknown_thing> unk = unknown_thing{};
+    CHECK(neo::repr(unk).string() == "optional<?>{->?}");
 }
 
 static_assert(neo::repr_detail::detect_path<std::filesystem::path>);

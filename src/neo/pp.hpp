@@ -64,7 +64,23 @@
 #define NEO_HAS_ARGS_END() 0
 #define NEO_HAS_ARGS(...) NEO_BOOL(NEO_FIRST(NEO_HAS_ARGS_END __VA_ARGS__)())
 
-#define NEO_FN_MACRO_BEGIN do {
+#define NEO_IS_EMPTY(...) NEO_FIRST(__VA_OPT__(0, ) 1, ~)
+
+#define NEO_FN_MACRO_BEGIN if (true) {
 #define NEO_FN_MACRO_END                                                                           \
     }                                                                                              \
-    while (0)
+    else(void(0))
+
+#define NEO_DISCARD(...)
+
+#define NEO_IIF(Cond, Then, Else)                                                                  \
+    NEO_DISCARD(#Then, #Else)                                                                      \
+    NEO_CONCAT(_neoIIF_, Cond)(Then, Else)
+
+#define _neoIIF(Cond) NEO_CONCAT(_neoIIF_, Cond)
+
+#define _neoIIF_0(Then, Else) Else NEO_DISCARD(#Then)
+#define _neoIIF_1(Then, Else) Then NEO_DISCARD(#Else)
+
+#define NEO_LPAREN (
+#define NEO_RPAREN )

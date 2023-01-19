@@ -71,7 +71,7 @@ public:
 /**
  * @brief Partially applied callable object that compares two common iterators
  */
-template <std::forward_iterator Iter>
+template <forward_iterator Iter>
 struct common_erased_sentinel_compare_parts {
     Iter           iter;
     constexpr bool operator()(const any_iterator_base& other) const noexcept {
@@ -117,7 +117,7 @@ public:
     explicit erase_sentinel(Func&& fn)
         : _fn(NEO_FWD(fn)) {}
 
-    template <std::forward_iterator Iter>
+    template <forward_iterator Iter>
     explicit erase_sentinel(const Iter& it)
         : _fn{it} {}
 };
@@ -162,7 +162,7 @@ struct erased_impl<void, Ref, Iter, Interface> : Interface {
 private:
     Iter _iter;
 
-    void*         do_void_ptr() noexcept override { return std::addressof(_iter); }
+    void*         do_void_ptr() noexcept override { return NEO_ADDRESSOF(_iter); }
     neo::type_tag do_type_tag() const noexcept override { return type_tag_v<Iter>; }
 
 public:
@@ -383,10 +383,10 @@ private:
 template <typename From, typename To>
 concept iter_ref_conversion_is_safe =
        // Converting to a value is always safe
-       (!std::is_reference_v<To>)
-    || requires (std::add_pointer_t<From> from, std::add_pointer_t<To> to) {
+       not neo_is_reference(To)
+    || requires (add_pointer_t<From> from, add_pointer_t<To> to) {
         // If 'from' is a value type and the 'to' is a reference type, thas is never safe:
-        requires std::is_reference_v<From>;
+        requires neo_is_reference(From);
         // Only valid if rebinding those as pointers is safe (i.e. no conversion operators occur:
         // Such would leave the resulting reference bound to a temporary)
         to = from;
@@ -394,8 +394,7 @@ concept iter_ref_conversion_is_safe =
 // clang-format on
 
 template <typename From, typename To>
-concept iter_ref_convertible_to
-    = std::convertible_to<From, To> && iter_ref_conversion_is_safe<From, To>;
+concept iter_ref_convertible_to = convertible_to<From, To> && iter_ref_conversion_is_safe<From, To>;
 
 }  // namespace iter_detail
 
@@ -440,7 +439,7 @@ public:
     }
 
     // Default-move
-    any_iterator(any_iterator&&) = default;
+    any_iterator(any_iterator&&)            = default;
     any_iterator& operator=(any_iterator&&) = default;
 
     /**
@@ -464,23 +463,28 @@ public:
     reference dereference() const { return impl().dereference(); }
     void      increment() { impl().increment(); }
 
-    void decrement() requires derived_from<iterator_category, std::bidirectional_iterator_tag> {
+    void decrement()
+        requires derived_from<iterator_category, std::bidirectional_iterator_tag>
+    {
         impl().decrement();
     }
 
-    void advance(std::ptrdiff_t off) requires
-        derived_from<iterator_category, std::random_access_iterator_tag> {
+    void advance(std::ptrdiff_t off)
+        requires derived_from<iterator_category, std::random_access_iterator_tag>
+    {
         impl().advance(off);
     }
 
-    std::ptrdiff_t distance_to(const any_iterator& other) const requires
-        derived_from<iterator_category, std::random_access_iterator_tag> {
+    std::ptrdiff_t distance_to(const any_iterator& other) const
+        requires derived_from<iterator_category, std::random_access_iterator_tag>
+    {
         return impl().distance_to(other.impl());
     }
 
     // Compare two any_iterators iff they are forward iterators
     friend bool operator==(const any_iterator& left, const any_iterator& right) noexcept  //
-        requires derived_from<iterator_category, std::forward_iterator_tag> {
+        requires derived_from<iterator_category, std::forward_iterator_tag>
+    {
         return left.impl() == right.impl();
     }
 };
@@ -493,7 +497,7 @@ class any_sentinel {
 
     struct from_fn {};
 
-    template <std::invocable<const any_iterator_base&> Func>
+    template <neo::invocable2<const any_iterator_base&> Func>
     explicit any_sentinel(Func&& fn, from_fn)
         : _impl(std::make_shared<iter_detail::erase_sentinel<Func>>(NEO_FWD(fn))) {}
 
@@ -502,12 +506,12 @@ public:
 
     any_sentinel(const any_sentinel&) noexcept = default;
 
-    template <std::forward_iterator Iter>
+    template <forward_iterator Iter>
     any_sentinel(const Iter& it)
         : any_sentinel(iter_detail::common_erased_sentinel_compare_parts<Iter>{it}, from_fn{}) {}
 
     template <std::input_or_output_iterator Iter, std::sentinel_for<Iter> S>
-    any_sentinel(neo::tag<Iter>, S sentinel)
+    any_sentinel(meta::tag<Iter>, S sentinel)
         : any_sentinel(
             [sentinel = std::move(sentinel)](const any_iterator_base& it) {
                 auto iter = it.get<Iter>();

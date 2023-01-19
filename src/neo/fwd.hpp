@@ -1,26 +1,34 @@
 #pragma once
 
-namespace neo {
+namespace neo::move_detail {
 
 template <typename T>
-struct as_rref {
-    using type = T&&;
+struct strip_type {
+    using type = T;
 };
 
 template <typename T>
-struct as_rref<T&> {
-    using type = T&&;
+struct strip_type<T&> {
+    using type = T;
 };
 
 template <typename T>
-using as_rref_t = typename as_rref<T>::type;
+struct strip_type<T&&> {
+    using type = T;
+};
 
-}  // namespace neo
+#ifdef __GNUC__
+#define _neo_typeof_noref(...) __typeof__((__VA_ARGS__))
+#else
+#define _neo_typeof_noref(...) typename ::neo::move_detail::strip_type<decltype(__VA_ARGS__)>::type
+#endif
+
+}  // namespace neo::move_detail
 
 /**
  * @brief Like std::move, but less overhead
  */
-#define NEO_MOVE(...) static_cast<::neo::as_rref_t<decltype(__VA_ARGS__)>>(__VA_ARGS__)
+#define NEO_MOVE(...) static_cast<_neo_typeof_noref(__VA_ARGS__) &&>(__VA_ARGS__)
 
 /**
  * @brief Equivalent to std::forward<decltype(Expr)&&>(expr)

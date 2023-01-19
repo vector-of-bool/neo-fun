@@ -5,6 +5,8 @@
 #include "./tl.hpp"
 #include <catch2/catch.hpp>
 
+constexpr inline auto eq = neo::text_range_equal_to{};
+
 TEST_CASE("Tokenize a simple string") {
     std::string    s = "a b c";
     neo::tokenizer toks{s, neo::whitespace_splitter{}};
@@ -17,11 +19,11 @@ TEST_CASE("Tokenize a simple string") {
 
     auto it = toks.begin();
     REQUIRE(it != toks.end());
-    CHECK(it->view == "a");
+    CHECK(eq(*it, "a"));
     ++it;
-    CHECK(it->view == "b");
+    CHECK(eq(*it, "b"));
     ++it;
-    CHECK(it->view == "c");
+    CHECK(eq(*it, "c"));
 }
 
 TEST_CASE("Tokenize an owned string") {
@@ -29,9 +31,9 @@ TEST_CASE("Tokenize an owned string") {
     static_assert(std::ranges::forward_range<decltype(toks)>);
 
     auto it = toks.begin();
-    CHECK(it->view == "foo");
+    CHECK(eq(*it, "foo"));
     ++it;
-    CHECK(it->view == "bar");
+    CHECK(eq(*it, "bar"));
 }
 
 TEST_CASE("Iterate some lines") {
@@ -39,9 +41,9 @@ TEST_CASE("Iterate some lines") {
     auto        iter  = neo::iter_lines(s);
     auto        lines = neo::to_vector(iter);
     CHECKED_IF(lines.size() == 3) {
-        CHECK(lines[0] == "foo");
-        CHECK(lines[1] == "bar");
-        CHECK(lines[2] == "baz");
+        CHECK(eq(lines[0], "foo"));
+        CHECK(eq(lines[1], "bar"));
+        CHECK(eq(lines[2], "baz"));
     }
 
     // Final newline causes another empty line:
@@ -49,10 +51,10 @@ TEST_CASE("Iterate some lines") {
     iter  = neo::iter_lines(s);
     lines = neo::to_vector(iter);
     CHECKED_IF(lines.size() == 5) {
-        CHECK(lines[0] == "foo");
-        CHECK(lines[1] == "");
-        CHECK(lines[2] == "bar");
-        CHECK(lines[3] == "baz");
-        CHECK(lines[4] == "");
+        CHECK(eq(lines[0], "foo"));
+        CHECK(eq(lines[1], ""));
+        CHECK(eq(lines[2], "bar"));
+        CHECK(eq(lines[3], "baz"));
+        CHECK(eq(lines[4], ""));
     }
 }

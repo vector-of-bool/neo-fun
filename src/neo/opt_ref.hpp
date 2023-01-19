@@ -1,12 +1,12 @@
 #pragma once
 
-#include "./opt_ref_fwd.hpp"
-
 #include "./addressof.hpp"
+#include "./assert.hpp"
+#include "./concepts.hpp"
+#include "./opt_ref_fwd.hpp"
 
 #include <cassert>
 #include <compare>
-#include <concepts>
 #include <optional>
 
 namespace neo {
@@ -30,7 +30,7 @@ public:
     constexpr opt_ref() noexcept = default;
     /// Bind to the given object
     constexpr opt_ref(T& reference) noexcept
-        : _ptr(std::addressof(reference)) {}
+        : _ptr(NEO_ADDRESSOF(reference)) {}
     /// Bind to a pointer to the object (may be nullptr)
     constexpr opt_ref(T* ptr) noexcept
         : _ptr(ptr) {}
@@ -45,7 +45,7 @@ public:
      * @brief Obtain a reference to the referred-to object. Asserts to be non-NULL
      */
     constexpr T& operator*() const noexcept {
-        assert(_ptr != nullptr && "Dereferencing null opt_ref");
+        neo_assert(expects, _ptr != nullptr, "Dereferencing null neo::opt_ref");
         return *_ptr;
     }
 
@@ -53,7 +53,7 @@ public:
      * @brief Access members of the pointed-to objects. Asserts to be non-NULL
      */
     constexpr T* operator->() const noexcept {
-        assert(_ptr != nullptr && "Dereferencing null opt_ref");
+        neo_assert(expects, _ptr != nullptr, "Dereferencing null neo::opt_ref");
         return _ptr;
     }
 
@@ -62,13 +62,13 @@ public:
      * @brief Convert to an object that is constructible from either a T or a nullopt
      */
     template <typename U>
-    requires std::constructible_from<U, T&>
-          && std::constructible_from<U, nullopt_t>
-    explicit(!std::convertible_to<T&, U>
-          || !std::convertible_to<nullopt_t, U>)
+    requires explicit_convertible_to<T&, U>
+          && explicit_convertible_to<nullopt_t, U>
+    explicit(!convertible_to<T&, U>
+          || !convertible_to<nullopt_t, U>)
     constexpr operator U() const
-        noexcept(std::is_nothrow_constructible_v<U, T&>  //
-              && std::is_nothrow_constructible_v<U, decltype(nullptr)>)
+        noexcept(nothrow_constructible_from<U, T&>  //
+              && nothrow_constructible_from<U, nullopt_t>)
     {
         // clang-format on
         if (*this) {
@@ -93,14 +93,16 @@ public:
 
     // Compare with another opt_ref
     constexpr friend bool operator==(opt_ref lhs, opt_ref rhs) noexcept  //
-        requires std::equality_comparable<T> {
+        requires equality_comparable<T>
+    {
         if (bool(lhs) != bool(rhs)) {
             return false;
         }
         return bool(lhs) ? (*lhs == *rhs) : true;
     }
     constexpr friend auto operator<=>(opt_ref left, opt_ref right) noexcept  //
-        requires std::three_way_comparable<T> {
+        requires three_way_comparable<T>
+    {
         using cat = std::compare_three_way_result_t<T>;
         if (bool(left) != bool(right)) {
             if (left) {
@@ -121,7 +123,8 @@ public:
 
     constexpr friend bool operator==(const opt_ref& lhs,
                                      const T&       value) noexcept  //
-        requires std::equality_comparable<T> {
+        requires equality_comparable<T>
+    {
         if (!lhs) {
             return false;
         }
@@ -130,7 +133,8 @@ public:
 
     constexpr friend auto operator<=>(const opt_ref& lhs,
                                       const T&       rhs) noexcept  //
-        requires std::three_way_comparable<T> {
+        requires three_way_comparable<T>
+    {
         using cat = std::compare_three_way_result_t<T>;
         if (!lhs) {
             return cat::less;
@@ -157,6 +161,6 @@ public:
 };
 
 template <typename T>
-opt_ref(T&& what) -> opt_ref<std::remove_reference_t<T>>;
+opt_ref(T&& what) -> opt_ref<remove_reference_t<T>>;
 
 }  // namespace neo

@@ -11,6 +11,7 @@
 #endif
 
 #include "./addressof.hpp"
+#include "./type_traits.hpp"
 
 #include <coroutine>
 
@@ -44,9 +45,9 @@ struct promise_base {
 /// Specialization for non-void:
 template <typename T>
 struct promise : promise_base<T> {
-    std::remove_reference_t<const T>* value_ptr;
+    remove_reference_t<const T>* value_ptr;
 
-    auto yield_value(std::remove_reference_t<const T>& value) noexcept {
+    auto yield_value(remove_reference_t<const T>& value) noexcept {
         value_ptr = neo::addressof(value);
         return std::suspend_always{};
     }
@@ -112,7 +113,7 @@ public:
         return *this;
     }
 
-    auto operator->() const noexcept { return neo::addressof(**this); }
+    auto operator->() const noexcept { return NEO_ADDRESSOF(**this); }
 
     auto&& operator*() const noexcept {
         if (_coro.done() || !_coro.promise().value_ptr) {

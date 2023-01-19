@@ -37,15 +37,21 @@ struct uncopyable {
     uncopyable& operator=(uncopyable&&);
 };
 
+NEO_PRAGMA_WARNING_PUSH();
+// Older GCC doesn't recognize the [[maybe_unused]] on members
+NEO_GNU_PRAGMA(GCC diagnostic ignored "-Wattributes");
+
 /**
  * @brief Mixin that disables all (semi)regular type traits
  */
 class irregular {
-    indestructible  _1;
-    unconstructible _2;
-    immovable       _3;
-    uncopyable      _4;
+    indestructible  _1 [[maybe_unused]];
+    unconstructible _2 [[maybe_unused]];
+    immovable       _3 [[maybe_unused]];
+    uncopyable      _4 [[maybe_unused]];
 };
+
+NEO_PRAGMA_WARNING_POP();
 
 /**
  * @brief Base class that disables all (semi)regular operations, and defines the comma and

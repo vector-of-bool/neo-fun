@@ -1,8 +1,7 @@
 #pragma once
 
 #include "./tag.hpp"
-
-#include <type_traits>
+#include "./type_traits.hpp"
 
 namespace neo {
 
@@ -108,10 +107,10 @@ struct invocable_signature<Ret (&)(Args...) noexcept> : signature_tag<Ret(Args..
 
 // ... and function rvalue references
 template <typename Ret, typename... Args>
-struct invocable_signature<Ret(&&)(Args...)> : signature_tag<Ret(Args...)> {};
+struct invocable_signature<Ret (&&)(Args...)> : signature_tag<Ret(Args...)> {};
 
 template <typename Ret, typename... Args>
-struct invocable_signature<Ret(&&)(Args...) noexcept> : signature_tag<Ret(Args...) noexcept> {};
+struct invocable_signature<Ret (&&)(Args...) noexcept> : signature_tag<Ret(Args...) noexcept> {};
 
 // Base overload for direct signatures:
 template <typename Ret, typename... Args>
@@ -154,8 +153,8 @@ DECL_MEM_INFER(const volatile&&, const volatile&&);
 
 // Overload for member object pointers too
 template <typename T, typename Owner>
-requires std::is_member_object_pointer_v<T Owner::*>  //
-    struct invocable_signature<T Owner::*> : signature_tag<T&(Owner&) noexcept> {};
+    requires neo_is_member_object_pointer(T Owner::*)  //
+struct invocable_signature<T Owner::*> : signature_tag<T&(Owner&) noexcept> {};
 
 namespace detail {
 
@@ -181,18 +180,14 @@ struct callable_object_signature {
 
 // This case catches objects with overloaded 'operator()'
 template <typename Callable>
-requires requires {
-    &std::remove_cvref_t<Callable>::operator();
-}
-struct invocable_signature<Callable> : detail::callable_object_signature<decltype(
-                                           &std::remove_cvref_t<Callable>::operator())>::type {};
+    requires requires { &remove_cvref_t<Callable>::operator(); }
+struct invocable_signature<Callable>
+    : detail::callable_object_signature<decltype(&remove_cvref_t<Callable>::operator())>::type {};
 
 /**
  * @brief A type which has a fixed signature, i.e. an invocable that is not overloaded
  */
 template <typename T>
-concept fixed_invocable = requires {
-    typename invocable_return_type_t<T>;
-};
+concept fixed_invocable = requires { typename invocable_return_type_t<T>; };
 
 }  // namespace neo

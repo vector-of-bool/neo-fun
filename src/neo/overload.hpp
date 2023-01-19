@@ -1,12 +1,14 @@
 #pragma once
 
-#include "./assignable_box.hpp"
 #include "./attrib.hpp"
 #include "./fwd.hpp"
 #include "./invoke.hpp"
 #include "./returns.hpp"
+#include "./scalar_box.hpp"
+#include "./tag.hpp"
 
 #include <type_traits>
+#include <utility>
 
 namespace neo {
 
@@ -14,18 +16,39 @@ namespace detail {
 
 template <typename Func>
 class overload_fn {
-    NEO_NO_UNIQUE_ADDRESS neo::assignable_box<Func> _func;
+    NEO_NO_UNIQUE_ADDRESS neo::scalar_box<Func> _func;
 
 public:
+    constexpr overload_fn() = default;
+
     constexpr explicit overload_fn(Func&& fn) noexcept(noexcept(Func(NEO_FWD(fn))))
         : _func(NEO_FWD(fn)) {}
 
     template <typename... Args>
-    constexpr auto operator()(Args&&... args) NEO_RETURNS(neo::invoke(_func, NEO_FWD(args)...));
+    constexpr auto operator()(Args&&... args)
+        NEO_RETURNS(NEO_INVOKE(_func.get(), NEO_FWD(args)...));
 
     template <typename... Args>
     constexpr auto operator()(Args&&... args) const
-        NEO_RETURNS(neo::invoke(_func.get(), NEO_FWD(args)...));
+        NEO_RETURNS(NEO_INVOKE(_func.get(), NEO_FWD(args)...));
+};
+
+template <typename Func>
+    requires(not neo_is_member_pointer(remove_cvref_t<Func>))
+class overload_fn<Func> {
+    NEO_NO_UNIQUE_ADDRESS neo::scalar_box<Func> _func;
+
+public:
+    constexpr overload_fn() = default;
+
+    constexpr explicit overload_fn(Func&& fn) noexcept(noexcept(Func(NEO_FWD(fn))))
+        : _func(NEO_FWD(fn)) {}
+
+    template <typename... Args>
+    constexpr auto operator()(Args&&... args) NEO_RETURNS(_func.get()(NEO_FWD(args)...));
+
+    template <typename... Args>
+    constexpr auto operator()(Args&&... args) const NEO_RETURNS(_func.get()(NEO_FWD(args)...));
 };
 
 }  // namespace detail
@@ -65,47 +88,50 @@ template <typename Fn, typename... Tail>
 struct ordered_overload_impl<Fn, Tail...> : ordered_overload_impl<Tail...> {
     using base_type = ordered_overload_impl<Tail...>;
 
-    NEO_NO_UNIQUE_ADDRESS neo::assignable_box<Fn> _my_fn;
+    NEO_NO_UNIQUE_ADDRESS neo::scalar_box<Fn> _my_fn;
 
     // Default constructor
     constexpr ordered_overload_impl() = default;
 
     // Construct this invocable, and its parent
     constexpr explicit ordered_overload_impl(Fn&& fn, Tail&&... tail) noexcept(
-        std::is_nothrow_constructible_v<base_type, Tail...>and
-            std::is_nothrow_constructible_v<Fn, Fn>)
+        nothrow_constructible_from<base_type, Tail...>and nothrow_constructible_from<Fn, Fn>)
         : base_type(NEO_FWD(tail)...)
         , _my_fn(NEO_FWD(fn)) {}
 
     // clang-format off
     template <typename... Args>
     constexpr decltype(auto) operator()(Args&&... args) const
-        noexcept(neo::invocable2<const Fn&, Args&&...>
-                     ? std::is_nothrow_invocable_v<const Fn&, Args&&...>
-                     : std::is_nothrow_invocable_v<const base_type&, Args&&...>)
+        noexcept(nothrow_invocable<const Fn&, Args&&...>)
         requires neo::invocable2<const Fn&, Args&&...>
-              or neo::invocable2<const base_type&, Args&&...>
     {
-        if constexpr (neo::invocable2<const Fn&, Args&&...>) {
-            return neo::invoke(_my_fn.get(), NEO_FWD(args)...);
-        } else {
-            return base_type::operator()(NEO_FWD(args)...);
-        }
+        return NEO_INVOKE(_my_fn.get(), NEO_FWD(args)...);
+    }
+
+    template <typename... Args>
+    constexpr decltype(auto) operator()(Args&&... args) const
+        noexcept(nothrow_invocable<base_type&, Args&&...>)
+        requires (not neo::invocable2<Fn&, Args&&...>)
+             and neo::invocable2<base_type&, Args&&...>
+    {
+        return base_type::operator()(NEO_FWD(args)...);
     }
 
     template <typename... Args>
     constexpr decltype(auto) operator()(Args&&... args)
-        noexcept(neo::invocable2<Fn&, Args&&...>
-                     ? std::is_nothrow_invocable_v<Fn&, Args&&...>
-                     : std::is_nothrow_invocable_v<base_type&, Args&&...>)
+        noexcept(nothrow_invocable<Fn&, Args&&...>)
         requires neo::invocable2<Fn&, Args&&...>
-              or neo::invocable2<base_type&, Args&&...>
     {
-        if constexpr (neo::invocable2<Fn&, Args&&...>) {
-            return neo::invoke(_my_fn.get(), NEO_FWD(args)...);
-        } else {
-            return base_type::operator()(NEO_FWD(args)...);
-        }
+        return NEO_INVOKE(_my_fn.get(), NEO_FWD(args)...);
+    }
+
+    template <typename... Args>
+    constexpr decltype(auto) operator()(Args&&... args)
+        noexcept(nothrow_invocable<base_type&, Args&&...>)
+        requires (not neo::invocable2<Fn&, Args&&...>)
+             and neo::invocable2<base_type&, Args&&...>
+    {
+        return base_type::operator()(NEO_FWD(args)...);
     }
     // clang-format on
 };

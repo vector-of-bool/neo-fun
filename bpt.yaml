@@ -1,5 +1,5 @@
 name: neo-fun
-version: 0.12.0
+version: 0.13.0
 test-dependencies:
   - catch2@2.13.7 using main
 readme: README.md

@@ -20,7 +20,7 @@ struct make_weakly_incrementable : semiregular {
 template <typename Reference>
 struct make_indirectly_readable {
     Reference operator*() const;
-    using value_type = std::remove_cvref_t<Reference>;
+    using value_type = remove_cvref_t<Reference>;
 };
 
 template <typename Derived>
@@ -98,7 +98,7 @@ struct contiguous_iterator : make_incrementable<contiguous_iterator<T>>,
 
     T operator[](int) const;
 
-    std::remove_reference_t<T>* operator->() const;
+    remove_reference_t<T>* operator->() const;
 };
 
 template <typename Out>
@@ -160,9 +160,20 @@ struct sized_input_range : sized_range<input_iterator<T>> {};
 template <typename T = pathological&>
 struct output_range : range<output_iterator<T>> {};
 
+template <typename T = pathological&>
+struct view : range<input_iterator<T>> {
+    view();
+    view(const view&);
+    view& operator=(const view&);
+    ~view();
+};
+
 }  // namespace neo::arch
 
 template <typename It, typename Se>
 inline constexpr bool std::ranges::enable_borrowed_range<neo::arch::borrowed_range<It, Se>> = true;
+
+template <typename T>
+inline constexpr bool std::ranges::enable_view<neo::arch::view<T>> = true;
 
 NEO_PRAGMA_WARNING_POP();

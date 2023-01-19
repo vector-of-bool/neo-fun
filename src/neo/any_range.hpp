@@ -5,7 +5,9 @@
 #include "./any_iterator.hpp"
 #include "./assert.hpp"
 #include "./fwd.hpp"
+#include "./meta.hpp"
 #include "./ref_member.hpp"
+#include "./type_traits.hpp"
 #include "./unref.hpp"
 
 #include <memory>
@@ -20,9 +22,8 @@ template <typename Ref, typename Category>
 class erased_range_base {
 private:
     using iterator = any_iterator<Ref, Category>;
-    using sentinel = std::conditional_t<std::derived_from<Category, std::forward_iterator_tag>,
-                                        iterator,
-                                        any_sentinel>;
+    using sentinel
+        = conditional_t<derived_from<Category, std::forward_iterator_tag>, iterator, any_sentinel>;
     virtual iterator do_begin() = 0;
     virtual sentinel do_end()   = 0;
 
@@ -37,16 +38,16 @@ template <typename Ref, typename Cat, typename Range>
 class erased_range_impl : public erased_range_base<Ref, Cat> {
 private:
     using iterator = any_iterator<Ref, Cat>;
-    using sentinel = std::
-        conditional_t<std::derived_from<Cat, std::forward_iterator_tag>, iterator, any_sentinel>;
+    using sentinel
+        = conditional_t<derived_from<Cat, std::forward_iterator_tag>, iterator, any_sentinel>;
 
     using wrapped_iter = std::ranges::iterator_t<neo::unref_t<Range>>;
     Range _range;
 
     iterator do_begin() override { return std::ranges::begin(neo::unref(_range)); }
     sentinel do_end() override {
-        if constexpr (std::same_as<sentinel, any_sentinel>) {
-            return any_sentinel(neo::tag_v<wrapped_iter>, std::ranges::end(neo::unref(_range)));
+        if constexpr (weak_same_as<sentinel, any_sentinel>) {
+            return any_sentinel(meta::tag<wrapped_iter>{}, std::ranges::end(neo::unref(_range)));
         } else {
             return std::ranges::end(neo::unref(_range));
         }
@@ -72,27 +73,27 @@ class any_range {
             return NEO_FWD(r)._impl;
         } else {
             return std::make_unique<
-                range_detail::erased_range_impl<Ref, Category, std::remove_cvref_t<R>>>(NEO_FWD(r));
+                range_detail::erased_range_impl<Ref, Category, remove_cvref_t<R>>>(NEO_FWD(r));
         }
     }
 
 public:
     using iterator = any_iterator<Ref, Category>;
-    using sentinel = std::conditional_t<std::derived_from<Category, std::forward_iterator_tag>,
-                                        iterator,
-                                        any_sentinel>;
+    using sentinel = conditional_t<std::derived_from<Category, std::forward_iterator_tag>,
+                                   iterator,
+                                   any_sentinel>;
 
-    any_range(any_range&&) noexcept = default;
+    any_range(any_range&&) noexcept            = default;
     any_range& operator=(any_range&&) noexcept = default;
 
     // clang-format off
     template <std::ranges::range R>
-        requires std::convertible_to<std::ranges::iterator_t<R>, iterator>
+        requires convertible_to<std::ranges::iterator_t<R>, iterator>
     any_range(R&& r)
         : _impl(_make_impl(NEO_FWD(r))) {}
 
     template <std::ranges::range R>
-        requires std::convertible_to<std::ranges::iterator_t<R>, iterator>
+        requires convertible_to<std::ranges::iterator_t<R>, iterator>
     any_range(std::reference_wrapper<R> ref) noexcept
         : _impl(_make_impl(ref)) {}
     // clang-format on

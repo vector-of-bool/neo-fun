@@ -1,8 +1,10 @@
 #pragma once
 
 #include "./fwd.hpp"
+#include "./tuple.hpp"
+#include "./type_traits.hpp"
 
-#include <tuple>
+#include <compare>
 #include <type_traits>
 
 namespace neo {
@@ -13,9 +15,9 @@ namespace neo {
  * Equivalent to 'std::exchange(obj, T())'.
  */
 template <typename T>
-constexpr T take(T& obj) noexcept(noexcept(std::remove_cvref_t<T>())) {
+constexpr T take(T& obj) noexcept(noexcept(remove_cvref_t<T>())) {
     auto ret = NEO_MOVE(obj);
-    obj      = std::remove_cvref_t<T>();
+    obj      = remove_cvref_t<T>();
     return ret;
 }
 
@@ -54,16 +56,16 @@ constexpr inline struct logical_and_t {
  */
 template <typename... Items>
 class any_of {
-    std::tuple<const Items&...> _items;
+    nano_tuple<const Items&...> _items;
 
     template <auto Oper, std::size_t... I, typename Other>
     constexpr bool _op_1(std::index_sequence<I...>, logical_or_t, Other&& o) const noexcept {
-        return (Oper(o, std::get<I>(_items)) || ...);
+        return (Oper(o, _items.template get<I>()) || ...);
     }
 
     template <auto Oper, std::size_t... I, typename Other>
     constexpr bool _op_1(std::index_sequence<I...>, logical_and_t, Other&& o) const noexcept {
-        return (Oper(o, std::get<I>(_items)) && ...);
+        return (Oper(o, _items.template get<I>()) && ...);
     }
 
     template <auto Oper, auto Joiner, typename Other>
@@ -73,7 +75,7 @@ class any_of {
 
 public:
     constexpr explicit any_of(const Items&... i) noexcept
-        : _items(i...) {}
+        : _items(neo::tuple_construct_tag{}, i...) {}
 
     template <typename Left>
     constexpr friend bool operator==(Left&& lhs, const any_of& rhs) noexcept {
@@ -94,11 +96,11 @@ explicit any_of(const Items&...) -> any_of<Items...>;
  */
 template <typename... Items>
 class none_of {
-    std::tuple<const Items&...> _items;
+    nano_tuple<const Items&...> _items;
 
     template <auto Oper, std::size_t... I, typename Other>
     constexpr bool _op_1(std::index_sequence<I...>, Other&& o) const noexcept {
-        return (Oper(o, std::get<I>(_items)) || ...);
+        return (Oper(o, _items.template get<I>()) || ...);
     }
 
     template <auto Oper, typename Other>
@@ -108,7 +110,7 @@ class none_of {
 
 public:
     constexpr explicit none_of(const Items&... i) noexcept
-        : _items(i...) {}
+        : _items(tuple_construct_tag{}, i...) {}
 
     template <typename Left>
     constexpr friend bool operator==(Left&& lhs, const none_of& rhs) noexcept {
@@ -131,11 +133,14 @@ explicit none_of(const Items&...) -> none_of<Items...>;
  * @param high The upper value of the range
  */
 template <typename Arg, typename Low, typename High>
-constexpr bool between(Arg&& arg, Low&& low, High&& high) noexcept requires requires {
-    arg <= high;
-    arg >= low;
+constexpr bool between(Arg&& arg, Low&& low, High&& high) noexcept
+    requires requires {
+                 arg <= high;
+                 arg >= low;
+             }
+{
+    return (arg <= high) && (arg >= low);
 }
-{ return (arg <= high) && (arg >= low); }
 
 /**
  * @brief Determine if 'arg' is "between" 'low' and 'high', exclusive.
@@ -145,10 +150,25 @@ constexpr bool between(Arg&& arg, Low&& low, High&& high) noexcept requires requ
  * @param high The upper value of the range
  */
 template <typename Arg, typename Low, typename High>
-constexpr bool properly_between(Arg&& arg, Low&& low, High&& high) noexcept requires requires {
-    arg < high;
-    arg > low;
+constexpr bool properly_between(Arg&& arg, Low&& low, High&& high) noexcept
+    requires requires {
+                 arg < high;
+                 arg > low;
+             }
+{
+    return (arg < high) && (arg > low);
 }
-{ return (arg < high) && (arg > low); }
+
+/**
+ * @brief Add this as a member (with NEO_NO_UNIQUE_ADDRESS) to force your type to become move-only
+ */
+struct move_only_cookie {
+    constexpr move_only_cookie()                              = default;
+    constexpr move_only_cookie(move_only_cookie&&)            = default;
+    constexpr move_only_cookie& operator=(move_only_cookie&&) = default;
+
+    constexpr bool operator==(const move_only_cookie&) const noexcept  = default;
+    constexpr auto operator<=>(const move_only_cookie&) const noexcept = default;
+};
 
 }  // namespace neo

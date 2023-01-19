@@ -138,7 +138,7 @@ concept contiguous_range =
 template <contiguous_range T>
 constexpr auto cdata(T&& t) noexcept {
     using CT      = make_cref_t<T>;
-    using RetType = std::remove_reference_t<range_reference_t<CT>>;
+    using RetType = remove_reference_t<range_reference_t<CT>>;
     return data(static_cast<RetType>(t));
 }
 

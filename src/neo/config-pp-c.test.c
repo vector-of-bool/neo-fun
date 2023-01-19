@@ -35,7 +35,7 @@
 #endif
 
 // Workaround warning about empty translation unit
-void foo() {}
+void foo(void) {}
 
 #ifdef _MSC_VER
 // This is required in order to link in some configurations MSVC

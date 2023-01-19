@@ -9,6 +9,8 @@ bool true_bool  = true;
 
 int global_n = 40;
 
+NEO_CLANG_PRAGMA(clang diagnostic ignored "-Wassume");
+
 TEST_CASE("Test some assertions") {
     int n = global_n;
     neo_assert(invariant, n != 2, "n was two?", n);

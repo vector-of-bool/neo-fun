@@ -13,10 +13,10 @@ namespace awt_detail {
 
 template <typename T>
 concept awaiter = requires(T&& f, std::coroutine_handle<> co) {
-    f.await_ready();
-    f.await_suspend(co);
-    f.await_resume();
-};
+                      f.await_ready();
+                      f.await_suspend(co);
+                      f.await_resume();
+                  };
 
 constexpr inline auto get_awaiter_impl = neo::ordered_overload{
     [](auto&& arg) NEO_RETURNS_L(NEO_FWD(arg).operator co_await()),
@@ -29,7 +29,7 @@ struct rebind {};
 
 // Match a type that has a nested Awt::rebind type alias template
 template <typename Awt, typename T>
-requires requires { typename Awt::template rebind<T>; }
+    requires requires { typename Awt::template rebind<T>; }
 struct rebind<Awt, T> {
     using type = typename Awt::template rebind<T>;
 };
@@ -56,8 +56,8 @@ struct rebind<Awt<First, Ts...>, T> {
  */
 template <typename T>
 concept awaitable = requires(T&& arg) {
-    { awt_detail::get_awaiter_impl(NEO_FWD(arg)) } -> awt_detail::awaiter;
-};
+                        { awt_detail::get_awaiter_impl(NEO_FWD(arg)) } -> awt_detail::awaiter;
+                    };
 
 template <typename T>
 struct awaitable_traits {};
@@ -69,7 +69,7 @@ struct awaitable_traits<T> {
 
     /// Create an awaitable of a new type
     template <typename U>
-    using rebind = typename awt_detail::template rebind<std::remove_cvref_t<T>, U>::type;
+    using rebind = typename awt_detail::template rebind<remove_cvref_t<T>, U>::type;
 };
 
 /// Obtain the awaiter type of the given awaitable type
