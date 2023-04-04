@@ -53,15 +53,29 @@ public:
     constexpr pimpl& operator=(const pimpl& other)
         noexcept(noexcept(NEO_DECLVAL(T&) = NEO_DECLVAL(const T&)))
         requires requires { NEO_DECLVAL(T&) = NEO_DECLVAL(const T&); }
-        { **this = *other; return *this; }
+    {
+        if (_impl) {
+            // We have a pointee. Assign-through.
+            **this = *other;
+        } else {
+            // We don't have a pointee: Copy construct a new impl.
+            _impl = new T(*other);
+            _del  = other._del;
+        }
+        return *this;
+    }
+    // clang-format on
 
     constexpr pimpl& operator=(pimpl&& o) noexcept {
+        if (_impl) {
+            // Delete the prior impl that we were holding
+            _del(_impl);
+        }
         _impl   = o._impl;
         _del    = o._del;
         o._impl = nullptr;
+        return *this;
     }
-
-    // clang-format on
 
     constexpr ~pimpl() {
         if (_impl) {
