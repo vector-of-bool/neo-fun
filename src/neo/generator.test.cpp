@@ -1,3 +1,5 @@
+#if !defined(__GNUC__) || !defined(__SANITIZE_ADDRESS__)  // GCC has an Asan bug for now
+
 #include "./generator.hpp"
 
 #include "./ranges.hpp"
@@ -87,3 +89,5 @@ TEST_CASE("Yield move-only objects") {
     ++it;
     CHECK(it == g.end());
 }
+
+#endif

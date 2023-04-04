@@ -1,3 +1,5 @@
+#if !defined(__GNUC__) || !defined(__SANITIZE_ADDRESS__)  // GCC has an Asan bug for now
+
 #include "./immediate.hpp"
 
 #include "./await.hpp"
@@ -68,3 +70,5 @@ static_assert(std::same_as<void, neo::await_result_t<neo::immediate<void>>>);
 
 using rebound = neo::rebind_awaitable_t<neo::immediate<int>, double>;
 static_assert(std::same_as<rebound, neo::immediate<double>>);
+
+#endif
