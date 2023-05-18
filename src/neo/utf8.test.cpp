@@ -28,6 +28,18 @@ TEST_CASE("Decode some bytes") {
     CHECK(res.size == 2);
     CHECK(res.error() == neo::utf8_errc::invalid_continuation_byte);
 
+    // An overlong sequence
+    str = "\xf0\x82\x82\xac";  // An overlong euro
+    res = neo::next_utf8_codepoint(str.cbegin(), str.cend());
+    CHECK(res.size == 4);
+    CHECK(res.error() == neo::utf8_errc::overlong_encoded);
+
+    // An invalid codepoint
+    str = "\xf4\xbf\xbf\xbf";
+    res = neo::next_utf8_codepoint(str.cbegin(), str.cend());
+    CHECK(res.size == 4);
+    CHECK(res.error() == neo::utf8_errc::invalid_codepoint);
+
     str = "(hello)";
     res = neo::next_utf8_codepoint(str.cbegin(), str.cend());
     CHECK_FALSE(res.error());
@@ -58,3 +70,9 @@ TEST_CASE("View a range of codepoints") {
     CHECK(it->codepoint == 'g');
     CHECK_FALSE(it->error());
 }
+
+// Check compilation with a very non-ideal iterator:
+static_assert(
+    std::same_as<neo::utf8_codepoint,
+                 decltype(neo::next_utf8_codepoint(std::declval<std::istream_iterator<char>>(),
+                                                   std::declval<std::istream_iterator<char>>()))>);
