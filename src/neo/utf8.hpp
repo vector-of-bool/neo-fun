@@ -75,7 +75,8 @@ struct utf8_codepoint {
  * @param stop The end of the UTF-8 stream
  */
 template <std::input_iterator Iter, std::sentinel_for<Iter> Stop>
-constexpr utf8_codepoint next_utf8_codepoint(Iter it, const Stop stop) noexcept(noexcept(++it)) {
+constexpr utf8_codepoint
+next_utf8_codepoint(Iter it, const Stop stop) noexcept(nothrow_advancing_iterator<Iter>) {
     if (it == stop) {
         return utf8_codepoint::make_error(utf8_errc::need_more);
     }
@@ -155,7 +156,8 @@ extern template utf8_codepoint next_utf8_codepoint(const std::byte*, const std::
 // Overload that normalizes all pointer-like iterators into std::byte pointers
 template <std::contiguous_iterator I, std::sized_sentinel_for<I> S>
     requires(sizeof(std::iter_value_t<I>) == 1) and (not neo::weak_same_as<I, const std::byte*>)
-utf8_codepoint next_utf8_codepoint(I iter, S stop) {
+constexpr utf8_codepoint
+    next_utf8_codepoint(I iter, const S stop) noexcept(nothrow_advancing_iterator<I>) {
     auto b = reinterpret_cast<const std::byte*>(std::to_address(iter));
     return neo::next_utf8_codepoint(b, b + (stop - iter));
 }
@@ -177,16 +179,16 @@ constexpr utf8_codepoint next_utf8_codepoint(std::ranges::input_range auto&& rng
  */
 template <typename Range>
 class utf8_range {
-    Range _range;
+    NEO_NO_UNIQUE_ADDRESS scalar_box<Range> _range;
 
-    using _iter_type = decltype(std::cbegin(_range));
-    using _stop_type = decltype(std::cend(_range));
+    using _iter_type = decltype(std::cbegin(_range.get()));
+    using _stop_type = decltype(std::cend(_range.get()));
 
 public:
     constexpr utf8_range() = default;
 
     constexpr explicit utf8_range(Range&& r)
-        : _range{r} {}
+        : _range{NEO_FWD(r)} {}
 
     class iterator : public iterator_facade<iterator> {
         _iter_type _begin{};
@@ -206,6 +208,8 @@ public:
         constexpr utf8_codepoint dereference() const noexcept {
             return next_utf8_codepoint(_iter, _stop);
         }
+
+        constexpr _iter_type base() const noexcept { return _iter; }
 
         constexpr void increment() {
             neo_assert(expects, _iter != _stop, "Advanced the past-the-end utf8_range iterator");
@@ -237,7 +241,9 @@ public:
     };
 
     constexpr iterator begin() const noexcept {
-        return iterator{std::cbegin(_range), std::cbegin(_range), std::cend(_range)};
+        return iterator{std::cbegin(_range.get()),
+                        std::cbegin(_range.get()),
+                        std::cend(_range.get())};
     }
     constexpr typename iterator::sentinel_type end() const noexcept { return {}; }
 };
@@ -246,3 +252,6 @@ template <typename R>
 explicit utf8_range(R&&) -> utf8_range<R>;
 
 }  // namespace neo
+
+template <typename R>
+constexpr inline bool std::ranges::enable_view<neo::utf8_range<R>> = std::ranges::view<R>;
