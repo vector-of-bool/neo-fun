@@ -195,9 +195,22 @@ DECL_TRAIT_CONCEPT(pointer_type, neo_is_pointer);
 #endif
 
 #define DECL_UNARY_TRANSFORM(Name) declUnaryTransform(NEO_CONCAT(__, Name), NEO_CONCAT(Name, _t))
+#if !defined __GNUC__ || defined __clang__
 #define declUnaryTransform(Builtin, Trait)                                                         \
     template <typename T>                                                                          \
     using Trait = NEO_IF_ELSE(NEO_HAS_BUILTIN(Builtin))(Builtin(T))(::std::Trait<T>)
+#else
+// GCC dislikes us using the intrinsics as part of function signatures (it cannot mangle them)
+#define declUnaryTransform(Builtin, Trait)                                                         \
+    namespace detail {                                                                             \
+    template <typename T>                                                                          \
+    struct NEO_CONCAT(Trait, _impl) {                                                              \
+        using type = NEO_IF_ELSE(NEO_HAS_BUILTIN(Builtin))(Builtin(T))(::std::Trait<T>);           \
+    };                                                                                             \
+    }                                                                                              \
+    template <typename T>                                                                          \
+    using Trait = detail::NEO_CONCAT(Trait, _impl)<T>::type
+#endif
 
 DECL_UNARY_TRANSFORM(add_lvalue_reference);
 DECL_UNARY_TRANSFORM(add_pointer);
@@ -222,38 +235,37 @@ template <typename T, typename Target>
 concept alike = weak_same_as<remove_cvref_t<T>, remove_cvref_t<Target>>;
 
 template <typename T, typename Target>
-concept unalike = not
-weak_same_as<remove_cvref_t<T>, remove_cvref_t<Target>>;
+concept unalike = not weak_same_as<remove_cvref_t<T>, remove_cvref_t<Target>>;
 
 namespace detail {
 
 template <typename T>
 constexpr bool integral_v = requires {
-                                requires not neo_is_class(T);
-                                requires weak_same_as<decay_t<T>,
-                                                      bool,
-                                                      char,
-                                                      signed char,
-                                                      unsigned char,
-                                                      wchar_t,
-                                                      char8_t,
-                                                      char16_t,
-                                                      char32_t,
-                                                      short,
-                                                      unsigned short,
-                                                      int,
-                                                      unsigned int,
-                                                      long,
-                                                      unsigned long,
-                                                      long long,
-                                                      unsigned long long>;
-                            };
+    requires not neo_is_class(T);
+    requires weak_same_as<decay_t<T>,
+                          bool,
+                          char,
+                          signed char,
+                          unsigned char,
+                          wchar_t,
+                          char8_t,
+                          char16_t,
+                          char32_t,
+                          short,
+                          unsigned short,
+                          int,
+                          unsigned int,
+                          long,
+                          unsigned long,
+                          long long,
+                          unsigned long long>;
+};
 
 template <typename T>
 constexpr bool floating_point_v = requires {
-                                      requires not neo_is_class(T);
-                                      requires weak_same_as<decay_t<T>, float, double, long double>;
-                                  };
+    requires not neo_is_class(T);
+    requires weak_same_as<decay_t<T>, float, double, long double>;
+};
 
 }  // namespace detail
 
@@ -423,8 +435,8 @@ struct detail::common_type<2> {
     // C++20: Check if we get a type with const_reference binding:
     template <typename T, typename U>
         requires requires {
-                     0 ? NEO_DECLVAL(const_reference_t<T>) : NEO_DECLVAL(const_reference_t<U>);
-                 }
+            0 ? NEO_DECLVAL(const_reference_t<T>) : NEO_DECLVAL(const_reference_t<U>);
+        }
     struct impl_try_basic<T, U> {
         using type = decay_t<decltype(0 ? NEO_DECLVAL(const_reference_t<T>)
                                         : NEO_DECLVAL(const_reference_t<U>))>;
@@ -592,9 +604,9 @@ struct detail::common_reference<2> {
     template <rvalue_reference_type T, rvalue_reference_type U, template <class> class Q>
     // Both must be convertible to the base type:
         requires requires(void (*fn)(remove_reference_t<impl_t<T&, U&, Q>>&&), T t, U u) {
-                     fn(NEO_FWD(t));
-                     fn(NEO_FWD(u));
-                 }
+            fn(NEO_FWD(t));
+            fn(NEO_FWD(u));
+        }
     struct impl_try_simple<T, U, Q> {
         using type = remove_reference_t<impl_t<T&, U&, Q>>&&;
     };
