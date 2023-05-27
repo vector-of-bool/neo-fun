@@ -158,6 +158,8 @@ public:
             out.value("nullopt");
         }
     }
+
+    constexpr T* to_address() const noexcept { return _ptr; }
 };
 
 template <typename T>

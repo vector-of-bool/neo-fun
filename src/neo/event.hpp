@@ -117,9 +117,9 @@ emit_result_t<E> get_default_emit_result(const E& ev)
 template <typename E>
 emit_result_t<E> get_default_emit_result(const E& ev)
     requires requires {
-                 requires !requires { ev.default_emit_result(); };
-                 requires default_initializable<emit_result_t<E>>;
-             }
+        requires !requires { ev.default_emit_result(); };
+        requires default_initializable<emit_result_t<E>>;
+    }
 {
     return emit_result_t<E>();
 }
@@ -188,7 +188,8 @@ private:
     }
 
     // Keep a reference to the prior handler in the thread-local stack
-    opt_ref<scoped_listener<T>> _prev_ref = std::exchange(event_detail::tl_tail_listener<T>, *this);
+    scoped_listener<T>* _prev_ref
+        = std::exchange(event_detail::tl_tail_listener<T>, *this).to_address();
 
 public:
     scoped_listener() = default;
