@@ -1,5 +1,7 @@
 #pragma once
 
+#include "./channel_fwd.hpp"
+
 #include "./attrib.hpp"
 #include "./coroutine.hpp"
 #include "./opt_ref.hpp"
@@ -63,7 +65,7 @@ public:
         _coro.promise().send_value(nullptr);
     }
 
-    typename _types::return_lvalue_reference return_value() const noexcept {
+    typename Traits::return_type return_value() const noexcept {
         return _coro.promise().returned_value();
     }
 
@@ -95,12 +97,13 @@ private:
         : _coro(h) {}
 };
 
-template <typename Yield = void, typename Send = void, typename Return = void>
+template <typename Yield, typename Send, typename Return>
 class channel : public basic_channel<default_channel_traits<Yield, Send, Return>> {
-    using channel::basic_channel::basic_channel;
+    using base_type = basic_channel<default_channel_traits<Yield, Send, Return>>;
+    using base_type::base_type;
 
 public:
-    channel(typename channel::basic_channel&& o) noexcept
+    channel(base_type&& o) noexcept
         : channel::basic_channel(NEO_MOVE(o)) {}
 };
 
@@ -128,11 +131,8 @@ struct default_channel_traits {
     using send_type   = Send;
     using return_type = Return;
 
-    using yield_value_type  = void;
-    using send_value_type   = void;
-    using return_value_type = void;
-
-    using allocator = std::allocator<std::byte>;
+    using yield_value_type = void;
+    using send_value_type  = void;
 };
 
 namespace detail {
@@ -211,12 +211,7 @@ template <typename Traits>
 struct channel_types {
     using yield = yield_send_traits<typename Traits::yield_type, typename Traits::yield_value_type>;
     using send  = yield_send_traits<typename Traits::send_type, typename Traits::send_value_type>;
-
     using return_ = Traits::return_type;
-
-    constexpr static bool returns_void = neo_is_void(return_);
-
-    using return_lvalue_reference = conditional_t<returns_void, void, nonvoid_t<return_>&>;
 };
 
 template <typename ReturnVal>
