@@ -20,9 +20,6 @@ class channel_promise;
 
 }  // namespace detail
 
-template <typename Yield = void, typename Send = void, typename Return = void>
-struct default_channel_traits;
-
 template <typename Traits>
 class basic_channel {
 private:
@@ -33,34 +30,41 @@ private:
 
 public:
     using promise_type = detail::channel_promise<Traits>;
-    using yielded      = _types::yield::presented;
-    using sent         = _types::send::presented;
-    using returned     = _types::return_;
+    using yielded      = _types::yielded;
+    using sent         = _types::sent;
+    using returned     = _types::returns;
 
+    /**
+     * @brief Returns `true` if the channel has co_returned
+     */
     bool done() const noexcept { return _coro.promise().has_returned(); }
-    typename _types::yield::reference current() const noexcept
+    /**
+     * @brief Obtain the most-recently yielded value from the channel.
+     *
+     * The yielded type is a reference derived from the yield type of the channel
+     */
+    yielded current() const noexcept
         requires(not neo_is_void(yielded))
     {
         return static_cast<yielded>(_coro.promise().get_yielded());
     }
 
-    void send(typename _types::send::nonvoid arg)
-        requires(not _types::send::is_void)
+    void send(typename _types::send_param arg)
+        requires(not _types::send_is_void)
     {
         _coro.promise().send_value(NEO_FWD(arg));
     }
 
     template <typename S>
-        requires rvalue_reference_type<sent>
-        and constructible_from<remove_cvref_t<sent>, S&&>
+        requires convertible_to<S, typename _types::send_param>
     void send(S&& arg)
-        requires(not _types::send::is_void)
+        requires(not _types::send_is_void)
     {
         _coro.promise().send_value(arg);
     }
 
     void send()
-        requires(_types::send::is_void)
+        requires(!!_types::send_is_void)
     {
         _coro.promise().send_value(nullptr);
     }
@@ -109,6 +113,7 @@ public:
 
 template <typename C>
 class from_channel {
+    // The wrapped channel
     C _arg;
 
     template <typename, typename>
@@ -137,81 +142,114 @@ struct default_channel_traits {
 
 namespace detail {
 
-struct void_placeholder {
-    constexpr void_placeholder(decltype(nullptr)) noexcept {}
+struct voidish {
+    voidish() = default;
+    constexpr voidish(decltype(nullptr)) noexcept {}
+    constexpr voidish operator*() const noexcept { return {}; }
 };
 
-template <typename T>
-using nonvoid_t = conditional_t<neo_is_void(T), void_placeholder, T>;
+template <bool IsVoid, bool IsReference, bool IsSmartRef>
+struct chan_type_helper;
 
-// Case: Ref is non-void non-reference type and a Value was explicitly provided
-template <typename Ref, typename Value>
-struct yield_send_traits {
-    // The value type of the channel
-    using value = Value;
-    // The reference type of the channel (may be a fancy reference)
-    using reference = Ref;
-    // We present the user with a reference-to-const
-    using presented = const Ref&;
-    using nonvoid   = presented;
-    // The reference type that is used in transit of the value, but not exposed
-    // at the surface API
-    using transit_reference = Ref;
-    // The "optional" of the reference type
-    using opt_reference           = std::optional<Ref>;
-    constexpr static bool is_void = false;
-};
-
-// Case: The type is void
+// Case: Void types
 template <>
-struct yield_send_traits<void, void> {
-    using value     = void;
-    using reference = void;
-    using presented = void;
-    using nonvoid   = decltype(nullptr);
-    struct opt_reference {
-        opt_reference() = default;
-        constexpr opt_reference(decltype(nullptr)) noexcept {}
-    };
-    using transit_reference       = decltype(nullptr);
-    constexpr static bool is_void = true;
+struct chan_type_helper<true, false, false> {
+    template <typename>
+    using present_as = void;
+    template <typename>
+    using forward_as = void;
+    template <typename>
+    using param = decltype(nullptr);
+    template <typename>
+    using transit = voidish;
+    template <typename>
+    using opt = voidish;
 };
 
-// Case: Ref is a reference type, and Value was explicitly provided
-template <reference_type Ref, typename Value>
-    requires(not neo_is_void(Value))
-struct yield_send_traits<Ref, Value> {
-    // Value is given
-    using value = Value;
-    // Ref is a language reference
-    using reference = Ref;
-    // We present as that reference
-    using presented         = reference;
-    using nonvoid           = presented;
-    using transit_reference = Ref&;
-    // We store an optional of the referree
-    using opt_reference           = neo::opt_ref<remove_reference_t<Ref>>;
-    constexpr static bool is_void = false;
+// Case: Language references
+template <>
+struct chan_type_helper<false, true, false> {
+    template <typename T>
+    using present_as = T&;
+    template <typename T>
+    using forward_as = T&&;
+    template <typename T>
+    using param = T;
+    template <typename T>
+    using transit = T&;
+    template <typename T>
+    using opt = opt_ref<remove_reference_t<T>>;
 };
 
-// Common case: No explicit value type
-template <typename Ref>
-struct yield_send_traits<Ref, void> {
-    using value = remove_cvref_t<Ref>;
-    // The reference type in this case is presented by reference collapsing
-    using reference               = Ref&&;
-    using presented               = reference;
-    using nonvoid                 = presented;
-    using transit_reference       = reference&;
-    using opt_reference           = neo::opt_ref<remove_reference_t<Ref>>;
-    constexpr static bool is_void = false;
+// Case: Non-references
+template <>
+struct chan_type_helper<false, false, false> {
+    template <typename T>
+    using present_as = T&;
+    template <typename T>
+    using forward_as = T&&;
+    template <typename T>
+    using param = const T&;
+    template <typename T>
+    using transit = T&;
+    template <typename T>
+    using opt = opt_ref<T>;
+};
+
+// Case: Fancy references
+template <>
+struct chan_type_helper<false, false, true> {
+    template <typename T>
+    using present_as = T;
+    template <typename T>
+    using forward_as = T;
+    template <typename T>
+    using param = T;
+    template <typename T>
+    using transit = T;
+    template <typename T>
+    using opt = std::optional<T>;
 };
 
 template <typename Traits>
 struct channel_types {
-    using yield = yield_send_traits<typename Traits::yield_type, typename Traits::yield_value_type>;
-    using send  = yield_send_traits<typename Traits::send_type, typename Traits::send_value_type>;
-    using return_ = Traits::return_type;
+    using yield_arg = Traits::yield_type;
+    using send_arg  = Traits::send_type;
+    enum {
+        yield_is_smartref = not neo_is_void(typename Traits::yield_value_type),
+        send_is_smartref  = not neo_is_void(typename Traits::send_value_type),
+        yield_is_void     = neo_is_void(yield_arg),
+        send_is_void      = neo_is_void(send_arg),
+        yield_is_ref      = neo_is_reference(yield_arg),
+        send_is_ref       = neo_is_reference(send_arg),
+    };
+
+    using _yield = chan_type_helper<yield_is_void, yield_is_ref, yield_is_smartref>;
+    using _send  = chan_type_helper<send_is_void, send_is_ref, send_is_smartref>;
+
+    // The forwarding-reference type (returned from co_yield and take())
+    using yield_fwd = _yield::template forward_as<yield_arg>;
+    using send_fwd  = _send::template forward_as<send_arg>;
+
+    // The types presented on the API surface
+    // yielded is an lvalue-reference, since it can be requested multiple times
+    using yielded = _yield::template present_as<yield_arg>;
+    // co_yield always forwards, since it cannot be requested more than once
+    using sent = send_fwd;
+
+    // The parameter types (for send_value and yield_value, guards against void too)
+    using yield_param = _yield::template param<yield_arg>;
+    using send_param  = _send::template param<send_arg>;
+
+    // The type of reference stored in-transit
+    using yield_transit = _yield::template transit<yield_arg>;
+    using send_transit  = _send::template transit<send_arg>;
+
+    // The optional-reference type
+    using yield_opt = _yield::template opt<yield_arg>;
+    using send_opt  = _send::template opt<send_arg>;
+
+    using returns = Traits::return_type;
 };
 
 template <typename ReturnVal>
@@ -248,113 +286,134 @@ struct return_part<void> {
 
 template <typename YieldTransit, typename SendTransit>
 struct channel_promise_base {
-    virtual bool         do_send_value(SendTransit) = 0;
-    virtual YieldTransit do_get_yielded() noexcept  = 0;
+    /**
+     * @brief Sends a value and resumes the innermost channel
+     *
+     * @return true If the channel returned
+     * @return false Otherwise
+     */
+    virtual bool do_send_value(SendTransit) = 0;
+    /**
+     * @brief Obtain the yielded value
+     */
+    virtual YieldTransit do_get_yielded() noexcept = 0;
 };
 
 template <typename Traits, typename Types>
-class channel_promise : public channel_promise_base<typename Types::yield::transit_reference,  //
-                                                    typename Types::send::transit_reference>,
-                        public return_part<typename Types::return_> {
+class channel_promise : public channel_promise_base<typename Types::yield_transit,  //
+                                                    typename Types::send_transit>,
+                        public return_part<typename Types::returns> {
+    /// The channel associated with this promise
     using channel_type = basic_channel<Traits>;
-    using handle_type  = std::coroutine_handle<channel_promise>;
-    using types        = channel_types<Traits>;
-    using base_type    = channel_promise_base<typename Types::yield::transit_reference,
-                                           typename Types::send::transit_reference>;
+    /// The coroutine handle type
+    using handle_type = std::coroutine_handle<channel_promise>;
+    /// Types for this channel
+    using types = channel_types<Traits>;
+    /// Base class, used for delegation
+    using base_type
+        = channel_promise_base<typename Types::yield_transit, typename Types::send_transit>;
 
-    NEO_NO_UNIQUE_ADDRESS typename types::yield::opt_reference _yielded;
-    NEO_NO_UNIQUE_ADDRESS typename types::send::opt_reference  _sent;
+    /// The recently yielded value
+    NEO_NO_UNIQUE_ADDRESS typename types::yield_opt _yielded;
+    /// The recently sent value
+    NEO_NO_UNIQUE_ADDRESS typename types::send_opt _sent;
 
-    using yielded = types::yield::presented;
-    using sent    = types::yield::presented;
-
-    bool do_send_value(typename types::send::transit_reference arg) noexcept override final {
-        if (_this_or_inner != this) {
-            bool inner_finished = _this_or_inner->do_send_value(arg);
+    bool do_send_value(typename types::send_transit arg) noexcept override final {
+        if (_inner) {
+            // Delegating to an inner coroutine:
+            bool inner_finished = _inner->do_send_value(arg);
             if (inner_finished) {
+                // The inner channel finished, so now we resume ourself
                 handle().resume();
                 return handle().done();
             }
+            // Not done yet
             return false;
         } else {
+            // We're the leaf channel
             this->_sent = arg;
             handle().resume();
             return handle().done();
         }
     }
-    typename types::yield::transit_reference do_get_yielded() noexcept override final {
-        if constexpr (not types::yield::is_void) {
-            return *_yielded;
-        } else {
-            return 0;
+
+    typename types::yield_transit do_get_yielded() noexcept override final {
+        if (_inner) {
+            // Ask the inner channel:
+            return _inner->do_get_yielded();
         }
+        return *_yielded;
     }
 
-    base_type* _this_or_inner = this;
+    base_type* _inner = nullptr;
 
 public:
+    // Run to the first yield expression first:
     std::suspend_never  initial_suspend() const noexcept { return {}; }
     std::suspend_always final_suspend() const noexcept { return {}; }
+    handle_type         handle() noexcept { return handle_type::from_promise(*this); }
+    void                unhandled_exception() const { throw; }
+    channel_type        get_return_object() noexcept { return channel_type(handle()); }
 
-    handle_type handle() noexcept { return handle_type::from_promise(*this); }
-
-    void unhandled_exception() const { throw; }
-
-    channel_type get_return_object() noexcept { return channel_type(handle()); }
-
+    // Awaiter for regular yield expressions
     struct yield_awaiter {
         channel_promise& self;
 
-        constexpr bool                            await_ready() const noexcept { return false; }
-        constexpr typename types::send::reference await_resume() const noexcept {
-            if constexpr (types::send::is_void) {
-                // Nothing to do/return
-            } else {
-                return static_cast<types::send::reference>(*self._sent);
-            }
+        constexpr bool                 await_ready() const noexcept { return false; }
+        constexpr typename types::sent await_resume() const noexcept {
+            // Return the value that was sent to the coroutine upon resume:
+            self._yielded = {};
+            return static_cast<types::sent>(*self._sent);
         }
 
-        constexpr void await_suspend(auto) const noexcept {}
+        constexpr void await_suspend(auto) const noexcept { self._sent = {}; }
     };
 
-    yield_awaiter yield_value(typename types::yield::nonvoid y) noexcept {
-        _yielded = y;
+    // Yielding a value:
+    yield_awaiter yield_value(typename types::yield_param p) noexcept {
+        _yielded = p;
         return yield_awaiter{*this};
     }
 
-    template <typename Y>
-        requires rvalue_reference_type<yielded> and constructible_from<remove_cvref_t<yielded>, Y&&>
+    // Yielding a value, which can be converted to the yield reference:
+    template <convertible_to<typename types::yield_param> Y>
     yield_awaiter yield_value(Y&& y) noexcept {
         _yielded = y;
         return yield_awaiter{*this};
     }
 
+    // Awaiter for inner channels:
     template <typename Promise>
     struct nested_awaiter {
         channel_promise& self;
-        Promise&         other;
+        // The inner channel that we are waiting for
+        Promise& other;
 
         constexpr bool await_ready() const noexcept { return other.has_returned(); }
-        constexpr void await_suspend(auto) const noexcept { self._this_or_inner = &other; }
+        constexpr void await_suspend(auto) const noexcept { self._inner = &other; }
 
         constexpr decltype(auto) await_resume() const noexcept {
-            self._this_or_inner = &self;
+            self._inner   = nullptr;
+            self._yielded = {};
             return other.returned_value();
         }
     };
 
     template <typename Ch, typename Promise = remove_reference_t<Ch>::promise_type>
-        requires convertible_to<typename Ch::yielded, typename types::yield::reference>
+        requires convertible_to<typename Ch::yielded, typename types::yielded>
     auto yield_value(from_channel<Ch> ch) noexcept {
         Promise& pr = ch._arg._coro.promise();
         return nested_awaiter<Promise>{*this, pr};
     }
 
-    typename types::yield::transit_reference get_yielded() const noexcept {
-        return _this_or_inner->do_get_yielded();
+    typename types::yield_transit get_yielded() const noexcept {
+        if (_inner) {
+            return _inner->do_get_yielded();
+        }
+        return *_yielded;
     }
 
-    void send_value(typename types::send::transit_reference s) { do_send_value(s); }
+    void send_value(typename types::send_transit s) { do_send_value(s); }
 };
 
 }  // namespace detail

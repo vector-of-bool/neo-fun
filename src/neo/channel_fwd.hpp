@@ -60,4 +60,7 @@ class basic_channel;
 template <typename C>
 class from_channel;
 
+template <typename Yield = void, typename Send = void, typename Return = void>
+struct default_channel_traits;
+
 }  // namespace neo
