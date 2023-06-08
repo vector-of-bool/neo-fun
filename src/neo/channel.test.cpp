@@ -12,11 +12,12 @@ channel<int, int> int_chan() {
 
 TEST_CASE("Simple channel") {
     auto ch = int_chan();
-    CHECK(ch.current() == 21);
+    auto io = ch.open();
+    CHECK(io.current() == 21);
     int i = 42;
-    ch.send(i);
-    CHECK(ch.done());
-    ch.return_value();
+    io.send(i);
+    CHECK(io.done());
+    io.return_value();
 }
 
 channel<void, void, int> ret_int_chan() {
@@ -28,10 +29,11 @@ channel<void, void, int> ret_int_chan() {
 
 TEST_CASE("Non-void return") {
     auto ch = ret_int_chan();
-    REQUIRE_FALSE(ch.done());
-    ch.send();
-    CHECK(ch.done());
-    CHECK(ch.return_value() == 42);
+    auto io = ch.open();
+    REQUIRE_FALSE(io.done());
+    io.send();
+    CHECK(io.done());
+    CHECK(io.return_value() == 42);
 }
 
 static int                global_int = 0;
@@ -45,10 +47,11 @@ channel<void, void, int&> ret_int2_chan() {
 
 TEST_CASE("Reference return") {
     auto ch = ret_int2_chan();
-    REQUIRE_FALSE(ch.done());
-    ch.send();
-    CHECK(ch.done());
-    CHECK(ch.return_value() == 42);
+    auto io = ch.open();
+    REQUIRE_FALSE(io.done());
+    io.send();
+    CHECK(io.done());
+    CHECK(io.return_value() == 42);
 }
 
 channel<int&, void, int&> ret_int3_chan() {
@@ -62,11 +65,12 @@ channel<int&, void, int&> ret_int3_chan() {
 
 TEST_CASE("Reference yield") {
     auto ch = ret_int3_chan();
-    REQUIRE_FALSE(ch.done());
-    CHECK(ch.current() == 71);
-    ch.send();
-    CHECK(ch.done());
-    CHECK(ch.return_value() == 42);
+    auto io = ch.open();
+    REQUIRE_FALSE(io.done());
+    CHECK(io.current() == 71);
+    io.send();
+    CHECK(io.done());
+    CHECK(io.return_value() == 42);
 }
 
 channel<int> inner() { co_yield 31; }
@@ -76,15 +80,16 @@ channel<int> outer() {
 }
 
 TEST_CASE("Nested yield") {
-    auto ch = outer();
-    REQUIRE_FALSE(ch.done());
     global_int = 94;
-    CHECK(ch.current() == 94);
-    ch.send();
-    REQUIRE_FALSE(ch.done());
-    CHECK(ch.current() == 31);
-    ch.send();
-    CHECK(ch.done());
+    auto ch    = outer();
+    auto io    = ch.open();
+    REQUIRE_FALSE(io.done());
+    CHECK(io.current() == 94);
+    io.send();
+    REQUIRE_FALSE(io.done());
+    CHECK(io.current() == 31);
+    io.send();
+    CHECK(io.done());
 }
 
 channel<int, void, std::string> inner_with_str() {
@@ -99,16 +104,134 @@ channel<int> outer2() {
 
 TEST_CASE("Nested yield with return") {
     auto ch = outer2();
-    REQUIRE_FALSE(ch.done());
+    auto io = ch.open();
+    REQUIRE_FALSE(io.done());
     global_int = 94;
-    CHECK(ch.current() == 94);
-    ch.send();
-    REQUIRE_FALSE(ch.done());
-    CHECK(ch.current() == 31);
-    REQUIRE_FALSE(ch.done());
-    ch.send();
-    CHECK(ch.current() == 5);
-    REQUIRE_FALSE(ch.done());
-    ch.send();
-    CHECK(ch.done());
+    CHECK(io.current() == 94);
+    io.send();
+    REQUIRE_FALSE(io.done());
+    CHECK(io.current() == 31);
+    REQUIRE_FALSE(io.done());
+    io.send();
+    CHECK(io.current() == 5);
+    REQUIRE_FALSE(io.done());
+    io.send();
+    CHECK(io.done());
+}
+
+channel<std::string, std::string, std::string> my_chan() {
+    decltype(auto) s = co_yield "Hello";
+    static_assert(neo::same_as<decltype(s), std::string>);
+    CHECK(s == "world!");
+    co_return "the end";
+}
+
+TEST_CASE("Nontrivial objects") {
+    auto ch = my_chan();
+    auto io = ch.open();
+    REQUIRE_FALSE(io.done());
+    CHECK(io.current() == "Hello");
+    CHECK(io.current() == "Hello");  // Check again to be sure it isn't moved-from
+    io.send("world!");
+    REQUIRE(io.done());
+    CHECK(io.return_value() == "the end");
+    CHECK(io.return_value() == "the end");
+}
+
+channel<std::string, std::string, std::string> throwing_channel(int) {
+    const auto s = co_yield "Howdy!";
+    throw std::runtime_error("fail");
+    co_return "hi";
+}
+
+TEST_CASE("Throw an error") {
+    auto ch = throwing_channel(3);
+    auto io = ch.open();
+    REQUIRE_FALSE(io.done());
+    CHECK_THROWS_AS(io.send("boo"), std::runtime_error);
+    CHECK(io.done());
+}
+
+    channel<void, void, std::string> throwing_channel2(int) {
+        throw std::runtime_error("fail");
+        co_return "hi";
+    }
+
+TEST_CASE("Throw an error 2") {
+    auto ch = throwing_channel2(3);
+    CHECK_THROWS_AS(ch.open(), std::runtime_error);
+}
+
+channel<> maybe_throw(bool do_throw) {
+    if (do_throw) {
+        throw std::runtime_error("no");
+    }
+    co_return;
+}
+channel<> inner_loop() {
+    std::vector<int> vec(1024);
+    co_yield ~maybe_throw(false);
+    co_yield ~maybe_throw(true);
+    co_yield ~maybe_throw(false);
+}
+
+channel<> outer_loop() {
+    auto ch = inner_loop();
+    auto io = ch.open();
+    io.send();
+    io.send();
+    co_return;
+}
+
+TEST_CASE("Throw during suspend") {
+    auto ch = outer_loop();
+    CHECK_THROWS_AS(ch.open(), std::runtime_error);
+}
+
+channel<int, int> deep_channel(int layers) {
+    if (layers == 0) {
+        int got = co_yield 42;
+        CHECK(got == 1729);
+    } else {
+        co_yield layers;
+        co_yield ~deep_channel(layers - 1);
+        co_yield layers;
+    }
+}
+
+TEST_CASE("Deep resume") {
+    const int nlayers = 4096;
+    auto      ch      = deep_channel(nlayers);
+    auto      io      = ch.open();
+    for (int n = nlayers; n > 0; --n) {
+        REQUIRE_FALSE(io.done());
+        CHECK(io.current() == n);
+        io.send(-12);
+    }
+    CHECK(io.current() == 42);
+    io.send(1729);
+    for (int n = 1; n <= nlayers; ++n) {
+        REQUIRE_FALSE(io.done());
+        CHECK(io.current() == n);
+        io.send(-2);
+    }
+    CHECK(io.done());
+}
+
+channel<void, void, int> deep_return(int n, int top) {
+    if (n == 0) {
+        co_return top;
+    }
+    co_return co_yield ~deep_return(n - 1, top);
+}
+
+TEST_CASE("Deep return") {
+    auto ch = deep_return(2, 52);
+    auto io = ch.open();
+    CHECK(io.return_value() == 52);
+}
+
+neo::channel<int&> integer_mrefs() {
+    int n = 0;
+    co_yield n;
 }

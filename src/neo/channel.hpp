@@ -1,90 +1,57 @@
 #pragma once
 
-#include "./channel_fwd.hpp"
+#include <neo/channel_fwd.hpp>
 
-#include "./attrib.hpp"
-#include "./coroutine.hpp"
-#include "./opt_ref.hpp"
-#include "./optional.hpp"
-#include "./type_traits.hpp"
+#include <neo/attrib.hpp>
+#include <neo/opt_ref.hpp>
+#include <neo/optional.hpp>
+#include <neo/type_traits.hpp>
+
+#include <coroutine>
 
 namespace neo {
 
-namespace detail {
+template <typename Yield, typename Send, typename Return>
+class channel {
+public:
+    using promise_type = _channel_detail::promise<Yield, Send, Return>;
+    using send_type    = Send;
+    using yield_type   = Yield;
+    using return_type  = Return;
 
-template <typename Traits>
-struct channel_types;
+    using pipe_type = channel_pipe<Yield, Send, Return>;
 
-template <typename Traits, typename Types = channel_types<Traits>>
-class channel_promise;
-
-}  // namespace detail
-
-template <typename Traits>
-class basic_channel {
 private:
-    using _types = detail::channel_types<Traits>;
+    template <typename, typename, typename>
+    friend class _channel_detail::promise;
 
-    template <typename, typename>
-    friend class detail::channel_promise;
+    template <typename>
+    friend class from_channel;
+
+    using handle_type = std::coroutine_handle<promise_type>;
 
 public:
-    using promise_type = detail::channel_promise<Traits>;
-    using yielded      = _types::yielded;
-    using sent         = _types::sent;
-    using returned     = _types::returns;
-
-    /**
-     * @brief Returns `true` if the channel has co_returned
-     */
-    bool done() const noexcept { return _coro.promise().has_returned(); }
-    /**
-     * @brief Obtain the most-recently yielded value from the channel.
-     *
-     * The yielded type is a reference derived from the yield type of the channel
-     */
-    yielded current() const noexcept
-        requires(not neo_is_void(yielded))
-    {
-        return static_cast<yielded>(_coro.promise().get_yielded());
+    pipe_type open() {
+        // Initiate the channel:
+        _coro.resume();
+        return pipe_type(_coro);
     }
 
-    void send(typename _types::send_param arg)
-        requires(not _types::send_is_void)
-    {
-        _coro.promise().send_value(NEO_FWD(arg));
-    }
-
-    template <typename S>
-        requires convertible_to<S, typename _types::send_param>
-    void send(S&& arg)
-        requires(not _types::send_is_void)
-    {
-        _coro.promise().send_value(arg);
-    }
-
-    void send()
-        requires(!!_types::send_is_void)
-    {
-        _coro.promise().send_value(nullptr);
-    }
-
-    typename Traits::return_type return_value() const noexcept {
-        return _coro.promise().returned_value();
-    }
-
-    ~basic_channel() {
+    // Destroy
+    NEO_CONSTEXPR_DESTRUCTOR ~channel() {
         if (_coro) {
             _coro.destroy();
         }
     }
 
-    basic_channel(basic_channel&& o) noexcept
+    // Move-construct
+    constexpr channel(channel&& o) noexcept
         : _coro(o._coro) {
         o._coro = nullptr;
     }
 
-    basic_channel& operator=(basic_channel&& o) noexcept {
+    // Move-assign
+    constexpr channel& operator=(channel&& o) noexcept {
         if (_coro) {
             _coro.destroy();
         }
@@ -93,329 +60,403 @@ public:
         return *this;
     }
 
-private:
-    using _handle_type = std::coroutine_handle<promise_type>;
-    _handle_type _coro;
+    constexpr from_channel<channel> operator~() noexcept;
 
-    explicit basic_channel(_handle_type h) noexcept
+private:
+    handle_type _coro;
+
+    constexpr explicit channel(handle_type h) noexcept
         : _coro(h) {}
 };
 
 template <typename Yield, typename Send, typename Return>
-class channel : public basic_channel<default_channel_traits<Yield, Send, Return>> {
-    using base_type = basic_channel<default_channel_traits<Yield, Send, Return>>;
-    using base_type::base_type;
+class channel_pipe {
+    using promise     = _channel_detail::promise<Yield, Send, Return>;
+    using handle_type = std::coroutine_handle<promise>;
+    handle_type _coro;
+
+    friend class channel<Yield, Send, Return>;
+
+    explicit channel_pipe(handle_type co)
+        : _coro(co) {}
 
 public:
-    channel(base_type&& o) noexcept
-        : channel::basic_channel(NEO_MOVE(o)) {}
+    using send_type   = Send;
+    using yield_type  = Yield;
+    using return_type = Return;
+    using send_put    = promise::send_put;
+
+    /**
+     * @brief Returns `true` if the channel has co_returned
+     */
+    constexpr bool done() const noexcept { return _coro.promise().has_returned(); }
+
+    /**
+     * @brief Obtain the most-recently yielded value from the channel.
+     *
+     * This function will always return an lvalue-reference. Use take_current()
+     * to obtain the value from the coroutine casted to the true yield type.
+     */
+    constexpr add_lvalue_reference_t<yield_type> current() const noexcept {
+        return _coro.promise().get_yielded();
+    }
+
+    /**
+     * @brief Take the current object yielded by the channel.
+     *
+     * @return _types::yield_backward
+     */
+    constexpr yield_type take_current() noexcept {
+        return static_cast<yield_type>(_coro.promise().get_yielded());
+    }
+
+    /**
+     * @brief Send a value. This is the main overload
+     *
+     * The type of the parameter depends on the template parameter for sending.
+     * If Send is void, this function is not available.
+     *
+     * @param arg The value to send
+     */
+    constexpr void send(send_put arg)
+        requires(not neo_is_void(send_type))
+    {
+        _coro.promise().send_value(NEO_FWD(arg));
+    }
+
+    /**
+     * @brief Send a value with a possible conversion.
+     *
+     * @note This overload is only visible if Send IS NOT an lvalue-reference type.
+     *
+     * If Send is an lvalue reference, then Send&& will be an lvalue reference, and the requires
+     * constraint on this function will fail.
+     *
+     * This will always accept a reference-to-const of the underlying type, which
+     * results in allowing conversions to the yielded type
+     *
+     * @param y
+     * @return yield_awaiter<remove_cvref_t<yield_forward>>
+     */
+    constexpr void send(const_reference_t<send_put> arg)
+        requires(not void_type<send_type>)
+        // Require that we are not sending lvalue-references:
+        and rvalue_reference_type<add_rvalue_reference_t<send_type>>
+        // Require that we can construct a send value from the const-reference:
+        and convertible_to<const_reference_t<send_type>, remove_cvref_t<send_type>>
+    {
+        remove_cvref_t<send_put> x = NEO_FWD(arg);
+        _coro.promise().send_value(NEO_FWD(x));
+    }
+
+    /**
+     * @brief Send a void value (resumes the coroutine channel)
+     *
+     * This overload is only visible if Send is `void`
+     */
+    constexpr void send()
+        requires void_type<send_type>
+    {
+        _coro.promise().send_value(nullptr);
+    }
+
+    /**
+     * @brief Obtain the final return value from the coroutine.
+     *
+     * If the Return type is void, this function returns void. Otherwise,
+     * this function will always return an lvalue-reference.
+     */
+    constexpr add_lvalue_reference_t<return_type> return_value() const noexcept {
+        return _coro.promise().get_returned();
+    }
+
+    /**
+     * @brief Take the final return value from the coroutine.
+     *
+     * This returns exactly yield_type, which may be an rvalue
+     */
+    constexpr return_type take_return_value() noexcept {
+        return _coro.promise().take_return_value();
+    }
 };
 
 template <typename C>
 class from_channel {
-    // The wrapped channel
-    C _arg;
+    // The wrapped channel coroutine
+    typename remove_cvref_t<C>::handle_type _coro;
 
+    template <typename, typename, typename>
+    friend class _channel_detail::promise;
     template <typename, typename>
-    friend class detail::channel_promise;
+    friend struct _channel_detail::promise_yield_send;
 
 public:
-    explicit from_channel(C&& c) noexcept
-        : _arg(NEO_FWD(c)) {}
-
-    using yielded = remove_cvref_t<C>::yielded;
-    using sent    = remove_cvref_t<C>::sent;
+    explicit from_channel(const C& c) noexcept
+        : _coro(c._coro) {}
 };
 
 template <typename C>
-explicit from_channel(C&&) -> from_channel<C>;
+explicit from_channel(C const&) -> from_channel<C>;
 
-template <typename Yield, typename Send, typename Return>
-struct default_channel_traits {
-    using yield_type  = Yield;
-    using send_type   = Send;
-    using return_type = Return;
+template <typename Y, typename S, typename R>
+constexpr from_channel<channel<Y, S, R>> channel<Y, S, R>::operator~() noexcept {
+    return from_channel(*this);
+}
 
-    using yield_value_type = void;
-    using send_value_type  = void;
-};
-
-namespace detail {
-
-struct voidish {
-    voidish() = default;
-    constexpr voidish(decltype(nullptr)) noexcept {}
-    constexpr voidish operator*() const noexcept { return {}; }
-};
-
-template <bool IsVoid, bool IsReference, bool IsSmartRef>
-struct chan_type_helper;
-
-// Case: Void types
-template <>
-struct chan_type_helper<true, false, false> {
-    template <typename>
-    using present_as = void;
-    template <typename>
-    using forward_as = void;
-    template <typename>
-    using param = decltype(nullptr);
-    template <typename>
-    using transit = voidish;
-    template <typename>
-    using opt = voidish;
-};
-
-// Case: Language references
-template <>
-struct chan_type_helper<false, true, false> {
-    template <typename T>
-    using present_as = T&;
-    template <typename T>
-    using forward_as = T&&;
-    template <typename T>
-    using param = T;
-    template <typename T>
-    using transit = T&;
-    template <typename T>
-    using opt = opt_ref<remove_reference_t<T>>;
-};
-
-// Case: Non-references
-template <>
-struct chan_type_helper<false, false, false> {
-    template <typename T>
-    using present_as = T&;
-    template <typename T>
-    using forward_as = T&&;
-    template <typename T>
-    using param = const T&;
-    template <typename T>
-    using transit = T&;
-    template <typename T>
-    using opt = opt_ref<T>;
-};
-
-// Case: Fancy references
-template <>
-struct chan_type_helper<false, false, true> {
-    template <typename T>
-    using present_as = T;
-    template <typename T>
-    using forward_as = T;
-    template <typename T>
-    using param = T;
-    template <typename T>
-    using transit = T;
-    template <typename T>
-    using opt = std::optional<T>;
-};
-
-template <typename Traits>
-struct channel_types {
-    using yield_arg = Traits::yield_type;
-    using send_arg  = Traits::send_type;
-    enum {
-        yield_is_smartref = not neo_is_void(typename Traits::yield_value_type),
-        send_is_smartref  = not neo_is_void(typename Traits::send_value_type),
-        yield_is_void     = neo_is_void(yield_arg),
-        send_is_void      = neo_is_void(send_arg),
-        yield_is_ref      = neo_is_reference(yield_arg),
-        send_is_ref       = neo_is_reference(send_arg),
-    };
-
-    using _yield = chan_type_helper<yield_is_void, yield_is_ref, yield_is_smartref>;
-    using _send  = chan_type_helper<send_is_void, send_is_ref, send_is_smartref>;
-
-    // The forwarding-reference type (returned from co_yield and take())
-    using yield_fwd = _yield::template forward_as<yield_arg>;
-    using send_fwd  = _send::template forward_as<send_arg>;
-
-    // The types presented on the API surface
-    // yielded is an lvalue-reference, since it can be requested multiple times
-    using yielded = _yield::template present_as<yield_arg>;
-    // co_yield always forwards, since it cannot be requested more than once
-    using sent = send_fwd;
-
-    // The parameter types (for send_value and yield_value, guards against void too)
-    using yield_param = _yield::template param<yield_arg>;
-    using send_param  = _send::template param<send_arg>;
-
-    // The type of reference stored in-transit
-    using yield_transit = _yield::template transit<yield_arg>;
-    using send_transit  = _send::template transit<send_arg>;
-
-    // The optional-reference type
-    using yield_opt = _yield::template opt<yield_arg>;
-    using send_opt  = _send::template opt<send_arg>;
-
-    using returns = Traits::return_type;
-};
+namespace _channel_detail {
 
 template <typename ReturnVal>
-struct return_part {
+struct promise_return {
+    using return_get  = ReturnVal&;
+    using return_take = ReturnVal;
     neo::nano_opt<ReturnVal> _return_value;
+    bool                     _did_throw = false;
     template <neo::convertible_to<ReturnVal> U>
     constexpr void return_value(U&& arg) noexcept(nothrow_constructible_from<ReturnVal, U>) {
         _return_value.emplace(NEO_MOVE(arg));
     }
-    constexpr bool       has_returned() const noexcept { return _return_value.has_value(); }
-    constexpr ReturnVal& returned_value() noexcept { return _return_value.get(); }
+    constexpr bool has_returned() const noexcept { return _return_value.has_value() or _did_throw; }
+    constexpr ReturnVal& get_returned() noexcept { return _return_value.get(); }
+    constexpr ReturnVal  take_return_value() noexcept { return NEO_MOVE(_return_value.get()); }
 };
 
 template <reference_type ReturnRef>
-struct return_part<ReturnRef> {
+struct promise_return<ReturnRef> {
+    using return_get  = ReturnRef&;
+    using return_take = ReturnRef&&;
     neo::opt_ref<remove_reference_t<ReturnRef>> _return_value;
+    bool                                        _did_throw = false;
     template <neo::convertible_to<ReturnRef> U>
     constexpr void return_value(U&& arg) noexcept(nothrow_constructible_from<ReturnRef, U>) {
         _return_value = arg;
     }
-    constexpr bool      has_returned() const noexcept { return !!_return_value; }
-    constexpr ReturnRef returned_value() const noexcept {
-        return static_cast<ReturnRef>(*_return_value);
+    constexpr bool       has_returned() const noexcept { return !!_return_value or _did_throw; }
+    constexpr return_get get_returned() const noexcept {
+        return static_cast<return_get>(*_return_value);
+    }
+    constexpr return_take take_return_value() const noexcept {
+        return static_cast<return_take>(*_return_value);
     }
 };
 
 template <>
-struct return_part<void> {
+struct promise_return<void> {
     bool           _did_return = false;
+    bool           _did_throw  = false;
     constexpr void return_void() noexcept { _did_return = true; }
-    constexpr bool has_returned() const noexcept { return _did_return; }
-    constexpr void returned_value() noexcept {}
+    constexpr bool has_returned() const noexcept { return _did_return or _did_throw; }
+    constexpr void get_returned() noexcept {}
+    constexpr void take_return_value() noexcept {}
+    using return_get  = void;
+    using return_take = void;
 };
 
-template <typename YieldTransit, typename SendTransit>
-struct channel_promise_base {
+template <typename T>
+struct channel_box {
+    using put_type  = T&&;
+    using get_type  = T&;
+    using take_type = T;
+
+    remove_reference_t<T>* _ptr = nullptr;
+
+    constexpr void      put(put_type p) { _ptr = NEO_ADDRESSOF(p); }
+    constexpr get_type  get() const noexcept { return static_cast<get_type>(*_ptr); }
+    constexpr take_type take() const noexcept { return static_cast<take_type>(*_ptr); }
+};
+
+template <>
+struct channel_box<void> {
+    using put_type  = decltype(nullptr);
+    using get_type  = void;
+    using take_type = void;
+
+    constexpr void put(put_type) {}
+    constexpr void get() const noexcept {}
+    constexpr void take() const noexcept {}
+};
+
+template <>
+struct channel_box<const void> : channel_box<void> {};
+
+template <typename Yield, typename Send>
+struct promise_yield_send {
+    using yield_box = channel_box<Yield>;
+    using send_box  = channel_box<Send>;
+    using yield_put = yield_box::put_type;
+    using yield_get = yield_box::get_type;
+    using send_put  = send_box::put_type;
+
+    virtual std::coroutine_handle<> do_get_handle() noexcept = 0;
+
+    NEO_NO_UNIQUE_ADDRESS yield_box _yield_box;
+    NEO_NO_UNIQUE_ADDRESS send_box  _send_box;
+
+    // In the beginning, we believe that we are the leaf and the root channel in the chain:
+    promise_yield_send* _leaf   = this;
+    promise_yield_send* _root   = this;
+    promise_yield_send* _parent = nullptr;
+    // The coroutine to resume when we return (may later be updated to be the parent channel):
+    std::coroutine_handle<> _then_resume = std::noop_coroutine();
+
+    void connect_leaf(promise_yield_send* leaf) {
+        _leaf        = leaf;
+        _leaf->_root = this;
+    }
+
+    // Awaiter for inner channels:
+    template <typename Promise, typename Ret>
+    struct nested_awaiter {
+        promise_yield_send& self;
+        // The inner channel that we are waiting for
+        Promise& child;
+
+        constexpr bool await_ready() const noexcept { return child.has_returned(); }
+        constexpr void await_suspend(std::coroutine_handle<> this_co) const noexcept {
+            // The child knows who the correct leaf is. It may be itself, or a descendent thereof.
+            // auto leaf = child._leaf;
+            self._root->connect_leaf(child._leaf);
+            child._parent = &self;
+            // child._leaf->connect_root(self._root);
+            // // Tell the leaf who we believe the root to be.
+            // // (This may be incorrect, but our parent will correct it later.)
+            // leaf->_root = self._root;
+            // // Tell the root who the new leaf is:
+            // self._root->_leaf = leaf;
+            // Tell the child that it should resume us when it is done:
+            child._then_resume = this_co;
+        }
+
+        constexpr Ret await_resume() const noexcept {
+            // // We have become the leaf again:
+            // // self._leaf = &self;
+            // // A parent channel may have updated the root on the child.
+            // // Inherit that knowledge now:
+            // self._root = child._root;
+            // // Tell the root that we are the new leaf:
+            // self._root->_leaf = &self;
+            self._root->connect_leaf(&self);
+            return child.take_return_value();
+        }
+    };
+
+    template <typename Ch,
+              derived_from<promise_yield_send> Promise = remove_reference_t<Ch>::promise_type>
+    constexpr auto yield_value(from_channel<Ch> ch) {
+        ch._coro.resume();  // Start up
+        Promise& pr = ch._coro.promise();
+        return nested_awaiter<Promise, typename remove_reference_t<Ch>::return_type>{*this, pr};
+    }
+
+    struct parent_resumer {
+        promise_yield_send& self;
+
+        constexpr bool                    await_ready() const noexcept { return false; }
+        constexpr std::coroutine_handle<> await_suspend(auto) const noexcept {
+            if (self._parent) {
+                self._parent->_root = self._root;
+            }
+            return self._then_resume;
+        }
+        void await_resume() const noexcept { std::terminate(); }
+    };
+
+    constexpr parent_resumer final_suspend() noexcept { return {*this}; }
+
+    std::suspend_always initial_suspend() const noexcept { return {}; }
+
     /**
      * @brief Sends a value and resumes the innermost channel
      *
      * @return true If the channel returned
      * @return false Otherwise
      */
-    virtual bool do_send_value(SendTransit) = 0;
+    constexpr void send_value(send_put arg) {
+        // We're the leaf channel
+        _leaf->_send_box.put(NEO_FWD(arg));
+        _leaf->do_get_handle().resume();
+    }
+
     /**
      * @brief Obtain the yielded value
      */
-    virtual YieldTransit do_get_yielded() noexcept = 0;
-};
-
-template <typename Traits, typename Types>
-class channel_promise : public channel_promise_base<typename Types::yield_transit,  //
-                                                    typename Types::send_transit>,
-                        public return_part<typename Types::returns> {
-    /// The channel associated with this promise
-    using channel_type = basic_channel<Traits>;
-    /// The coroutine handle type
-    using handle_type = std::coroutine_handle<channel_promise>;
-    /// Types for this channel
-    using types = channel_types<Traits>;
-    /// Base class, used for delegation
-    using base_type
-        = channel_promise_base<typename Types::yield_transit, typename Types::send_transit>;
-
-    /// The recently yielded value
-    NEO_NO_UNIQUE_ADDRESS typename types::yield_opt _yielded;
-    /// The recently sent value
-    NEO_NO_UNIQUE_ADDRESS typename types::send_opt _sent;
-
-    bool do_send_value(typename types::send_transit arg) noexcept override final {
-        if (_inner) {
-            // Delegating to an inner coroutine:
-            bool inner_finished = _inner->do_send_value(arg);
-            if (inner_finished) {
-                // The inner channel finished, so now we resume ourself
-                handle().resume();
-                return handle().done();
-            }
-            // Not done yet
-            return false;
-        } else {
-            // We're the leaf channel
-            this->_sent = arg;
-            handle().resume();
-            return handle().done();
-        }
-    }
-
-    typename types::yield_transit do_get_yielded() noexcept override final {
-        if (_inner) {
-            // Ask the inner channel:
-            return _inner->do_get_yielded();
-        }
-        return *_yielded;
-    }
-
-    base_type* _inner = nullptr;
-
-public:
-    // Run to the first yield expression first:
-    std::suspend_never  initial_suspend() const noexcept { return {}; }
-    std::suspend_always final_suspend() const noexcept { return {}; }
-    handle_type         handle() noexcept { return handle_type::from_promise(*this); }
-    void                unhandled_exception() const { throw; }
-    channel_type        get_return_object() noexcept { return channel_type(handle()); }
+    constexpr yield_get get_yielded() const noexcept { return _leaf->_yield_box.get(); }
 
     // Awaiter for regular yield expressions
+    template <typename Store>
     struct yield_awaiter {
-        channel_promise& self;
+        promise_yield_send& self;
+        Store               _store;
 
-        constexpr bool                 await_ready() const noexcept { return false; }
-        constexpr typename types::sent await_resume() const noexcept {
+        constexpr bool                         await_ready() const noexcept { return false; }
+        constexpr typename send_box::take_type await_resume() const noexcept {
             // Return the value that was sent to the coroutine upon resume:
-            self._yielded = {};
-            return static_cast<types::sent>(*self._sent);
+            return self._send_box.take();
         }
 
-        constexpr void await_suspend(auto) const noexcept { self._sent = {}; }
+        constexpr void await_suspend(auto) noexcept { self._yield_box.put(NEO_FWD(_store)); }
     };
 
-    // Yielding a value:
-    yield_awaiter yield_value(typename types::yield_param p) noexcept {
-        _yielded = p;
-        return yield_awaiter{*this};
+    /**
+     * @brief Yield a value. This is the main overload
+     *
+     * The type of the parameter depends on the template parameter for yielding.
+     * If Yield is void, yield_forward is nullptr_t, otherwise it is Yield&&
+     *
+     * @param y The value to yield
+     * @return yield_awaiter<yield_lref>
+     */
+    constexpr yield_awaiter<yield_put> yield_value(yield_put y) noexcept {
+        return {*this, NEO_FWD(y)};
     }
 
-    // Yielding a value, which can be converted to the yield reference:
-    template <convertible_to<typename types::yield_param> Y>
-    yield_awaiter yield_value(Y&& y) noexcept {
-        _yielded = y;
-        return yield_awaiter{*this};
+    /**
+     * @brief Yield with a possible conversion.
+     *
+     * @note This overload is only visible if Yield IS NOT an lvalue-reference type.
+     *
+     * If Yield is an lvalue reference, then Yield&& will be an lvalue reference, and the requires
+     * constraint on this function will fail.
+     *
+     * This will always accept a reference-to-const of the underlying type, which
+     * results in allowing conversions to the yielded type
+     *
+     * @param y
+     * @return yield_awaiter<remove_cvref_t<yield_forward>>
+     */
+    constexpr yield_awaiter<remove_cvref_t<yield_put>>
+    yield_value(const_reference_t<yield_put> y) noexcept
+        // This overload is only visible for non-lref types:
+        requires rvalue_reference_type<yield_put>
+        // We must be able to convert the forwarding reference to the underlying type:
+        and convertible_to<const_reference_t<yield_put>, remove_cvref_t<yield_put>>
+    {
+        return {*this, NEO_FWD(y)};
     }
-
-    // Awaiter for inner channels:
-    template <typename Promise>
-    struct nested_awaiter {
-        channel_promise& self;
-        // The inner channel that we are waiting for
-        Promise& other;
-
-        constexpr bool await_ready() const noexcept { return other.has_returned(); }
-        constexpr void await_suspend(auto) const noexcept { self._inner = &other; }
-
-        constexpr decltype(auto) await_resume() const noexcept {
-            self._inner   = nullptr;
-            self._yielded = {};
-            return other.returned_value();
-        }
-    };
-
-    template <typename Ch, typename Promise = remove_reference_t<Ch>::promise_type>
-        requires convertible_to<typename Ch::yielded, typename types::yielded>
-    auto yield_value(from_channel<Ch> ch) noexcept {
-        Promise& pr = ch._arg._coro.promise();
-        return nested_awaiter<Promise>{*this, pr};
-    }
-
-    typename types::yield_transit get_yielded() const noexcept {
-        if (_inner) {
-            return _inner->do_get_yielded();
-        }
-        return *_yielded;
-    }
-
-    void send_value(typename types::send_transit s) { do_send_value(s); }
 };
 
-}  // namespace detail
+template <typename Yield, typename Send, typename Return>
+class promise : public promise_yield_send<Yield, Send>,  //
+                public promise_return<Return> {
+    /// The channel associated with this promise
+    using channel_type = channel<Yield, Send, Return>;
+
+    std::coroutine_handle<> do_get_handle() noexcept override {
+        return std::coroutine_handle<promise>::from_promise(*this);
+    }
+
+public:
+    void unhandled_exception() {
+        this->_did_throw = true;
+        throw;
+    }
+
+    constexpr channel_type get_return_object() noexcept {
+        return channel_type{std::coroutine_handle<promise>::from_promise(*this)};
+    }
+
+    constexpr bool did_throw() const noexcept { return this->_did_throw; }
+};
+
+}  // namespace _channel_detail
 
 }  // namespace neo
