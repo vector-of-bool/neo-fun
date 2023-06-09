@@ -49,7 +49,7 @@ template <typename Y, typename S, typename R>
 class promise;
 
 template <typename, typename>
-struct promise_yield_send;
+struct promise_base;
 
 }  // namespace _channel_detail
 

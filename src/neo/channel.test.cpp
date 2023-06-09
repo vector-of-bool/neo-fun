@@ -2,6 +2,12 @@
 
 #include <catch2/catch.hpp>
 
+#include <neo/config-pp.hpp>
+#include <neo/coroutine.hpp>
+
+#include <ranges>
+#include <stdexcept>
+
 using namespace neo;
 
 channel<int, int> int_chan() {
@@ -152,10 +158,10 @@ TEST_CASE("Throw an error") {
     CHECK(io.done());
 }
 
-    channel<void, void, std::string> throwing_channel2(int) {
-        throw std::runtime_error("fail");
-        co_return "hi";
-    }
+channel<void, void, std::string> throwing_channel2(int) {
+    throw std::runtime_error("fail");
+    co_return "hi";
+}
 
 TEST_CASE("Throw an error 2") {
     auto ch = throwing_channel2(3);
@@ -184,8 +190,10 @@ channel<> outer_loop() {
 }
 
 TEST_CASE("Throw during suspend") {
-    auto ch = outer_loop();
-    CHECK_THROWS_AS(ch.open(), std::runtime_error);
+    if (not NEO_IsEnabled(NEO_Clang_Broken_Coroutines)) {
+        auto ch = outer_loop();
+        CHECK_THROWS_AS(ch.open(), std::runtime_error);
+    }
 }
 
 channel<int, int> deep_channel(int layers) {
@@ -234,4 +242,66 @@ TEST_CASE("Deep return") {
 neo::channel<int&> integer_mrefs() {
     int n = 0;
     co_yield n;
+}
+
+neo::channel<int, void, std::string> generate_fib() {
+    int a = 0;
+    int b = 1;
+    for (;;) {
+        co_yield a;
+        int sum = a + b;
+        a       = b;
+        b       = sum;
+    }
+}
+
+static_assert(std::input_iterator<std::ranges::iterator_t<neo::channel<int>>>);
+static_assert(std::ranges::range<neo::channel<int>>);
+static_assert(std::ranges::input_range<neo::channel<int>>);
+static_assert(std::ranges::output_range<neo::channel<void, int>, int>);
+static_assert(not std::ranges::input_range<neo::channel<int, int>>);
+
+TEST_CASE("As range") {
+    auto             ch = generate_fib();
+    std::vector<int> nums;
+    std::ranges::copy(std::views::take(ch, 40), std::back_inserter(nums));
+    CHECK(nums[39] == 63245986);
+}
+
+template <typename T>
+neo::channel<double, T&&> push_backer(std::vector<T>& into) {
+    while (1) {
+        auto t = co_yield 42.0;
+        into.push_back(NEO_FWD(t));
+    }
+}
+
+TEST_CASE("Output range") {
+    std::vector<std::string> strings;
+    auto                     out = push_backer(strings);
+    auto                     num_strings
+        = std::views::iota(0, 30) | std::views::transform([](auto n) { return std::to_string(n); });
+    std::ranges::copy(num_strings, out.begin());
+    CHECK(strings.size() == 30);
+}
+
+neo::channel<int> inner_throws() {
+    throw std::runtime_error("fail");
+    co_return;
+}
+
+neo::channel<int> outer_catches() {
+    try {
+        co_yield ~inner_throws();
+        FAIL("Child did not throw, but we expected it");
+    } catch (std::runtime_error const&) {
+        co_return;
+    }
+}
+
+neo::channel<int> outer_unaware() { co_yield ~outer_catches(); }
+
+TEST_CASE("Nested throw") {
+    auto ch = outer_unaware();
+    CHECK_NOTHROW(ch.open());
 }

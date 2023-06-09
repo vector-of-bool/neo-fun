@@ -8,6 +8,7 @@
 #include <neo/type_traits.hpp>
 
 #include <coroutine>
+#include <exception>
 
 namespace neo {
 
@@ -62,6 +63,61 @@ public:
 
     constexpr from_channel<channel> operator~() noexcept;
 
+    class iterator {
+        handle_type _coro;
+
+        friend channel;
+
+        explicit iterator(handle_type h) noexcept
+            : _coro(h) {}
+
+        struct sender {
+            handle_type co;
+
+            void operator=(typename promise_type::send_put send) const&& {
+                co.promise().send_value(NEO_FWD(send));
+            }
+        };
+
+    public:
+        iterator() = default;
+
+        using difference_type = std::ptrdiff_t;
+        using value_type = conditional_t<void_type<send_type>, remove_cvref_t<yield_type>, void>;
+
+        yield_type operator*() const noexcept
+            requires void_type<send_type>
+        {
+            return pipe_type(_coro).take_current();
+        }
+
+        sender operator*() const noexcept
+            requires(not void_type<send_type>)
+        {
+            return sender{_coro};
+        }
+
+        iterator& operator++() {
+            if constexpr (void_type<send_type>) {
+                pipe_type(_coro).send();
+            }
+            return *this;
+        }
+        iterator operator++(int) {
+            ++*this;
+            return *this;
+        }
+
+        constexpr bool operator==(std::default_sentinel_t) const noexcept { return _coro.done(); }
+    };
+
+    iterator begin() {
+        _coro.resume();
+        return iterator(_coro);
+    }
+
+    constexpr std::default_sentinel_t end() const noexcept { return {}; }
+
 private:
     handle_type _coro;
 
@@ -106,8 +162,8 @@ public:
      *
      * @return _types::yield_backward
      */
-    constexpr yield_type take_current() noexcept {
-        return static_cast<yield_type>(_coro.promise().get_yielded());
+    constexpr add_rvalue_reference_t<yield_type> take_current() noexcept {
+        return static_cast<add_rvalue_reference_t<yield_type>>(_coro.promise().get_yielded());
     }
 
     /**
@@ -185,10 +241,8 @@ class from_channel {
     // The wrapped channel coroutine
     typename remove_cvref_t<C>::handle_type _coro;
 
-    template <typename, typename, typename>
-    friend class _channel_detail::promise;
     template <typename, typename>
-    friend struct _channel_detail::promise_yield_send;
+    friend struct _channel_detail::promise_base;
 
 public:
     explicit from_channel(const C& c) noexcept
@@ -279,7 +333,7 @@ template <>
 struct channel_box<const void> : channel_box<void> {};
 
 template <typename Yield, typename Send>
-struct promise_yield_send {
+struct promise_base {
     using yield_box = channel_box<Yield>;
     using send_box  = channel_box<Send>;
     using yield_put = yield_box::put_type;
@@ -292,70 +346,63 @@ struct promise_yield_send {
     NEO_NO_UNIQUE_ADDRESS send_box  _send_box;
 
     // In the beginning, we believe that we are the leaf and the root channel in the chain:
-    promise_yield_send* _leaf   = this;
-    promise_yield_send* _root   = this;
-    promise_yield_send* _parent = nullptr;
-    // The coroutine to resume when we return (may later be updated to be the parent channel):
-    std::coroutine_handle<> _then_resume = std::noop_coroutine();
+    promise_base* _leaf = this;
+    promise_base* _root = this;
 
-    void connect_leaf(promise_yield_send* leaf) {
+    void connect_leaf(promise_base* leaf) {
         _leaf        = leaf;
         _leaf->_root = this;
     }
 
+    // Keep track of what we are doing here
+    struct parent_resume_info {
+        std::exception_ptr      thrown;
+        std::coroutine_handle<> resume;
+    };
+
+    parent_resume_info* _parent = nullptr;
+
     // Awaiter for inner channels:
     template <typename Promise, typename Ret>
     struct nested_awaiter {
-        promise_yield_send& self;
+        promise_base& self;
         // The inner channel that we are waiting for
-        Promise& child;
+        Promise&           child;
+        parent_resume_info info{};
 
         constexpr bool await_ready() const noexcept { return child.has_returned(); }
-        constexpr void await_suspend(std::coroutine_handle<> this_co) const noexcept {
-            // The child knows who the correct leaf is. It may be itself, or a descendent thereof.
-            // auto leaf = child._leaf;
-            self._root->connect_leaf(child._leaf);
-            child._parent = &self;
-            // child._leaf->connect_root(self._root);
-            // // Tell the leaf who we believe the root to be.
-            // // (This may be incorrect, but our parent will correct it later.)
-            // leaf->_root = self._root;
-            // // Tell the root who the new leaf is:
-            // self._root->_leaf = leaf;
-            // Tell the child that it should resume us when it is done:
-            child._then_resume = this_co;
+        constexpr auto await_suspend(std::coroutine_handle<> this_co) noexcept {
+            self._root->connect_leaf(&child);
+            child._parent = &info;
+            info.resume   = this_co;
+            return std::coroutine_handle<Promise>::from_promise(child);
         }
 
-        constexpr Ret await_resume() const noexcept {
-            // // We have become the leaf again:
-            // // self._leaf = &self;
-            // // A parent channel may have updated the root on the child.
-            // // Inherit that knowledge now:
-            // self._root = child._root;
-            // // Tell the root that we are the new leaf:
-            // self._root->_leaf = &self;
+        constexpr Ret await_resume() const {
             self._root->connect_leaf(&self);
+            if (info.thrown) {
+                std::rethrow_exception(info.thrown);
+            }
             return child.take_return_value();
         }
     };
 
     template <typename Ch,
-              derived_from<promise_yield_send> Promise = remove_reference_t<Ch>::promise_type>
+              derived_from<promise_base> Promise = remove_reference_t<Ch>::promise_type>
     constexpr auto yield_value(from_channel<Ch> ch) {
-        ch._coro.resume();  // Start up
         Promise& pr = ch._coro.promise();
         return nested_awaiter<Promise, typename remove_reference_t<Ch>::return_type>{*this, pr};
     }
 
     struct parent_resumer {
-        promise_yield_send& self;
+        promise_base& self;
 
         constexpr bool                    await_ready() const noexcept { return false; }
         constexpr std::coroutine_handle<> await_suspend(auto) const noexcept {
             if (self._parent) {
-                self._parent->_root = self._root;
+                return self._parent->resume;
             }
-            return self._then_resume;
+            return std::noop_coroutine();
         }
         void await_resume() const noexcept { std::terminate(); }
     };
@@ -384,8 +431,8 @@ struct promise_yield_send {
     // Awaiter for regular yield expressions
     template <typename Store>
     struct yield_awaiter {
-        promise_yield_send& self;
-        Store               _store;
+        promise_base& self;
+        Store         _store;
 
         constexpr bool                         await_ready() const noexcept { return false; }
         constexpr typename send_box::take_type await_resume() const noexcept {
@@ -435,7 +482,7 @@ struct promise_yield_send {
 };
 
 template <typename Yield, typename Send, typename Return>
-class promise : public promise_yield_send<Yield, Send>,  //
+class promise : public promise_base<Yield, Send>,  //
                 public promise_return<Return> {
     /// The channel associated with this promise
     using channel_type = channel<Yield, Send, Return>;
@@ -446,6 +493,10 @@ class promise : public promise_yield_send<Yield, Send>,  //
 
 public:
     void unhandled_exception() {
+        if (this->_parent) {
+            this->_parent->thrown = std::current_exception();
+            return;
+        }
         this->_did_throw = true;
         throw;
     }
