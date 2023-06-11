@@ -2,6 +2,7 @@
 
 #include <catch2/catch.hpp>
 
+#include <neo/assert.hpp>
 #include <neo/config-pp.hpp>
 #include <neo/coroutine.hpp>
 
@@ -253,6 +254,7 @@ neo::channel<int, void, std::string> generate_fib() {
         a       = b;
         b       = sum;
     }
+    neo::unreachable();
 }
 
 static_assert(std::input_iterator<std::ranges::iterator_t<neo::channel<int>>>);
