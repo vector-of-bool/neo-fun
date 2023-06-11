@@ -387,8 +387,8 @@ struct promise_base {
         }
     };
 
-    template <typename Ch,
-              derived_from<promise_base> Promise = remove_reference_t<Ch>::promise_type>
+    template <typename Ch, typename Promise = remove_reference_t<Ch>::promise_type>
+        requires derived_from<Promise, promise_base>
     constexpr auto yield_value(from_channel<Ch> ch) {
         Promise& pr = ch._coro.promise();
         return nested_awaiter<Promise, typename remove_reference_t<Ch>::return_type>{*this, pr};
