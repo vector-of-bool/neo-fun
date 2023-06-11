@@ -255,6 +255,7 @@ neo::channel<int, void, std::string> generate_fib() {
         b       = sum;
     }
     neo::unreachable();
+    co_return "unreachable";
 }
 
 static_assert(std::input_iterator<std::ranges::iterator_t<neo::channel<int>>>);
