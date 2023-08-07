@@ -4,9 +4,9 @@
 #include "./fwd.hpp"
 #include "./invoke.hpp"
 #include "./iterator_facade.hpp"
+#include "./object_box.hpp"
 #include "./ranges.hpp"
 #include "./reconstruct.hpp"
-#include "./scalar_box.hpp"
 #include "./substring.hpp"
 #include "./text_algo.hpp"
 #include "./text_range.hpp"
@@ -33,7 +33,7 @@ template <typename FindSplit>
 struct simple_token_splitter {
     NEO_NO_UNIQUE_ADDRESS FindSplit _find_split;
 
-    template <text_view View>
+    template <text_range View>
     constexpr std::optional<simple_token<substring_t<View>>>
     operator()(View&& prev, std::type_identity_t<View> const& remaining) const noexcept {
         if (std::ranges::empty(remaining)
@@ -58,7 +58,7 @@ struct simple_token_splitter {
 template <typename C>
     requires predicate<C, char32_t>
 struct charclass_splitter {
-    NEO_NO_UNIQUE_ADDRESS scalar_box<C> _classifier{};
+    NEO_NO_UNIQUE_ADDRESS object_box<C> _classifier{};
 
     template <text_range T>
     constexpr substring_t<T> operator()(const T& remaining) const noexcept {
@@ -144,9 +144,9 @@ class tokenizer {
     using View = view_text_t<R&>;
 
     /// The text that is being tokenized
-    NEO_NO_UNIQUE_ADDRESS scalar_box<R> _text;
+    NEO_NO_UNIQUE_ADDRESS object_box<R> _text;
     /// The token-splitting function
-    NEO_NO_UNIQUE_ADDRESS scalar_box<Tok> _get_next_token;
+    NEO_NO_UNIQUE_ADDRESS object_box<Tok> _get_next_token;
 
     constexpr static bool _is_nothrow
         = ranges::nothrow_range<R> and nothrow_invocable<Tok, View, View>;
@@ -172,19 +172,18 @@ public:
     /**
      * @brief The iterator that walks the range of tokens
      */
-    struct iterator : iterator_facade<iterator> {
-    private:
+    template <typename IterTok>
+    struct _iterator : iterator_facade<_iterator<IterTok>> {
         NEO_NO_UNIQUE_ADDRESS borrowed_text _tail;
         NEO_NO_UNIQUE_ADDRESS token_result  _current;
 
-        remove_reference_t<Tok>* _tokenize = nullptr;
+        remove_reference_t<IterTok>* _tokenize = nullptr;
 
-    public:
-        iterator() = default;
+        _iterator() = default;
 
         struct sentinel_type {};
 
-        explicit iterator(borrowed_text v, Tok& tok)
+        explicit _iterator(borrowed_text v, IterTok& tok)
             : _tail(v)
             , _tokenize(NEO_ADDRESSOF(tok)) {
             _current = NEO_INVOKE(*_tokenize, borrowed_text(_tail.begin(), _tail.begin()), _tail);
@@ -206,16 +205,23 @@ public:
         }
 
         constexpr bool operator==(sentinel_type) const { return not static_cast<bool>(_current); }
-        constexpr bool operator==(iterator other) const noexcept {
+        constexpr bool operator==(_iterator other) const noexcept {
             return std::ranges::begin(_tail) == std::ranges::begin(other._tail);
         }
     };
 
-    constexpr iterator begin() noexcept(_is_nothrow) {
-        return iterator{neo::substring(neo::view_text(_text.get()), 0), _get_next_token.get()};
+    constexpr _iterator<Tok> begin() noexcept(_is_nothrow) {
+        return _iterator<Tok>{neo::substring(neo::view_text(_text.get()), 0),
+                              _get_next_token.get()};
     }
 
-    constexpr auto end() noexcept { return typename iterator::sentinel_type{}; }
+    constexpr _iterator<const Tok> begin() const noexcept(_is_nothrow) {
+        return _iterator<const Tok>{neo::substring(neo::view_text(_text.get()), 0),
+                                    _get_next_token.get()};
+    }
+
+    constexpr auto end() noexcept { return typename _iterator<Tok>::sentinel_type{}; }
+    constexpr auto end() const noexcept { return typename _iterator<const Tok>::sentinel_type{}; }
 };
 
 template <text_range R, tokenizer_fn<substring_t<view_text_t<R>>> Tok>

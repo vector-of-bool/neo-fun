@@ -1,6 +1,6 @@
 #pragma once
 
-#include "./scalar_box.hpp"
+#include "./object_box.hpp"
 
 #if defined(__bpt_header_check)
 #include "./platform.hpp"
@@ -11,8 +11,8 @@ NEO_MSVC_PRAGMA(warning(disable : 4996));
 namespace neo {
 
 template <typename T>
-struct [[deprecated("Use scalar_box instead of assignable_box")]] assignable_box : scalar_box<T> {
-    using assignable_box::scalar_box::scalar_box;
+struct [[deprecated("Use object_box instead of assignable_box")]] assignable_box : object_box<T> {
+    using assignable_box::object_box::object_box;
 };
 
 template <typename T>

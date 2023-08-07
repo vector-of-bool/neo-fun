@@ -5,8 +5,8 @@
 #include "../fwd.hpp"
 #include "../iterator.hpp"
 #include "../iterator_facade.hpp"
+#include "../object_box.hpp"
 #include "../ranges.hpp"
-#include "../scalar_box.hpp"
 #include "../tuple.hpp"
 
 #include <compare>
@@ -450,7 +450,7 @@ public:
 
 template <SR::view... Rs>
 class concat_view : public SR::view_interface<concat_view<Rs...>> {
-    using tuple_type = neo::nano_tuple<scalar_box<Rs>...>;
+    using tuple_type = neo::nano_tuple<object_box<Rs>...>;
     NEO_NO_UNIQUE_ADDRESS tuple_type _tuple;
 
     using _iterator = _concat_detail::iterator<Rs...>;
