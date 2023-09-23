@@ -22,10 +22,53 @@ struct unconstructible {
     unconstructible() = delete;
 };
 
+struct deleted_copy_constructor {
+    deleted_copy_constructor(const deleted_copy_constructor&) = delete;
+    deleted_copy_constructor(deleted_copy_constructor&&)      = default;
+
+    deleted_copy_constructor& operator=(const deleted_copy_constructor&) = default;
+    deleted_copy_constructor& operator=(deleted_copy_constructor&&)      = default;
+};
+
+struct deleted_move_constructor {
+    deleted_move_constructor(const deleted_move_constructor&) = default;
+    deleted_move_constructor(deleted_move_constructor&&)      = delete;
+
+    deleted_move_constructor& operator=(const deleted_move_constructor&) = default;
+    deleted_move_constructor& operator=(deleted_move_constructor&&)      = default;
+};
+
+struct deleted_copy_assignment {
+    deleted_copy_assignment(const deleted_copy_assignment&) = default;
+    deleted_copy_assignment(deleted_copy_assignment&&)      = default;
+
+    deleted_copy_assignment& operator=(const deleted_copy_assignment&) = delete;
+    deleted_copy_assignment& operator=(deleted_copy_assignment&&)      = default;
+};
+
+struct deleted_move_assignment {
+    deleted_move_assignment(const deleted_move_assignment&) = default;
+    deleted_move_assignment(deleted_move_assignment&&)      = default;
+
+    deleted_move_assignment& operator=(const deleted_move_assignment&) = default;
+    deleted_move_assignment& operator=(deleted_move_assignment&&)      = delete;
+};
+
+struct deleted_copy_move {
+    deleted_copy_constructor _1;
+    deleted_move_constructor _2;
+};
+
+struct deleted_assignment {
+    deleted_copy_assignment _1;
+    deleted_move_assignment _2;
+};
+
 /**
  * @brief Mixin to make a type non-movable (immobile)
  */
 struct immovable {
+    immovable()            = default;
     immovable(immovable&&) = delete;
 };
 
@@ -33,6 +76,7 @@ struct immovable {
  * @brief Mixin to make a type move-only (non-copyable)
  */
 struct uncopyable {
+    uncopyable() = default;
     uncopyable(uncopyable&&);
     uncopyable& operator=(uncopyable&&);
 };
@@ -168,6 +212,71 @@ struct invocable : pathological {
 template <typename... Args>
 struct predicate : pathological {
     bool operator()(Args&&...);
+};
+
+struct trivially_default_constructible {
+    // XXX: https://cplusplus.github.io/LWG/issue2116
+    // ~trivially_default_constructible() {}
+    uncopyable _2;
+    immovable  _3;
+};
+
+struct nontrivial_default_constructor {
+    nontrivial_default_constructor();
+};
+
+struct nontrivial_destructor {
+    ~nontrivial_destructor();
+};
+
+struct nontrivial_copy_constructor {
+    nontrivial_copy_constructor(const nontrivial_copy_constructor&);
+};
+
+struct nontrivial_move_constructor {
+    nontrivial_move_constructor(nontrivial_move_constructor&&);
+};
+
+struct nontrivial_copy_assignment {
+    nontrivial_copy_assignment& operator=(const nontrivial_copy_assignment&) &;
+};
+
+struct nontrivial_move_assignment {
+    nontrivial_move_assignment& operator=(nontrivial_move_assignment&&) &;
+};
+
+struct trivially_copy_constructible {
+    trivially_copy_constructible(const trivially_copy_constructible&) = default;
+    trivially_copy_constructible(trivially_copy_constructible&&)      = delete;
+    unconstructible    _1;
+    deleted_assignment _2;
+};
+
+struct trivially_copy_assignable {
+    unconstructible            _1;
+    deleted_copy_move          _2;
+    trivially_copy_assignable& operator=(trivially_copy_assignable const&) & = default;
+    trivially_copy_assignable& operator=(trivially_copy_assignable&&) &      = delete;
+};
+
+struct trivially_copyable {
+    deleted_move_constructor       _1;
+    deleted_move_assignment        _2;
+    nontrivial_default_constructor _3;
+};
+
+struct trivially_movable {
+    deleted_copy_constructor       _1;
+    deleted_copy_assignment        _2;
+    nontrivial_default_constructor _3;
+};
+
+struct trivially_destructible {
+    nontrivial_default_constructor _1;
+    nontrivial_copy_constructor    _2;
+    nontrivial_move_constructor    _3;
+    nontrivial_copy_assignment     _4;
+    nontrivial_move_assignment     _5;
 };
 
 }  // namespace neo::arch

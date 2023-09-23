@@ -1,4 +1,5 @@
 #include "./archetypes.hpp"
+#include "./concepts.hpp"
 
 #include <catch2/catch.hpp>
 
@@ -26,18 +27,14 @@ static_assert(!neo::destructible<irregular> &&           //
               !neo::movable<irregular>);
 
 template <typename T>
-concept can_amp_addressof = requires(T& arg) {
-    &arg;
-};
+concept can_amp_addressof = requires(T& arg) { &arg; };
 class derived_pathological : pathological {};
 
 static_assert(!can_amp_addressof<pathological>);
 static_assert(!can_amp_addressof<derived_pathological>);
 
 template <typename T>
-concept can_comma_operate = requires(T& arg) {
-    (arg, 0);
-};
+concept can_comma_operate = requires(T& arg) { (arg, 0); };
 static_assert(!can_comma_operate<pathological>);
 static_assert(!can_comma_operate<derived_pathological>);
 
@@ -79,3 +76,46 @@ static_assert(!neo::regular<semiregular_2>);
 static_assert(neo::regular<regular_2>);
 
 static_assert(neo::invocable<invocable<int, char, int*>, int, char, int*>);
+
+static_assert(neo::trivially_default_constructible<trivially_default_constructible>);
+static_assert(not neo::trivially_constructible<trivially_default_constructible,
+                                               trivially_default_constructible const&>);
+static_assert(not neo::trivially_constructible<trivially_default_constructible,
+                                               trivially_default_constructible&&>);
+static_assert(not neo::trivially_copyable<trivially_default_constructible>);
+static_assert(not neo::trivially_assignable<trivially_default_constructible&,
+                                            const trivially_default_constructible&>);
+static_assert(not neo::trivially_assignable<trivially_default_constructible&,
+                                            trivially_default_constructible&&>);
+// XXX: https://cplusplus.github.io/LWG/issue2116
+// static_assert(not neo::trivially_destructible<trivially_default_constructible>);
+
+static_assert(not neo::default_initializable<trivially_copy_constructible>);
+static_assert(neo::trivially_constructible<trivially_copy_constructible,
+                                           trivially_copy_constructible const&>);
+static_assert(not neo::trivially_assignable<trivially_copy_constructible&,
+                                            trivially_copy_constructible const&>);
+static_assert(
+    not neo::trivially_assignable<trivially_copy_constructible&, trivially_copy_constructible&&>);
+static_assert(
+    not neo::trivially_constructible<trivially_copy_constructible, trivially_copy_constructible&&>);
+
+static_assert(not neo::default_initializable<trivially_copy_assignable>);
+static_assert(
+    not neo::trivially_constructible<trivially_copy_assignable, trivially_copy_assignable const&>);
+static_assert(
+    neo::trivially_assignable<trivially_copy_assignable&, trivially_copy_assignable const&>);
+static_assert(
+    not neo::trivially_assignable<trivially_copy_assignable&, trivially_copy_assignable&&>);
+static_assert(
+    not neo::trivially_constructible<trivially_copy_assignable, trivially_copy_assignable&&>);
+
+static_assert(neo::trivially_copyable<trivially_copyable>);
+static_assert(neo::trivially_movable<trivially_copyable>);
+static_assert(neo::trivially_movable<trivially_movable>);
+static_assert(not neo::copyable<trivially_movable>);
+
+static_assert(neo::trivially_destructible<trivially_destructible>);
+static_assert(not neo::trivially_default_constructible<trivially_destructible>);
+static_assert(not neo::trivially_copyable<trivially_destructible>);
+static_assert(not neo::trivially_movable<trivially_destructible>);
