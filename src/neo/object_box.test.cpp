@@ -2,6 +2,7 @@
 
 #include "./archetypes.hpp"
 #include "./repr.hpp"
+#include "neo/concepts.hpp"
 
 #include <catch2/catch.hpp>
 
@@ -11,6 +12,18 @@ static_assert(std::constructible_from<neo::object_box<int>, int>);
 static_assert(std::assignable_from<neo::object_box<int>&, neo::object_box<int>>);
 static_assert(std::assignable_from<neo::object_box<int&>&, neo::object_box<int&>>);
 
+struct nontrivial_destructor {
+    ~nontrivial_destructor() {}
+};
+static_assert(neo::trivial_type<neo::object_box<int>>);
+static_assert(neo::trivially_default_constructible<neo::object_box<int>>);
+static_assert(neo::trivially_copyable<neo::object_box<int>>);
+static_assert(neo::trivially_movable<neo::object_box<int>>);
+static_assert(neo::trivially_copyable<neo::object_box<int&>>);
+static_assert(neo::trivially_copyable<neo::object_box<const int&>>);
+static_assert(neo::trivially_copyable<neo::object_box<void>>);
+static_assert(neo::trivially_copyable<neo::object_box<int[4]>>);
+
 static_assert(std::copyable<neo::object_box<int>>);
 static_assert(std::semiregular<neo::object_box<int>>);
 static_assert(std::copyable<neo::object_box<int&>>);
@@ -18,6 +31,9 @@ static_assert(std::copyable<neo::object_box<const int&>>);
 static_assert(not std::copyable<neo::object_box<const int>>);
 static_assert(std::movable<neo::object_box<std::unique_ptr<int>>>);
 static_assert(std::movable<neo::object_box<std::unique_ptr<int>&>>);
+
+static_assert(not neo::copy_constructible<neo::object_box<neo::arch::nontrivial_move_constructor>>);
+static_assert(not neo::copy_assignable<neo::object_box<neo::arch::nontrivial_move_constructor>>);
 
 static_assert(not std::default_initializable<neo::object_box<int&>>);
 static_assert(std::default_initializable<neo::object_box<int>>);
