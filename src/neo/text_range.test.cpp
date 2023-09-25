@@ -32,7 +32,8 @@ TEST_CASE("Test") {
     auto s3 = neo::to_std_string("I am a string");
     CHECK(s3 == "I am a string");
 
-    std::same_as<std::allocator<char>> auto _ = neo::text_allocator("I am a bare string literal");
+    std::same_as<std::allocator<char>> auto _ [[maybe_unused]]
+    = neo::text_allocator("I am a bare string literal");
 
     std::same_as<std::string> auto dup = neo::copy_text(s);
     CHECK(dup == s);
