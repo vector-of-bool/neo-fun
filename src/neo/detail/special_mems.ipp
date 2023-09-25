@@ -1,8 +1,8 @@
 // clang-format off
-constexpr inline auto U = undeclared;
-constexpr inline auto F = defaulted;
-constexpr inline auto D = deleted;
-constexpr inline auto N = nontrivial;
+constexpr inline auto U = special_member_kind::undeclared;
+constexpr inline auto F = special_member_kind::defaulted;
+constexpr inline auto D = special_member_kind::deleted;
+constexpr inline auto N = special_member_kind::nontrivial;
 template <typename T> using CR=const T&;
 template<>struct S<U,U,U,U,U,U>{};
 template<>struct S<F,U,U,U,U,U>{S()=default;};

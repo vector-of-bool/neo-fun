@@ -5,6 +5,7 @@
 #include "./fwd.hpp"
 #include "./optional.hpp"
 #include "./type_traits.hpp"
+#include "neo/attrib.hpp"
 
 #include <coroutine>
 #include <type_traits>
@@ -54,18 +55,18 @@ struct immediate_promise_base {
 
 template <typename T>
 struct immediate_promise : immediate_promise_base {
-    nano_opt_storage<T> _value;
+    storage_for<T> _value;
 
     auto get_return_object() noexcept { return defer_convert<T>{*this}; }
 
     template <convertible_to<T> U>
     void return_value(U&& v) noexcept(noexcept(T(NEO_FWD(v)))) {
-        new (neo::addressof(_value.value)) T(NEO_FWD(v));
+        _value.construct(NEO_FWD(v));
     }
 
-    ~immediate_promise() { _value.value.~T(); }
+    ~immediate_promise() { _value.destroy(); }
 
-    T& value() noexcept { return _value.value; }
+    T& value() noexcept { return _value.get(); }
 };
 
 template <>
@@ -189,7 +190,7 @@ public:
 template <typename T>
 explicit immediate(const T&) -> immediate<T>;
 
-explicit immediate()->immediate<void>;
+explicit immediate() -> immediate<void>;
 
 template <typename T>
 constexpr imm_detail::defer_convert<T>::operator immediate<T>() const noexcept {

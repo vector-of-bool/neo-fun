@@ -296,8 +296,6 @@ using special_member_kind = special_member_kind;
 
 namespace specmem_specials {
 
-using enum special_member_kind;
-
 template <special_member_kind DefaultConstructor,
           special_member_kind Destructor,
           special_member_kind CopyConstructor,
