@@ -2,39 +2,57 @@ name: Build and Test
 on: [push, pull_request]
 
 jobs:
-  build-gcc12:
-    name: Build for GCC 12.2
+  build-gcc13:
+    name: Build for GCC 13.2
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Build and Test
-        run: bash tools/earthly.sh +build-gcc-12.2
+        run: bash tools/earthly.sh +build-gcc --gcc_version=13.2
+
+  build-gcc12:
+    name: Build for GCC 12.3
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build and Test
+        run: bash tools/earthly.sh +build-gcc --gcc_version=12.3
 
   build-gcc11:
-    name: Build for GCC 11.2
+    name: Build for GCC 11.4
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Build and Test
-        run: bash tools/earthly.sh +build-gcc-11.2
+        run: bash tools/earthly.sh +build-gcc --gcc_version=11.4
 
   build-gcc10:
     name: Build for GCC 10.3
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Build and Test
         run: bash tools/earthly.sh +build-gcc-10.3
+
+  build-clang16:
+    name: Build for Clang 16
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build and Test
+        run: bash tools/earthly.sh +build-clang-16
 
   build-vs2019:
     name: Build for VS 2019
     runs-on: windows-2019
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Build and Test
         run: tools/build-vs2019e.bat -Toolchain tools/msvc.jsonc
 
@@ -43,6 +61,6 @@ jobs:
     runs-on: windows-2022
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Build and Test
         run: tools/build-vs2022e.bat -Toolchain tools/msvc.jsonc
