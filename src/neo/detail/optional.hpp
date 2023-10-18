@@ -3,6 +3,8 @@
 #include "neo/type_traits.hpp"
 #include <neo/concepts.hpp>
 
+#include <optional>
+
 namespace neo {
 
 template <typename T>
@@ -10,6 +12,9 @@ struct tombstone_traits;
 
 template <typename T>
 class optional;
+
+using std::nullopt;
+using std::nullopt_t;
 
 /**
  * @brief Detect whether T is a specialization of neo::optional
@@ -42,22 +47,6 @@ concept valid_tombstone_traits = requires {
 template <class_type T>
 struct inherit_from : T {};
 
-// Hack: A concept that matches a type T that is a in_place_t tag
-template <typename T>
-concept in_place_t_tag = requires {
-    // Check for an injected-name matching in_place_t
-    typename inherit_from<T>::in_place_t;
-}
-// And that the nested name is the same as the enclosing class
-&&weak_same_as<T, typename inherit_from<T>::in_place_t>;
-
-/// Match a type named "nullopt_t"
-template <typename T>
-concept nullopt_t_tag = requires {
-    typename inherit_from<T>::nullopt_t;
-    requires weak_same_as<typename inherit_from<T>::nullopt_t, T>;
-};
-
 [[noreturn]] void throw_bad_optional();
 [[noreturn]] void terminate_bad_optional();
 
@@ -75,8 +64,7 @@ class adl_operators {
     }
 
     template <typename T>
-    friend constexpr bool operator==(const optional<T>& self,
-                                     opt_detail::nullopt_t_tag auto) noexcept {
+    friend constexpr bool operator==(const optional<T>& self, nullopt_t) noexcept {
         return not self.has_value();
     }
 
@@ -112,7 +100,7 @@ class adl_operators {
      */
     template <typename T>
     friend constexpr std::strong_ordering  //
-    operator<=>(const optional<T>& self, opt_detail::nullopt_t_tag auto) noexcept {
+    operator<=>(const optional<T>& self, nullopt_t) noexcept {
         if (self.has_value()) {
             return std::strong_ordering::greater;
         } else {

@@ -117,7 +117,7 @@ public:
     /// Default-constructs as a disengaged optional
     constexpr optional() noexcept = default;
     /// Simply constructs as a null optional
-    constexpr optional(opt_detail::nullopt_t_tag auto) noexcept {}
+    constexpr optional(nullopt_t) noexcept {}
 
     /// Copy-construct an optional from an optional of the same type
     constexpr optional(const optional&) noexcept
@@ -166,7 +166,7 @@ public:
     }
 
     template <typename... Args>
-    constexpr explicit optional(opt_detail::in_place_t_tag auto,
+    constexpr explicit optional(std::in_place_t,
                                 Args&&... args)  //
         noexcept(nothrow_constructible_from<T, Args...>)
         requires constructible_from<T, Args...>
@@ -174,12 +174,11 @@ public:
         traits::construct(_state, NEO_FWD(args)...);
     }
 
-    template <typename U = T>
+    template <typename U>
     constexpr explicit(not convertible_to<U&&, T>)
         optional(U&& arg) noexcept(nothrow_constructible_from<U&&, T>)
-        requires constructible_from<T, U&&>      //
-        and unalike<U, optional>                 //
-        and (not opt_detail::in_place_t_tag<U>)  //
+        requires constructible_from<T, U&&>  //
+        and unalike<U, std::in_place_t>      //
         and (not is_optional_v<remove_cvref_t<U>>)
     {
         traits::construct(_state, NEO_FWD(arg));
@@ -193,7 +192,7 @@ public:
                                               and noexcept(traits::assign(_state, o._state)))
         requires copy_assignable<T> and (not traits::trivial_copy_assign)
     {
-        _assign(NEO_MOVE(o._state));
+        _assign(NEO_MOVE(o)._state);
         return *this;
     }
 
@@ -205,7 +204,7 @@ public:
                                          and noexcept(traits::assign(_state, NEO_MOVE(o)._state)))
         requires move_assignable<T> and (not traits::trivial_move_assign)
     {
-        _assign(NEO_MOVE(o._state));
+        _assign(NEO_MOVE(o)._state);
         return *this;
     }
 
@@ -231,7 +230,7 @@ public:
     constexpr pointer       operator->() noexcept { return NEO_ADDRESSOF(**this); }
 
     constexpr explicit operator bool() const noexcept { return has_value(); }
-    constexpr bool has_value() const noexcept { return traits::has_value(_state); }
+    constexpr bool     has_value() const noexcept { return traits::has_value(_state); }
 
     constexpr auto value() & -> reference {
         _check_has_value();
@@ -300,9 +299,9 @@ public:
         noexcept(noexcept(traits::copy(_state, NEO_MOVE(other._state)))  //
                      and noexcept(traits::swap(_state, _state)))
         requires requires {
-            traits::copy(_state, NEO_MOVE(_state));
-            traits::swap(_state, other._state);
-        }
+                     traits::copy(_state, NEO_MOVE(_state));
+                     traits::swap(_state, other._state);
+                 }
     {
         if (not has_value()) {
             if (other.has_value()) {
@@ -346,25 +345,33 @@ public:
         return traits::get(_state);
     }
 
-    constexpr auto and_then(auto&& fun) &  //
+    template <typename F>
+        constexpr auto and_then(F&& fun) &  //
         NEO_RETURNS(this->do_and_then(*this, NEO_FWD(fun)));
 
-    constexpr auto and_then(auto&& fun) const&  //
+    template <typename F>
+    constexpr auto and_then(F&& fun) const&  //
         NEO_RETURNS(this->do_and_then(*this, NEO_FWD(fun)));
 
-    constexpr auto and_then(auto&& fun) &&  //
+    template <typename F>
+        constexpr auto and_then(F&& fun) &&  //
         NEO_RETURNS(this->do_and_then(NEO_MOVE(*this), NEO_FWD(fun)));
 
-    constexpr auto and_then(auto&& fun) const&&  //
+    template <typename F>
+    constexpr auto and_then(F&& fun) const&&  //
         NEO_RETURNS(this->do_and_then(NEO_MOVE(*this), NEO_FWD(fun)));
 
-    constexpr auto transform(auto&& fn) &  //
+    template <typename F>
+        constexpr auto transform(F&& fn) &  //
         NEO_RETURNS(this->do_transform(*this, NEO_FWD(fn)));
-    constexpr auto transform(auto&& fn) const&  //
+    template <typename F>
+    constexpr auto transform(F&& fn) const&  //
         NEO_RETURNS(this->do_transform(*this, NEO_FWD(fn)));
-    constexpr auto transform(auto&& fn) &&  //
+    template <typename F>
+        constexpr auto transform(F&& fn) &&  //
         NEO_RETURNS(this->do_transform(NEO_MOVE(*this), NEO_FWD(fn)));
-    constexpr auto transform(auto&& fn) const&&  //
+    template <typename F>
+    constexpr auto transform(F&& fn) const&&  //
         NEO_RETURNS(this->do_transform(NEO_MOVE(*this), NEO_FWD(fn)));
 
     template <typename F>
@@ -404,7 +411,7 @@ public:
     NEO_NO_UNIQUE_ADDRESS storage_for<T> storage;
     bool                                 has_value = false;
 
-    default_optional_state() noexcept = default;
+    default_optional_state() = default;
 };
 
 /**
@@ -468,7 +475,8 @@ struct tombstone_traits {
         st.has_value = true;
     }
 
-    constexpr static void copy(state_type& into, auto&& from)  //
+    template <typename O>
+    constexpr static void copy(state_type& into, O&& from)  //
         noexcept(nothrow_constructible_from<T,
                                             decltype(NEO_FWD(from).storage.get())>)  //
     {
@@ -476,7 +484,8 @@ struct tombstone_traits {
         into.has_value = true;
     }
 
-    constexpr static void assign(state_type& into, auto&& from)                           //
+    template <typename O>
+    constexpr static void assign(state_type& into, O&& from)                              //
         noexcept(std::is_nothrow_assignable_v<T, decltype(NEO_FWD(from).storage.get())>)  //
     {
         into.storage.assign_from(NEO_FWD(from).storage);
@@ -528,10 +537,10 @@ union [[deprecated("Prefer neo::storage_for<T>")]] nano_opt_storage {
      * @brief Construct a value in-place.
      */
     template <typename... Args>
-    constexpr explicit nano_opt_storage(opt_detail::in_place_t_tag auto, Args&&... args)  //
-        noexcept(nothrow_constructible_from<T, Args...>)                                  //
-        requires constructible_from<T, Args...>                                           //
-        : box((Args&&)(args)...) {}
+    constexpr explicit nano_opt_storage(std::in_place_t, Args&& ... args)  //
+        noexcept(nothrow_constructible_from<T, Args...>)                   //
+        requires constructible_from<T, Args...>                            //
+        : box((Args &&)(args)...) {}
 
     /// Default-construct as disenganged
     constexpr nano_opt_storage() = default;
@@ -582,10 +591,10 @@ public:
     }
 
     // Construct as a new T with the given arguments
-    template <opt_detail::in_place_t_tag InPlace, typename... Args>
-    constexpr explicit nano_opt(InPlace, Args&&... args)  //
-        noexcept(nothrow_constructible_from<T, Args...>)  //
-        requires constructible_from<T, Args...>           //
+    template <typename... Args>
+    constexpr explicit nano_opt(std::in_place_t, Args&&... args)  //
+        noexcept(nothrow_constructible_from<T, Args...>)          //
+        requires constructible_from<T, Args...>                   //
     {
         this->emplace(NEO_FWD(args)...);
     }

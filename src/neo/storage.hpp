@@ -36,23 +36,23 @@ class storage_for {
         constexpr union_t() noexcept
             : _unit() {}
 
-        constexpr union_t(const union_t&) noexcept
+        union_t(const union_t&)
             requires trivially_constructible<boxed_t, const boxed_t&>
         = default;
 
-        constexpr union_t(union_t&&) noexcept
+        union_t(union_t&&)
             requires trivially_constructible<boxed_t, boxed_t&&>
         = default;
 
-        constexpr union_t& operator=(const union_t&) noexcept
+        union_t& operator=(const union_t&)
             requires trivially_assignable<boxed_t&, const boxed_t&>
         = default;
 
-        constexpr union_t& operator=(union_t&&) noexcept
+        union_t& operator=(union_t&&)
             requires trivially_assignable<boxed_t&, boxed_t&&>
         = default;
 
-        constexpr ~union_t() = default;
+        ~union_t() = default;
         constexpr ~union_t()
             requires(not trivially_destructible<boxed_t>)
         {}
