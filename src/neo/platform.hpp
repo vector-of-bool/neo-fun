@@ -15,27 +15,27 @@ namespace neo {
 */
 
 #define pNeo_CompilerCheckByID_MSVC -
-#pragma push_macro("pNeo_CompilerCheckByID_MSVC")
 #define pNeo_CompilerCheckByID_Clang -
-#pragma push_macro("pNeo_CompilerCheckByID_Clang")
 #define pNeo_CompilerCheckByID_GNU -
-#pragma push_macro("pNeo_CompilerCheckByID_GNU")
 #define pNeo_CompilerCheckByID_LLVMClang -
-#pragma push_macro("pNeo_CompilerCheckByID_LLVMClang")
 #define pNeo_CompilerCheckByID_AppleClang -
-#pragma push_macro("pNeo_CompilerCheckByID_AppleClang")
 
 // clang-format off
 #if defined(_MSC_VER)
+    #undef pNeo_CompilerCheckByID_MSVC
     #define pNeo_CompilerCheckByID_MSVC +
 #elif defined(__clang__)
+    #undef pNeo_CompilerCheckByID_Clang
     #define pNeo_CompilerCheckByID_Clang +
     #if defined(__apple_build_version__)
+        #undef pNeo_CompilerCheckByID_AppleClang
         #define pNeo_CompilerCheckByID_AppleClang +
     #else
+        #undef pNeo_CompilerCheckByID_LLVMClang
         #define pNeo_CompilerCheckByID_LLVMClang +
     #endif
 #elif defined(__GNUC__)
+    #undef pNeo_CompilerCheckByID_GNU
     #define pNeo_CompilerCheckByID_GNU +
 #endif
 // clang-format on
