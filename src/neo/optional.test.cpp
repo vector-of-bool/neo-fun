@@ -228,6 +228,9 @@ TEST_CASE("Optional of reference") {
     CHECK(*opt_string == "Other string");
 }
 
+// XXX: MSVC has trouble with our designated-init trickery below?
+#if !NEO_COMPILER(MSVC)
+
 #define DECL_CHECKER(Concept, ...)                                                                 \
     template <bool B>                                                                              \
     struct check_##Concept {                                                                       \
@@ -346,3 +349,5 @@ constexpr auto u [[maybe_unused]] = unused{
                   }>,
                   Attrs{}>,
 };
+
+#endif
