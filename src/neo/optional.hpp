@@ -548,7 +548,7 @@ union [[deprecated("Prefer neo::storage_for<T>")]] nano_opt_storage {
         requires(not trivially_default_constructible<T>)
     {}
 
-#if !NEO_COMPILER_IS_CLANG
+#if !NEO_COMPILER(Clang)
 #define NEO_NANO_OPT_SUPPORTS_TRIVIAL_DESTRUCTIBILITY 1
     NEO_CONSTEXPR_DESTRUCTOR ~nano_opt_storage() = default;
     NEO_CONSTEXPR_DESTRUCTOR ~nano_opt_storage()

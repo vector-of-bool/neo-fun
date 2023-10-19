@@ -41,7 +41,7 @@ concept has_adl_get_if = requires(Variant&& var) {
     { get_if<Alt>(neo::addressof(var)) } -> try_get_result<forward_like_t<Variant, Alt>>;
 };
 
-#if NEO_COMPILER_IS_GNU
+#if NEO_COMPILER(GNU)
 template <typename Alt>
 constexpr inline auto try_get_impl = neo::ordered_overload{
     [](has_member_try_get<Alt> auto&& var) noexcept { return var.template try_get<Alt>(); },

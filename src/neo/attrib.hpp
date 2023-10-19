@@ -4,11 +4,11 @@
 #include <neo/pp.hpp>
 
 // clang-format off
-#if NEO_COMPILER_IS_MSVC
+#if NEO_COMPILER(MSVC)
 #  define NEO_ALWAYS_INLINE __forceinline
 #  define NEO_PRETTY_FUNC __FUNCSIG__
 
-#elif NEO_COMPILER_IS_GNU_LIKE
+#elif NEO_COMPILER(GNU, Clang)
 #  define NEO_ALWAYS_INLINE [[gnu::always_inline]] inline
 #  define NEO_PRETTY_FUNC __PRETTY_FUNCTION__
 
@@ -25,7 +25,7 @@
 # define NEO_CONSTEXPR_DESTRUCTOR inline
 #endif
 
-#if NEO_COMPILER_IS_MSVC
+#if NEO_COMPILER(MSVC)
 #   define NEO_NO_UNIQUE_ADDRESS [[msvc::no_unique_address]]
 #else
 #   define NEO_NO_UNIQUE_ADDRESS [[no_unique_address]]
