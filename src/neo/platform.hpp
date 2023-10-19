@@ -52,7 +52,7 @@ namespace neo {
  *
  * Recognizes "MSVC", "Clang", "GNU", "AppleClang", and "LLVMClang"
  */
-#define NEO_COMPILER(...) false NEO_MAP(pNeo_CompilerCheckIs, ~, __VA_ARGS__)
+#define NEO_COMPILER(...) (false NEO_MAP(pNeo_CompilerCheckIs, ~, __VA_ARGS__))
 
 /// @deprecated Prefer the NEO_COMPILER() function-like macro
 #define NEO_COMPILER_IS_GNU_LIKE (NEO_COMPILER(GNU) || NEO_COMPILER(Clang))
