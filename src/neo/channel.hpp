@@ -278,8 +278,8 @@ template <reference_type ReturnRef>
 struct promise_return<ReturnRef> {
     using return_get  = ReturnRef&;
     using return_take = ReturnRef&&;
-    neo::opt_ref<remove_reference_t<ReturnRef>> _return_value;
-    bool                                        _did_throw = false;
+    neo::optional<ReturnRef> _return_value;
+    bool                     _did_throw = false;
     template <neo::convertible_to<ReturnRef> U>
     constexpr void return_value(U&& arg) noexcept(nothrow_constructible_from<ReturnRef, U>) {
         _return_value = arg;

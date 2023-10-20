@@ -228,6 +228,13 @@ TEST_CASE("Optional of reference") {
     CHECK(*opt_string == "Other string");
 }
 
+struct never_defined;
+
+TEST_CASE("Optional of incomplete reference") {
+    neo::optional<never_defined&> oref;
+    CHECK_FALSE(oref.has_value());
+}
+
 // XXX: MSVC has trouble with our designated-init trickery below?
 #if !NEO_COMPILER(MSVC)
 
