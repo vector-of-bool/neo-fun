@@ -9,6 +9,7 @@
 #include "./invoke.hpp"
 #include "./returns.hpp"
 #include "./storage.hpp"
+#include "neo/type_traits.hpp"
 
 #include <compare>
 #include <cstddef>
@@ -286,6 +287,17 @@ public:
         } else {
             return NEO_FWD(dflt);
         }
+    }
+
+    /**
+     * @brief If this optional currently holds a value, returns a pointer to that
+     * value. Otherwise, returns nullptr
+     */
+    constexpr pointer as_pointer() noexcept {
+        return has_value() ? NEO_ADDRESSOF(**this) : nullptr;
+    }
+    constexpr const_pointer as_pointer() const noexcept {
+        return has_value() ? NEO_ADDRESSOF(**this) : nullptr;
     }
 
     /**
