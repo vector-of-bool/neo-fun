@@ -3,8 +3,8 @@
 #include "./attrib.hpp"
 #include "./fwd.hpp"
 #include "./invoke.hpp"
+#include "./object_box.hpp"
 #include "./returns.hpp"
-#include "./scalar_box.hpp"
 #include "./tag.hpp"
 
 #include <type_traits>
@@ -16,7 +16,7 @@ namespace detail {
 
 template <typename Func>
 class overload_fn {
-    NEO_NO_UNIQUE_ADDRESS neo::scalar_box<Func> _func;
+    NEO_NO_UNIQUE_ADDRESS neo::object_box<Func> _func;
 
 public:
     constexpr overload_fn() = default;
@@ -36,7 +36,7 @@ public:
 template <typename Func>
     requires(not neo_is_member_pointer(remove_cvref_t<Func>))
 class overload_fn<Func> {
-    NEO_NO_UNIQUE_ADDRESS neo::scalar_box<Func> _func;
+    NEO_NO_UNIQUE_ADDRESS neo::object_box<Func> _func;
 
 public:
     constexpr overload_fn() = default;
@@ -88,7 +88,7 @@ template <typename Fn, typename... Tail>
 struct ordered_overload_impl<Fn, Tail...> : ordered_overload_impl<Tail...> {
     using base_type = ordered_overload_impl<Tail...>;
 
-    NEO_NO_UNIQUE_ADDRESS neo::scalar_box<Fn> _my_fn;
+    NEO_NO_UNIQUE_ADDRESS neo::object_box<Fn> _my_fn;
 
     // Default constructor
     constexpr ordered_overload_impl() = default;

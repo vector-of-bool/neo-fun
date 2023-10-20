@@ -423,12 +423,6 @@ concept trivially_destructible =
     destructible<T> and neo_is_trivially_destructible(T)
     ;
 
-template <typename T>
-concept trivially_copyable =
-        copyable<T>
-    and neo_is_trivially_copyayable(T)
-    ;
-
 template <typename To, typename From>
 concept trivially_assignable =
         assignable_from<To, From>
@@ -441,6 +435,13 @@ concept trivially_movable =
     and trivially_assignable<T&, T&&>;
 
 template <typename T>
+concept trivially_copyable =
+        copyable<T>
+    and trivially_movable<T>
+    and neo_is_trivially_copyayable(T)
+    ;
+
+template <typename T>
 concept trivial_type = trivially_copyable<T> && neo_is_trivial(T);
 
 template <typename Func, typename... Args>
@@ -449,6 +450,17 @@ concept nothrow_invocable =
     requires(Func fn, Args... args) {
         { neo::invoke(NEO_FWD(fn), NEO_FWD(args)...) } noexcept;
     };
+
+template <typename T>
+concept move_assignable =
+        move_constructible<T>
+    and assignable_from<T&, T&&>;
+
+template <typename T>
+concept copy_assignable =
+        move_assignable<T>
+    and copy_constructible<T>
+    and assignable_from<T&, const T&>;
 
 // clang-format on
 

@@ -17,32 +17,31 @@ namespace var_detail {
 template <typename>
 void try_get(...) = delete;
 
+template <typename>
+void get_if(...) = delete;
+
 template <typename Result, typename Alt>
 concept try_get_result = requires(Result res, void (*fn)(Alt& ref)) {
-                             { res ? 0 : 0 } noexcept;
-                             fn(*res);
-                         };
+    { res ? 0 : 0 } noexcept;
+    fn(*res);
+};
 
 template <typename Variant, typename Alt>
 concept has_adl_try_get = requires(Variant&& var) {
-                              { try_get<Alt>(var) } -> try_get_result<forward_like_t<Variant, Alt>>;
-                          };
+    { try_get<Alt>(var) } -> try_get_result<forward_like_t<Variant, Alt>>;
+};
 
 template <typename Variant, typename Alt>
 concept has_member_try_get = requires(Variant&& var) {
-                                 {
-                                     var.template try_get<Alt>()
-                                     } -> try_get_result<forward_like_t<Variant, Alt>>;
-                             };
+    { var.template try_get<Alt>() } -> try_get_result<forward_like_t<Variant, Alt>>;
+};
 
 template <typename Variant, typename Alt>
 concept has_adl_get_if = requires(Variant&& var) {
-                             {
-                                 get_if<Alt>(neo::addressof(var))
-                                 } -> try_get_result<forward_like_t<Variant, Alt>>;
-                         };
+    { get_if<Alt>(neo::addressof(var)) } -> try_get_result<forward_like_t<Variant, Alt>>;
+};
 
-#if NEO_COMPILER_IS_GNU
+#if NEO_COMPILER(GNU)
 template <typename Alt>
 constexpr inline auto try_get_impl = neo::ordered_overload{
     [](has_member_try_get<Alt> auto&& var) noexcept { return var.template try_get<Alt>(); },

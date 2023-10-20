@@ -163,6 +163,9 @@ DECL_TRAIT_CONCEPT(union_type, neo_is_union);
 #define neo_is_class NEO_TTRAIT_BUILTIN_OR_VARTMPL(__is_class, ::std::is_class_v)
 DECL_TRAIT_CONCEPT(class_type, neo_is_class);
 
+#define neo_is_empty NEO_TTRAIT_BUILTIN_OR_VARTMPL(__is_empty, ::std::is_empty_v)
+DECL_TRAIT_CONCEPT(empty_type, neo_is_empty);
+
 #define neo_is_lvalue_reference                                                                    \
     NEO_TTRAIT_BUILTIN_OR_VARTMPL(__is_lvalue_reference, ::neo::detail::is_lref_v)
 DECL_TRAIT_CONCEPT(lvalue_reference_type, neo_is_lvalue_reference);
@@ -213,6 +216,7 @@ DECL_TRAIT_CONCEPT(pointer_type, neo_is_pointer);
 #endif
 
 DECL_UNARY_TRANSFORM(add_lvalue_reference);
+DECL_UNARY_TRANSFORM(add_const);
 DECL_UNARY_TRANSFORM(add_pointer);
 DECL_UNARY_TRANSFORM(add_rvalue_reference);
 DECL_UNARY_TRANSFORM(decay);
@@ -389,6 +393,12 @@ concept can_reference = requires { typename with_reference_t<T>; };
 
 template <typename T>
 using const_reference_t = add_lvalue_reference_t<const remove_reference_t<T>>;
+
+template <typename T>
+using add_const_reference_t = add_lvalue_reference_t<add_const_t<T>>;
+
+template <typename T>
+using add_const_pointer_t = add_pointer_t<add_const_t<T>>;
 
 namespace detail {
 

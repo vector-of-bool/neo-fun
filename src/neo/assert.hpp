@@ -18,10 +18,10 @@
 // A noexcept-attribute that is only `noexcept` if the assertion handler does not throw
 #define NEO_NOEXCEPT_ASSERTS noexcept(NEO_ASSERT_IS_NOEXCEPT)
 
-#if NEO_COMPILER_IS_MSVC
+#if NEO_COMPILER(MSVC)
 // MSVC has an __assume built-in
 #define NEO_ASSUME_1(...) (__assume(__VA_ARGS__), true)
-#elif NEO_COMPILER_IS_CLANG
+#elif NEO_COMPILER(Clang)
 // Clang defines a similar built-in to the MSVC one
 #define NEO_ASSUME_1(...) (__builtin_assume(__VA_ARGS__), true)
 #else
@@ -35,7 +35,7 @@
  */
 #define NEO_ASSUME(...) NEO_ASSUME_1(__VA_ARGS__)
 
-#if NEO_COMPILER_IS_MSVC || NEO_COMPILER_IS_CLANG
+#if NEO_COMPILER(MSVC, Clang)
 // On _MSC_VER and __clang__, we have an `assume` intrinsic that does not evaluate its argument.
 #define NEO_UNEVAL_ASSUME_1(...) (NEO_ASSUME(__VA_ARGS__), true)
 #else
@@ -57,9 +57,9 @@ namespace neo {
  * definition, is undefined behavior. Use this an optimization hint.
  */
 [[noreturn]] NEO_ALWAYS_INLINE void unreachable() noexcept {
-#if NEO_COMPILER_IS_GNU_LIKE
+#if NEO_COMPILER(Clang, GNU)
     __builtin_unreachable();
-#elif NEO_COMPILER_IS_MSVC
+#elif NEO_COMPILER(MSVC)
     __assume(0);
 #endif
 }
@@ -149,9 +149,7 @@ struct assertion_expression {
 namespace detail {
 
 template <typename T>
-concept ostream_writable = requires(std::ostream& out, const T& value) {
-    out << value;
-};
+concept ostream_writable = requires(std::ostream& out, const T& value) { out << value; };
 
 template <typename T>
 constexpr void check_one_representable(T&&) noexcept {
@@ -346,9 +344,9 @@ fire_assertion(assertion_info info,
 // compile flag. Check that we have it ready.
 #if _MSVC_TRADITIONAL
 #pragma message(                                                                                   \
-    "warning: NOTE from neo-fun: Using the <neo/assert.hpp> macros with MSVC "                     \
-    "requires a C++20 conformant preprocessor. Compile with "                                      \
-    "/experimental:preprocessor")
+        "warning: NOTE from neo-fun: Using the <neo/assert.hpp> macros with MSVC "                 \
+        "requires a C++20 conformant preprocessor. Compile with "                                  \
+        "/experimental:preprocessor")
 #endif
 
 /**
@@ -454,16 +452,14 @@ void render_breadcrumbs(std::ostream& out) noexcept;
  */
 #define neo_assertion_breadcrumbs(Message, ...)                                                    \
     ::neo::detail::breadcrumb_impl                                                                 \
-        NEO_CONCAT_3(_neo_breadcrum_,                                                              \
-                     __LINE__,                                                                     \
-                     _scope)(Message,                                                              \
-                             NEO_SOURCE_LOCATION(),                                                \
-                             [&](const ::neo::detail::breadcrumb_base& self,                       \
-                                 std::ostream&                         out) noexcept {                                     \
-                                 self.render_into(out,                                             \
-                                                  0 NEO_MAP(NEO_REPR_ASSERT_EXPR,                  \
-                                                            ~,                                     \
-                                                            __VA_ARGS__));                         \
-                             })
+    NEO_CONCAT_3(_neo_breadcrum_,                                                                  \
+                 __LINE__,                                                                         \
+                 _scope)(Message,                                                                  \
+                         NEO_SOURCE_LOCATION(),                                                    \
+                         [&](const ::neo::detail::breadcrumb_base& self,                           \
+                             std::ostream&                         out) noexcept {                                         \
+                             self.render_into(out,                                                 \
+                                              0 NEO_MAP(NEO_REPR_ASSERT_EXPR, ~, __VA_ARGS__));    \
+                         })
 
 }  // namespace neo

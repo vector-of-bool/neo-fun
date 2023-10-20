@@ -1,6 +1,10 @@
 #include "./pimpl.hpp"
 
+#include "./platform.hpp"
+
 #include <catch2/catch.hpp>
+
+NEO_CLANG_PRAGMA(clang diagnostic ignored "-Wself-assign");
 
 class pimpl_haver {
     struct impl;
@@ -44,7 +48,7 @@ TEST_CASE("Use a pimpl object") {
     p1 = std::move(p2);
     CHECK(p1.p->value == 0);
     p1.p->value = 9;
-    p2 = p1;
+    p2          = p1;
     CHECK(p2.p->value == 9);
     p1 = std::move(p2);
     p2 = std::move(p1);

@@ -179,7 +179,7 @@ constexpr utf8_codepoint next_utf8_codepoint(std::ranges::input_range auto&& rng
  */
 template <typename Range>
 class utf8_range {
-    NEO_NO_UNIQUE_ADDRESS scalar_box<Range> _range;
+    NEO_NO_UNIQUE_ADDRESS object_box<Range> _range;
 
     using _iter_type = decltype(std::cbegin(_range.get()));
     using _stop_type = decltype(std::cend(_range.get()));
