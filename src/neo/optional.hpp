@@ -19,7 +19,7 @@ namespace neo {
 /**
  * @brief Provides a stronger, leaner, and faster-compiling version of std::optional
  *
- * This optional supports any type that provides an instance of tombstone_traits,
+ * This optional supports any type that provides an instance of optional_traits,
  * which by default includes any type that supports object_box (including `void` and reference
  * types).
  *
@@ -27,10 +27,10 @@ namespace neo {
  */
 template <typename T>
 class optional : public opt_detail::adl_operators {
-    // tombstone_traits for the optional
-    using traits = tombstone_traits<T>;
+    // optional_traits for the optional
+    using traits = optional_traits<T>;
 
-    static_assert(opt_detail::valid_tombstone_traits<traits, T>);
+    static_assert(opt_detail::valid_optional_traits<traits, T>);
 
     // The stored state type, obtained from the traits
     using state_type = traits::state_type;
@@ -53,7 +53,7 @@ class optional : public opt_detail::adl_operators {
     }
 
     /// Perform a copy-construct/copy-assignment, which may include moving, depending
-    /// on the cvref of "other_storage" and the behavior of our tombstone_traits
+    /// on the cvref of "other_storage" and the behavior of our optional_traits
     void _assign(auto&& other_storage) {
         if (not has_value()) {
             // We have no value. We will take on the value of the other
@@ -230,7 +230,7 @@ public:
     constexpr pointer       operator->() noexcept { return NEO_ADDRESSOF(**this); }
 
     constexpr explicit operator bool() const noexcept { return has_value(); }
-    constexpr bool     has_value() const noexcept { return traits::has_value(_state); }
+    constexpr bool has_value() const noexcept { return traits::has_value(_state); }
 
     constexpr auto value() & -> reference {
         _check_has_value();
@@ -299,9 +299,9 @@ public:
         noexcept(noexcept(traits::copy(_state, NEO_MOVE(other._state)))  //
                      and noexcept(traits::swap(_state, _state)))
         requires requires {
-                     traits::copy(_state, NEO_MOVE(_state));
-                     traits::swap(_state, other._state);
-                 }
+            traits::copy(_state, NEO_MOVE(_state));
+            traits::swap(_state, other._state);
+        }
     {
         if (not has_value()) {
             if (other.has_value()) {
@@ -419,7 +419,7 @@ public:
  *
  * @tparam T The type for which we are specializing
  *
- * A valid specialization of tombstone_traits defines the following:
+ * A valid specialization of optional_traits defines the following:
  *
  * - `typename state_type` must be a type that is default-constructible. A default-constructed
  *   state_type object MUST represent an unalive "disengaged" state. The optional<T>
@@ -449,7 +449,7 @@ public:
  * - static constexpr bool trivial_copy_assign • Allow trivial copy-assignment of the state
  */
 template <typename T>
-struct tombstone_traits {
+struct optional_traits {
     using state_type = default_optional_state<T>;
 
     static constexpr bool trivial_copy        = copy_constructible<state_type>;
@@ -498,7 +498,7 @@ struct tombstone_traits {
  * @brief Specialization for reference types
  */
 template <reference_type Ref>
-struct tombstone_traits<Ref> {
+struct optional_traits<Ref> {
     using state_type = remove_reference_t<Ref>*;
 
     static constexpr bool trivial_copy        = true;
@@ -537,10 +537,10 @@ union [[deprecated("Prefer neo::storage_for<T>")]] nano_opt_storage {
      * @brief Construct a value in-place.
      */
     template <typename... Args>
-    constexpr explicit nano_opt_storage(std::in_place_t, Args&& ... args)  //
-        noexcept(nothrow_constructible_from<T, Args...>)                   //
-        requires constructible_from<T, Args...>                            //
-        : box((Args &&)(args)...) {}
+    constexpr explicit nano_opt_storage(std::in_place_t, Args&&... args)  //
+        noexcept(nothrow_constructible_from<T, Args...>)                  //
+        requires constructible_from<T, Args...>                           //
+        : box((Args&&)(args)...) {}
 
     /// Default-construct as disenganged
     constexpr nano_opt_storage() = default;

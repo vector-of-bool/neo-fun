@@ -8,7 +8,7 @@
 namespace neo {
 
 template <typename T>
-struct tombstone_traits;
+struct optional_traits;
 
 template <typename T>
 class optional;
@@ -30,7 +30,7 @@ constexpr bool is_optional_v<optional<T>> = true;
 namespace neo::opt_detail {
 
 template <typename Traits, typename T>
-concept valid_tombstone_traits = requires {
+concept valid_optional_traits = requires {
     typename Traits::state_type;
     requires object_type<typename Traits::state_type>;
 } and requires(typename Traits::state_type& mstate, typename Traits::state_type const& cstate) {
