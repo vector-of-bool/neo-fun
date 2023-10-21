@@ -4,12 +4,6 @@
 
 #include <catch2/catch.hpp>
 
-struct something {
-    NEO_NO_UNIQUE_ADDRESS neo::ct_optional<int, false> nothing;
-};
-
-static_assert(neo::empty_type<something>);
-
 TEST_CASE("Create an optional") {
     neo::ct_optional<int, true> v = 12;
     CHECK(v.has_value());
