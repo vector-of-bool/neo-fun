@@ -76,4 +76,22 @@ TEST_CASE("Array box") {
     CHECK(box2.get()[0] == 1);
     CHECK(box2.get()[1] == 2);
     CHECK(box2.get()[2] == 3);
+
+    neo::object_box box3{std::as_const(arr)};
+    static_assert(std::same_as<decltype(box3), neo::object_box<int const(&)[3]>>);
+    CHECK(box3.get()[0] == 1);
+    CHECK(box3.get()[1] == 2);
+    CHECK(box3.get()[2] == 3);
+
+    neo::object_box<int[3]> box_copy_const{std::as_const(carr)};
+    static_assert(std::same_as<decltype(box_copy_const), neo::object_box<int[3]>>);
+    CHECK(box_copy_const.get()[0] == 1);
+    CHECK(box_copy_const.get()[1] == 2);
+    CHECK(box_copy_const.get()[2] == 3);
+
+    neo::object_box<int[3]> box_copy_rval{NEO_MOVE(carr)};
+    static_assert(std::same_as<decltype(box_copy_rval), neo::object_box<int[3]>>);
+    CHECK(box_copy_rval.get()[0] == 1);
+    CHECK(box_copy_rval.get()[1] == 2);
+    CHECK(box_copy_rval.get()[2] == 3);
 }
