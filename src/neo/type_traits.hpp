@@ -131,6 +131,18 @@ DECL_TRAIT_CONCEPT(null_pointer, neo_is_null_pointer);
 #define neo_is_array NEO_TTRAIT_BUILTIN_OR_VARTMPL(__is_array, ::neo::detail::is_array_v)
 DECL_TRAIT_CONCEPT(array_type, neo_is_array);
 
+/**
+ * @brief Match a type which is an array of known bounds
+ */
+template <typename T>
+concept bounded_array_type = array_type<T> and detail::is_bounded_array_v<T>;
+
+/**
+ * @brief Match a type which is an array of unknown boundss
+ */
+template <typename T>
+concept unbounded_array_type = array_type<T> and detail::is_unbounded_array_v<T>;
+
 #define neo_is_const NEO_TTRAIT_BUILTIN_OR_VARTMPL(__is_const, ::neo::detail::is_const_v)
 DECL_TRAIT_CONCEPT(const_type, neo_is_const);
 
@@ -671,6 +683,30 @@ struct detail::common_reference {
     struct impl : common_reference<1>::template impl<
                       common_reference_t<common_reference_t<T, U>, common_reference_t<Vs...>>> {};
 };
+
+namespace detail {
+
+/// Add a level of indirection to prevent type_identity_t from being deduced,
+/// while also permforming better than a naive std::type_identity.
+template <bool>
+struct type_identity {
+    template <typename T>
+    using f = T;
+};
+
+}  // namespace detail
+
+/**
+ * @brief Yields the exact type given as the template argument. Inhibits argument deduction.
+ */
+template <typename T>
+using type_identity_t = detail::type_identity<void_type<T>>::template f<T>;
+
+/**
+ * @brief Wrap a template parameter in a context to guard it from template argument deduction
+ */
+template <typename T>
+using nondeduced = type_identity_t<T>;
 
 }  // namespace neo
 
