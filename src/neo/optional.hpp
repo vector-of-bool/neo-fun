@@ -9,7 +9,7 @@
 #include "./invoke.hpp"
 #include "./returns.hpp"
 #include "./storage.hpp"
-#include "neo/type_traits.hpp"
+#include "./type_traits.hpp"
 
 #include <compare>
 #include <cstddef>
@@ -466,8 +466,8 @@ struct optional_traits {
 
     static constexpr bool trivial_copy        = copy_constructible<state_type>;
     static constexpr bool trivial_move        = move_constructible<state_type>;
-    static constexpr bool trivial_copy_assign = copyable<state_type>;
-    static constexpr bool trivial_move_assign = movable<state_type>;
+    static constexpr bool trivial_copy_assign = trivially_copyable<state_type>;
+    static constexpr bool trivial_move_assign = trivially_movable<state_type>;
 
     constexpr static bool has_value(const state_type& st) noexcept { return st.has_value; }
     constexpr static add_lvalue_reference_t<T> get(state_type& st) noexcept {

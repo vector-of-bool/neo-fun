@@ -1,7 +1,7 @@
 #pragma once
 
-#include "neo/type_traits.hpp"
 #include <neo/concepts.hpp>
+#include <neo/type_traits.hpp>
 
 #include <optional>
 
