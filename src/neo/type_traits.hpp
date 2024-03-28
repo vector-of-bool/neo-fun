@@ -187,7 +187,7 @@ DECL_TRAIT_CONCEPT(lvalue_reference_type, neo_is_lvalue_reference);
 DECL_TRAIT_CONCEPT(rvalue_reference_type, neo_is_rvalue_reference);
 
 #define neo_is_reference(...)                                                                      \
-    neo_is_lvalue_reference(__VA_ARGS__) or neo_is_rvalue_reference(__VA_ARGS__)
+    (neo_is_lvalue_reference(__VA_ARGS__) or neo_is_rvalue_reference(__VA_ARGS__))
 
 template <typename T>
 concept reference_type = lvalue_reference_type<T> or rvalue_reference_type<T>;
