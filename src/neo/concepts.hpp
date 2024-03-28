@@ -486,6 +486,28 @@ concept nothrow_invocable =
         { neo::invoke(NEO_FWD(fn), NEO_FWD(args)...) } noexcept;
     };
 
+namespace detail {
+
+template <typename T>
+struct narrowing_conversion_helper {
+    T one[1];
+};
+
+} // namespace detail
+
+/**
+ * @brief Check that `From` is convertible to `To` without causing built-in
+ * narrowing.
+ */
+template <typename From, typename To>
+concept non_narrowing_convertible_to =
+        convertible_to<From, To>
+    and requires(From&& from) {
+        // This expression will be invalid if the conversion of `From` to `To`
+        // causes narrowing, because such conversion appears within a braced initializer
+        detail::narrowing_conversion_helper<remove_cvref_t<To>>{{NEO_FWD(from)}};
+    };
+
 // clang-format on
 
 }  // namespace neo
