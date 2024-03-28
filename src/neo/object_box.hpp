@@ -33,12 +33,31 @@ namespace neo {
 template <typename T>
 class object_box;
 
+namespace detail {
+
+// Put the ADL-visible specail functions() in a base class for object box, otherwise object_box
+// would generate new function templates for every specialization, which can get
+// expensive. This is only used for the plain object_type specialization
+struct object_box_operators {
+    template <typename T>
+    constexpr friend void swap(object_box<T>& left,
+                               object_box<T>& right)  //
+        noexcept(noexcept(neo::swap(left.get(), right.get()))) {
+        neo::swap(left.get(), right.get());
+    }
+
+    bool operator==(const object_box_operators&) const  = default;
+    auto operator<=>(const object_box_operators&) const = default;
+};
+
+}  // namespace detail
+
 /**
  * Implementation of object_box for non-array object types
  */
 template <typename T>
     requires object_type<T> and (not array_type<T>)
-class object_box<T> {
+class object_box<T> : detail::object_box_operators {
     NEO_NO_UNIQUE_ADDRESS T _value;
 
 public:
@@ -54,9 +73,11 @@ public:
      * This constructor is explicit if the underlying conversion is never implicit
      */
     template <unalike<object_box> U>
+        requires explicit_convertible_to<U&&, T>
     // We are explicit if the implicit conversion is not viable
-    explicit(not implicit_convertible_to<U&&, T>) constexpr object_box(U&& arg)
-        NEO_CONSTRUCTS(object_box(std::in_place, NEO_FWD(arg))) {}
+    explicit(not implicit_convertible_to<U&&, T>) constexpr object_box(U&& arg) noexcept(
+        noexcept(T(NEO_FWD(arg))))
+        : _value(NEO_FWD(arg)) {}
 
     /**
      * @brief In-place constructor. Calls the underlying constructor directly.
@@ -77,20 +98,14 @@ public:
     /**
      * @brief Obtain the boxed value as-if by forwarding reference.
      */
-    [[nodiscard]] constexpr T&& take() noexcept { return NEO_MOVE(_value); }
+    [[nodiscard]] constexpr T&&       forward() noexcept { return NEO_MOVE(_value); }
+    [[nodiscard]] constexpr const T&& forward() const noexcept { return NEO_MOVE(_value); }
 
     constexpr void friend do_repr(auto out, const object_box* self) noexcept {
         out.type("[boxed {}]", out.template repr_type<T>("?"));
         if (self) {
             out.value("{}", out.repr_value(self->get(), "?"));
         }
-    }
-
-    friend void swap(object_box& left,
-                     object_box& right) noexcept(noexcept(neo::swap(left._value, right._value)))
-        requires requires { neo::swap(left._value, right._value); }
-    {
-        neo::swap(left._value, right._value);
     }
 };
 
@@ -179,7 +194,8 @@ public:
     /**
      * @brief Obtain the boxed value as-if by forwarding reference.
      */
-    [[nodiscard]] constexpr array_type&& take() noexcept { return NEO_MOVE(_array); }
+    [[nodiscard]] constexpr array_type&&       forward() noexcept { return NEO_MOVE(_array); }
+    [[nodiscard]] constexpr const array_type&& forward() const noexcept { return NEO_MOVE(_array); }
 
     constexpr void friend do_repr(auto out, const object_box* self) noexcept {
         out.type("[boxed {}]", out.template repr_type<array_type>("?"));
@@ -275,7 +291,7 @@ public:
     [[nodiscard]] constexpr Ref& get() const noexcept { return *_ptr; }
 
     /// Obtain the boxed reference.
-    [[nodiscard]] constexpr Ref& take() noexcept { return *_ptr; }
+    [[nodiscard]] constexpr Ref& forward() const noexcept { return *_ptr; }
 
     constexpr Pointer operator->() const noexcept { return _ptr; }
 
@@ -304,7 +320,7 @@ public:
     // Returns void for boxed void
     constexpr remove_cv_t<Void> get() const noexcept {}
     // Returns void for boxed void
-    constexpr remove_cv_t<Void> take() noexcept {}
+    constexpr remove_cv_t<Void> forward() const noexcept {}
 
     constexpr void friend do_repr(auto out, const object_box* self) noexcept {
         out.type("[boxed {}]", out.template repr_type<Void>());
