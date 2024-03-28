@@ -73,6 +73,7 @@
 #define NEO_MSVC_HAS_BUILTIN__is_unbounded_array
 #define NEO_MSVC_HAS_BUILTIN__is_union
 #define NEO_MSVC_HAS_BUILTIN__underlying_type
+#define NEO_MSVC_HAS_BUILTIN__builtin_addressof
 
 #define NEO_MSVC_HAS_BUILTIN__make_integer_seq
 
