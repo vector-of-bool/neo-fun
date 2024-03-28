@@ -2,6 +2,7 @@
 
 #include "./fwd.hpp"
 #include "./invoke.hpp"
+#include "./swap.hpp"
 #include "./type_traits.hpp"
 #include "./version.hpp"
 
@@ -249,7 +250,9 @@ concept swappable_with = detail::swappable_impl<T, U>;
  * @brief Test whether a type is swappable with itself via std::ranges::swap
  */
 template <typename T>
-concept swappable = detail::can_std_ranges_swap<T&, T&>;
+concept swappable = requires(T& t) {
+    neo::swap(t, t);
+} or detail::can_std_ranges_swap<T&, T&>;
 
 namespace detail {
 
@@ -408,9 +411,20 @@ concept nothrow_constructible_from =
 #endif
     ;
 
+template <typename T>
+concept move_assignable =
+        move_constructible<T>
+    and assignable_from<T&, T&&>;
+
+template <typename T>
+concept copy_assignable =
+        move_assignable<T>
+    and copy_constructible<T>
+    and assignable_from<T&, const T&>;
+
 template <typename T, typename... Args>
 concept trivially_constructible =
-        constructible_from<T, Args...>
+        nothrow_constructible_from<T, Args...>
     and neo_is_trivially_constructible(T, Args...);
 
 template <typename T>
@@ -429,14 +443,35 @@ concept trivially_assignable =
     and neo_is_trivially_assignable(To, From);
 
 template <typename T>
+concept trivially_move_constructible =
+        move_constructible<T>
+    and trivially_constructible<T, T&&>;
+
+template <typename T>
+concept trivially_copy_constructible =
+        copy_constructible<T>
+    and trivially_constructible<T, const T&>;
+
+template <typename T>
+concept trivially_copy_assignable =
+        copy_assignable<T>
+    and trivially_assignable<T&, T const&>;
+
+template <typename T>
+concept trivially_move_assignable =
+        move_assignable<T>
+    and trivially_assignable<T&, T&&>;
+
+template <typename T>
 concept trivially_movable =
         movable<T>
-    and trivially_constructible<T, T&&>
+    and trivially_move_constructible<T>
     and trivially_assignable<T&, T&&>;
 
 template <typename T>
 concept trivially_copyable =
         copyable<T>
+    and trivially_copy_constructible<T>
     and trivially_movable<T>
     and neo_is_trivially_copyayable(T)
     ;
@@ -450,17 +485,6 @@ concept nothrow_invocable =
     requires(Func fn, Args... args) {
         { neo::invoke(NEO_FWD(fn), NEO_FWD(args)...) } noexcept;
     };
-
-template <typename T>
-concept move_assignable =
-        move_constructible<T>
-    and assignable_from<T&, T&&>;
-
-template <typename T>
-concept copy_assignable =
-        move_assignable<T>
-    and copy_constructible<T>
-    and assignable_from<T&, const T&>;
 
 // clang-format on
 
