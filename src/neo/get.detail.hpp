@@ -52,6 +52,9 @@ constexpr bool sfinae_mask_n<std::tuple<Ts...>, N> = sizeof...(Ts) > N;
 template <typename T, std::size_t Len, std::size_t N>
 constexpr bool sfinae_mask_n<std::array<T, Len>, N> = N < Len;
 
+template <typename T, typename U, std::size_t N>
+constexpr bool sfinae_mask_n<std::pair<T, U>, N> = N < 2;
+
 template <typename Alt>
 void try_get() = delete;
 
