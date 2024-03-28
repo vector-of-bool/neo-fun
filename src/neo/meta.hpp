@@ -1,6 +1,7 @@
 #pragma once
 
 #include <neo/attrib.hpp>
+#include <neo/type_traits.hpp>
 
 #include <utility>
 
@@ -647,6 +648,50 @@ struct rebind {
  */
 template <typename L, neo_ttparam NewL>
 using rebind = typename tacit::rebind<NewL>::tl f<L>;
+
+namespace find_type_detail {
+
+template <u64 N, bool Same>
+struct find_type_one {};
+
+template <u64 N>
+struct find_type_one<N, true> {
+    enum { value = N };
+};
+
+template <bool B>
+struct find_base {
+    template <u64 N>
+    struct base {};
+};
+
+template <>
+struct find_base<true> {
+    template <u64 N>
+    struct base {
+        enum { value = N };
+    };
+};
+
+template <typename T, typename List, typename Seq = std::make_index_sequence<meta::len_v<List>>>
+struct finder;
+
+template <std::size_t... Ns, typename T, neo_ttparam L, typename... Ts>
+struct finder<T, L<Ts...>, std::index_sequence<Ns...>>
+    : find_base<neo_is_same(T, Ts)>::template base<Ns>... {};
+
+}  // namespace find_type_detail
+
+template <typename Needle, typename... Ts>
+    requires requires { find_type_detail::finder<Needle, meta::list<Ts...>>::value; }
+constexpr std::size_t find_type_v = find_type_detail::finder<Needle, meta::list<Ts...>>::value;
+
+template <typename Needle, typename L>
+    requires requires { find_type_detail::finder<Needle, L>::value; }
+constexpr std::size_t find_type_in = find_type_detail::finder<Needle, L>::value;
+
+template <typename Needle, typename... Ts>
+struct find_type : meta::val<find_type_v<Needle, Ts...>> {};
 
 }  // namespace neo::meta
 
