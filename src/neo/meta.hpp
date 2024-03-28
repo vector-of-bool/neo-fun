@@ -1,5 +1,7 @@
 #pragma once
 
+#include <neo/attrib.hpp>
+
 #include <utility>
 
 #define u64 unsigned long long
@@ -380,9 +382,71 @@ struct remove_prefix_ {
     struct from;
 
     template <neo_ttparam L, tn... Ts>
+        requires((sizeof...(Ts) >= N))
     struct from<L<Ts...>> {
-        static_assert(sizeof...(Ts) >= N, "remove_prefix N is too large");
         using type = decltype(remove_prefix_fn<L, voids>::r(static_cast<tag<Ts>*>(nullptr)...));
+    };
+};
+
+template <>
+struct remove_prefix_<0> {
+    template <tn L>
+    struct from {
+        using type = L;
+    };
+};
+
+template <>
+struct remove_prefix_<1> {
+    template <tn L>
+    struct from;
+
+    template <neo_ttparam L>
+    struct fn {
+        template <typename... Tail>
+        static L<Tail...> r(void*, tag<Tail>*...);
+    };
+
+    template <neo_ttparam L, tn... Ts>
+        requires((sizeof...(Ts) >= 1))
+    struct from<L<Ts...>> {
+        using type = decltype(fn<L>::r(static_cast<tag<Ts>*>(nullptr)...));
+    };
+};
+
+template <>
+struct remove_prefix_<2> {
+    template <tn L>
+    struct from;
+
+    template <neo_ttparam L>
+    struct fn {
+        template <typename... Tail>
+        static L<Tail...> r(void*, void*, tag<Tail>*...);
+    };
+
+    template <neo_ttparam L, tn... Ts>
+        requires((sizeof...(Ts) >= 1))
+    struct from<L<Ts...>> {
+        using type = decltype(fn<L>::r(static_cast<tag<Ts>*>(nullptr)...));
+    };
+};
+
+template <>
+struct remove_prefix_<3> {
+    template <tn L>
+    struct from;
+
+    template <neo_ttparam L>
+    struct fn {
+        template <typename... Tail>
+        static L<Tail...> r(void*, void*, void*, tag<Tail>*...);
+    };
+
+    template <neo_ttparam L, tn... Ts>
+        requires((sizeof...(Ts) >= 1))
+    struct from<L<Ts...>> {
+        using type = decltype(fn<L>::r(static_cast<tag<Ts>*>(nullptr)...));
     };
 };
 
@@ -404,11 +468,34 @@ struct remove_prefix {
 template <tn L, u64 N>
 using remove_prefix = tn detail::remove_prefix_<N>::tl from<L>::type;
 
+namespace detail {
+
+#if NEO_HAS_BUILTIN(__type_pack_element)
+template <typename Seq>
+struct intrin_at_impl;
+
+template <neo_ttparam L, typename... Ts>
+struct intrin_at_impl<L<Ts...>> {
+    template <u64 N>
+    using f = __type_pack_element<N, Ts...>;
+};
+#endif
+
+}  // namespace detail
+
 /**
  * @brief Obtain the Nth element of the given typelist
  */
 template <tn L, u64 N>
+#if NEO_HAS_BUILTIN(__type_pack_element)
+using at = detail::intrin_at_impl<L>::template f<N>;
+template <u64 N, typename... Ts>
+using pack_at = __type_pack_element<N, Ts...>;
+#else
 using at = head<remove_prefix<L, N>>;
+template <u64 N, typename... Ts>
+using pack_at = at<list<Ts...>, N>;
+#endif
 
 namespace tacit {
 
