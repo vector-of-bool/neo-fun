@@ -1,0 +1,262 @@
+#pragma once
+
+// clang-format off
+
+{{generated_file_notice('src/neo/constexpr_union.hpp.jinja')}}
+{#-
+    To render this template, run render.py (at the root of this repo), feeding
+    this file to the script's stdin
+#}
+
+#include <neo/unit.hpp>
+#include <neo/attrib.hpp>
+#include <neo/addressof.hpp>
+#include <neo/meta.hpp>
+#include <neo/type_traits.hpp>
+#include <neo/fwd.hpp>
+
+#include <memory>  // std::construct_at
+
+namespace neo {
+
+/**
+ * @brief A variadic union template that is default-constructible and `constexpr`-ready.
+ *
+ * Defines three member function templates:
+ *
+ * - `get<N>() -> nth_type<N> [const] [&|&&]` obtain a reference to the `Nth` union member.
+ * - `construct<N>(auto&&...) -> nth_type<N>&` activate the `Nth` union member by calling
+ *   the constructor with the given arguments. No other union members are modified.
+ * - `destroy<N>() -> void` - Destroy the `Nth` union member by calling its destructor.
+ *
+ * Every specialization of `constexpr_union` constains a `nil` alternative which is
+ * activated upon default-construction of the union. The names of the variadic members are
+ * the zero-based index of the member with an underscore prefix (e.g. `_0`, `_1`, `_2`, `_3`).
+ * To access the `Nth` member generically, use the `get<N>()` member function template, which
+ * returns a reference to that member with the cvref-qualifiers of the instance used to call the
+ * `get` member. To get the `Nth` type of the union, use the `nth_type<N>` member alias
+ * template.
+ *
+ * The union is not a "`variant`"": it is up to the user to track the active member and
+ * to correctly call the constructors/destructors when needed. The sole purpose of
+ * this class template is to simplify the implementation of `variant`/`optional`-style
+ * class templates.
+ *
+ * Because of the implicit `nil` member, a `constexpr_union<T>` can be used as storage
+ * for an optional `T`, with the `nil` member acting as a the "null" state.
+ *
+ * All union members are marked with `[[no_uninque_address]]`.
+ *
+ * @tparam Ts... The alternative of the union. Must not be empty.
+ */
+template <typename... Ts>
+union constexpr_union;
+
+namespace detail {
+
+template <typename... Ts>
+concept all_trivially_destructible =
+    (neo_is_trivially_destructible(Ts) and ... and true);
+
+template <std::size_t N, typename Ret, typename Onion>
+NEO_ALWAYS_INLINE constexpr Ret get_member(Onion&& on) noexcept {
+    {%- for n in range(100) %}
+    if constexpr (N == {{n}}) return static_cast<Ret>(on._{{n}});
+    {%- endfor %}
+}
+
+}
+
+template <>
+union constexpr_union<> {
+    NEO_ALWAYS_INLINE constexpr constexpr_union() noexcept
+        : nil()
+    {}
+
+    NEO_NO_UNIQUE_ADDRESS unit nil;
+};
+
+#% for n in range(1, 100+1)
+template <{{range(n) | format_each('typename T{}') | join(', ')}}>
+union constexpr_union<{{range(n) | format_each('T{}') | join(', ')}}> {
+    template <std::size_t N>
+    using nth_type = meta::pack_at<N, {{range(n) | format_each('T{}') | join(', ')}}>;
+
+    NEO_ALWAYS_INLINE constexpr constexpr_union() noexcept
+        : nil()
+    {}
+
+    NEO_CONSTEXPR_DESTRUCTOR ~constexpr_union() = default;
+    NEO_CONSTEXPR_DESTRUCTOR ~constexpr_union()
+        requires (not detail::all_trivially_destructible<{{range(n) | format_each('T{}') | join(', ')}}>)
+    {}
+
+    template <std::size_t N, typename... Args>
+    NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
+        noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
+    {
+        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+    }
+
+    template <std::size_t N, typename T = nth_type<N>>
+    NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
+        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+    }
+
+    {%- macro foreach_member() -%}
+        {% for nth in range(n) -%}
+        {{caller(nth, 'T{}'.format(nth), '_{}'.format(nth))}}
+        {%- endfor %}
+    {%- endmacro %}
+
+    {%- macro getters(cast, T) -%}
+        {%- if n > 50 -%}
+        return detail::get_member<N, {{T}}>(*this);
+        {%- else -%}
+        if constexpr (false) {}
+        {%- call(idx, _type, member) foreach_member() %}
+        else if constexpr (N == {{idx}})
+            return {{cast}}({{member}});
+        {%- endcall -%}
+        {%- endif %}
+    {%- endmacro %}
+
+    template <std::size_t N>
+    [[nodiscard]] NEO_ALWAYS_INLINE constexpr nth_type<N>& get() & noexcept {
+        {{ getters('', 'nth_type<N>&') }}
+    }
+
+    template <std::size_t N>
+    [[nodiscard]] NEO_ALWAYS_INLINE constexpr nth_type<N> const& get() const & noexcept {
+        {{ getters('', 'nth_type<N> const&') }}
+    }
+
+    template <std::size_t N>
+    [[nodiscard]] NEO_ALWAYS_INLINE constexpr nth_type<N>&& get() && noexcept {
+        return NEO_MOVE(this->get<N>());
+    }
+
+    template <std::size_t N>
+    [[nodiscard]] NEO_ALWAYS_INLINE constexpr nth_type<N> const&& get() const && noexcept {
+        return NEO_MOVE(this->get<N>());
+    }
+
+    NEO_NO_UNIQUE_ADDRESS unit nil;
+
+    constexpr_union(constexpr_union&&) = default;
+    constexpr_union(constexpr_union const&) = default;
+    constexpr_union& operator=(constexpr_union&&) = default;
+    constexpr_union& operator=(constexpr_union const&) = default;
+    {# . #}
+
+    {%- call(_, type, name) foreach_member() %}
+    NEO_NO_UNIQUE_ADDRESS {{type}} {{name}};
+    {%- endcall %}
+};
+{##}
+#% endfor
+
+#if 0
+// In principal, arbitrarily many types could be supported, but some compilers consider it UB to
+// access the tail sub-union if the head sub-union has an active member. GCC accepts, but Clang
+// rejects. This might not have a pretty solution.
+
+// Specialization for at least ten types, which subdivides the arguments into
+// smaller sub-unions.
+template <typename T0,
+          typename T1,
+          typename T2,
+          typename T3,
+          typename T4,
+          typename T5,
+          typename T6,
+          typename T7,
+          typename T8,
+          typename T9,
+          typename... More>
+    requires(sizeof...(More) != 0)
+union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, More...> {
+    using FirstNext = constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9>;
+    using Tail = constexpr_union<More...>;
+
+    constexpr constexpr_union(constexpr_union&&)                 = default;
+    constexpr constexpr_union(constexpr_union const&)            = default;
+    constexpr constexpr_union& operator=(constexpr_union&&)      = default;
+    constexpr constexpr_union& operator=(constexpr_union const&) = default;
+
+    constexpr constexpr_union() noexcept
+        : _first_ten() {}
+
+    NEO_CONSTEXPR_DESTRUCTOR ~constexpr_union() = default;
+    NEO_CONSTEXPR_DESTRUCTOR ~constexpr_union()
+        requires(not neo_is_trivially_destructible(FirstNext)
+              or not neo_is_trivially_destructible(Tail))
+    {}
+
+    template <std::size_t N>
+    using nth_type = meta::at<constexpr_union, N>;
+
+    template <std::size_t N>
+    constexpr nth_type<N>& get() & noexcept {
+        if constexpr (N < 10) {
+            return _first_ten.template get<N>();
+        } else {
+            return _tail.template get<N - 10>();
+        }
+    }
+
+    template <std::size_t N>
+    constexpr nth_type<N> const& get() const& noexcept {
+        if constexpr (N < 10) {
+            return _first_ten.template get<N>();
+        } else {
+            return _tail.template get<N - 10>();
+        }
+    }
+
+    template <std::size_t N>
+    constexpr nth_type<N>&& get() && noexcept {
+        if constexpr (N < 10) {
+            return _first_ten.template get<N>();
+        } else {
+            return _tail.template get<N - 10>();
+        }
+    }
+
+    template <std::size_t N>
+    constexpr nth_type<N> const&& get() const&& noexcept {
+        if constexpr (N < 10) {
+            return _first_ten.template get<N>();
+        } else {
+            return _tail.template get<N - 10>();
+        }
+    }
+
+    template <std::size_t N, typename... Args>
+    constexpr nth_type<N>&
+    construct(Args&&... args) noexcept(noexcept(nth_type<N>(static_cast<Args&&...>(args)...))) {
+        if constexpr (N < 10) {
+            return _first_ten.template construct<N>(static_cast<Args&&...>(args)...);
+        } else {
+            return _tail.template construct<N - 10>(static_cast<Args&&...>(args)...);
+        }
+    }
+
+    template <std::size_t N>
+        requires requires { typename nth_type<N>; }
+    constexpr void destroy() noexcept {
+        if constexpr (N < 10) {
+            _first_ten.template destroy<N>();
+        } else {
+            _tail.template destroy<N-10>();
+        }
+    }
+
+    NEO_NO_UNIQUE_ADDRESS FirstNext _first_ten;
+    NEO_NO_UNIQUE_ADDRESS Tail _tail;
+};
+
+#endif // disabled
+
+}  // namespace neo
+
