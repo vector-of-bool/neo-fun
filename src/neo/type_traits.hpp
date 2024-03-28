@@ -175,6 +175,9 @@ DECL_TRAIT_CONCEPT(union_type, neo_is_union);
 #define neo_is_class NEO_TTRAIT_BUILTIN_OR_VARTMPL(__is_class, ::std::is_class_v)
 DECL_TRAIT_CONCEPT(class_type, neo_is_class);
 
+template <typename T>
+concept class_or_enum_type = class_type<T> or enum_type<T>;
+
 #define neo_is_empty NEO_TTRAIT_BUILTIN_OR_VARTMPL(__is_empty, ::std::is_empty_v)
 DECL_TRAIT_CONCEPT(empty_type, neo_is_empty);
 
@@ -351,6 +354,15 @@ DECL_TRAIT_CONCEPT(object_type, neo_is_object);
     NEO_TTRAIT_BUILTIN_OR_VARTMPL(__is_trivially_destructible, ::std::is_trivially_destructible_v)
 #define neo_is_trivially_assignable                                                                \
     NEO_TTRAIT_BUILTIN_OR_VARTMPL(__is_trivially_assignable, ::std::is_trivially_assignable_v)
+
+template <typename T>
+concept member_function_pointer = neo_is_member_function_pointer(T);
+
+template <typename T>
+concept member_object_pointer = neo_is_member_object_pointer(T);
+
+template <typename T>
+concept member_pointer = member_function_pointer<T> or member_object_pointer<T>;
 
 namespace detail {
 
