@@ -392,15 +392,19 @@ TEST_CASE("Get T from neo::variant<>") {
     STATIC_REQUIRE(std::same_as<neo::get_as_t<neo::variant<int&> const&&, int&>, int&>);
 }
 
-TEST_CASE("Not-default-constructible") {
-    STATIC_REQUIRE_FALSE(neo::default_initializable<neo::variant<std::strong_ordering>>);
-    // We are default-constructible only if the first alt is default constructible
-    STATIC_REQUIRE(neo::default_initializable<neo::variant<std::string, std::strong_ordering>>);
-    STATIC_REQUIRE_FALSE(
-        neo::default_initializable<neo::variant<std::strong_ordering, std::string>>);
+struct not_default_constructible {
+    not_default_constructible(int);
+};
 
-    neo::variant<std::strong_ordering> ord = std::strong_ordering::equal;
-    CHECK(ord == std::strong_ordering::equal);
+TEST_CASE("Not-default-constructible") {
+    STATIC_REQUIRE_FALSE(neo::default_initializable<neo::variant<not_default_constructible>>);
+    // We are default-constructible only if the first alt is default constructible
+    STATIC_REQUIRE(
+        neo::default_initializable<neo::variant<std::string, not_default_constructible>>);
+    STATIC_REQUIRE_FALSE(
+        neo::default_initializable<neo::variant<not_default_constructible, std::string>>);
+
+    neo::variant<not_default_constructible> ord = not_default_constructible{42};
 }
 
 template <typename T>
