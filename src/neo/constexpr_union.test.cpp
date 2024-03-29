@@ -1,6 +1,7 @@
 #include <neo/constexpr_union.hpp>
 
 #include <catch2/catch.hpp>
+#include <neo/testing.hpp>
 
 #include <memory>
 
@@ -60,3 +61,8 @@ TEST_CASE("Non-trivial") {
         STATIC_REQUIRE(n.value == 31);
     }
 }
+
+neo::testing::cx_test_case ChangingActiveMember = [](auto) consteval {
+    neo::constexpr_union<neo::unit, neo::unit, neo::unit> onion;
+    onion.construct<1>();  // Should be constexpr-okay
+};
