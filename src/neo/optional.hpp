@@ -1,10 +1,11 @@
 #pragma once
 
+#include "./optional.detail.hpp"
+
 #include "./addressof.hpp"
 #include "./attrib.hpp"
 #include "./concepts.hpp"
 #include "./declval.hpp"
-#include "./detail/optional.hpp"
 #include "./emplacement.hpp"
 #include "./invoke.hpp"
 #include "./returns.hpp"
@@ -40,14 +41,14 @@ class optional : public opt_detail::adl_operators {
     NEO_NO_UNIQUE_ADDRESS state_type _state = state_type();
 
     /// If we do not currently hold any value, throws bad_optional_access
-    void _check_has_value() const {
+    constexpr void _check_has_value() const {
         if (not has_value()) {
             opt_detail::throw_bad_optional();
         }
     }
 
     /// If we do not currently hold any value, terminate the program.
-    void _assert_has_value() const noexcept {
+    constexpr void _assert_has_value() const noexcept {
         if (not has_value()) {
             opt_detail::terminate_bad_optional();
         }
@@ -55,7 +56,7 @@ class optional : public opt_detail::adl_operators {
 
     /// Perform a copy-construct/copy-assignment, which may include moving, depending
     /// on the cvref of "other_storage" and the behavior of our optional_traits
-    void _assign(auto&& other_storage) {
+    constexpr void _assign(auto&& other_storage) {
         if (not has_value()) {
             // We have no value. We will take on the value of the other
             if (traits::has_value(other_storage)) {
@@ -175,6 +176,12 @@ public:
         traits::construct(_state, NEO_FWD(args)...);
     }
 
+    constexpr explicit optional(std::in_place_t) noexcept
+        requires void_type<T>
+    {
+        traits::construct(_state);
+    }
+
     template <typename U>
     constexpr explicit(not convertible_to<U&&, T>)
         optional(U&& arg) noexcept(nothrow_constructible_from<U&&, T>)
@@ -231,7 +238,7 @@ public:
     constexpr pointer       operator->() noexcept { return NEO_ADDRESSOF(**this); }
 
     constexpr explicit operator bool() const noexcept { return has_value(); }
-    constexpr bool has_value() const noexcept { return traits::has_value(_state); }
+    constexpr bool     has_value() const noexcept { return traits::has_value(_state); }
 
     constexpr auto value() & -> reference {
         _check_has_value();
@@ -398,8 +405,8 @@ public:
     }
 
     template <typename F>
-        constexpr optional or_else(F&& fn) &&
-            requires movable<T>
+    constexpr optional or_else(F&& fn) &&
+        requires movable<T>
     {
         if (has_value()) {
             return *NEO_FWD(*this);
