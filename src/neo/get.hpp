@@ -79,4 +79,10 @@ concept can_get_nth = requires(Tpl&& tpl) { get_nth<Index>(NEO_FWD(tpl)); };
 template <typename T, typename Alternative>
 concept can_get_as = requires(T&& obj) { get_as<Alternative>(NEO_FWD(obj)); };
 
+template <typename T>
+constexpr inline auto holds_alternative = _get::holds_alternative<T>{};
+
+template <std::size_t N>
+constexpr inline auto holds_alternative_n = _get::holds_alternative_n<N>{};
+
 }  // namespace neo

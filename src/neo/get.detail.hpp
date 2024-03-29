@@ -254,4 +254,24 @@ struct as {
     }
 };
 
+template <typename Alt>
+struct holds_alternative {
+    static constexpr inline try_as<Alt> try_it = {};
+
+    template <can_try_get_alt<Alt> T>
+    NEO_ALWAYS_INLINE constexpr bool operator()(const T& obj) const noexcept {
+        return static_cast<bool>(try_it(obj));
+    }
+};
+
+template <std::size_t N>
+struct holds_alternative_n {
+    static constexpr inline try_nth<N> try_it = {};
+
+    template <has_any_try_get_nth_backend<N> T>
+    NEO_ALWAYS_INLINE constexpr bool operator()(const T& obj) const noexcept {
+        return static_cast<bool>(try_it(obj));
+    }
+};
+
 }  // namespace neo::_get

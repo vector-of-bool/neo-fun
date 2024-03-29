@@ -1,5 +1,7 @@
 #include "./get.hpp"
 
+#include <neo/testing.hpp>
+
 #include <catch2/catch.hpp>
 
 #include <array>
@@ -263,3 +265,11 @@ TEST_CASE("Reject not-tuple-like types") {
     STATIC_REQUIRE_FALSE(neo::can_get_nth<invalid_ref_getter_v2&&, 0>);
     STATIC_REQUIRE_FALSE(neo::can_get_nth<const invalid_ref_getter_v2&&, 0>);
 }
+
+neo::testing::cx_test_case TestHoldsAlternative = [](auto check) consteval {
+    std::variant<int, double> var;
+    check(neo::holds_alternative<int>(var));
+    check(not neo::holds_alternative<double>(var));
+    check(neo::holds_alternative_n<0>(var));
+    check(not neo::holds_alternative_n<1>(var));
+};
