@@ -484,15 +484,25 @@ struct intrin_at_impl<L<Ts...>> {
 
 }  // namespace detail
 
+#if NEO_HAS_BUILTIN(__type_pack_element)
 /**
- * @brief Obtain the Nth element of the given typelist
+ * @brief Select the `Nth` element of the given type-list.
+ *
+ * @tparam L A list of types to choose from
+ * @tparam N The zero-based index of the type to be selected.
  */
 template <tn L, u64 N>
-#if NEO_HAS_BUILTIN(__type_pack_element)
 using at = detail::intrin_at_impl<L>::template f<N>;
+/**
+ * @brief Obtain the `Nth` type from the given list of types (zero-based indexing)
+ *
+ * @tparam N The zero-based index of the type to select
+ * @tparam Ts A list of types to choose from
+ */
 template <u64 N, typename... Ts>
 using pack_at = __type_pack_element<N, Ts...>;
 #else
+template <tn L, u64 N>
 using at = head<remove_prefix<L, N>>;
 template <u64 N, typename... Ts>
 using pack_at = at<list<Ts...>, N>;
@@ -678,13 +688,14 @@ struct finder;
 
 template <std::size_t... Ns, typename T, neo_ttparam L, typename... Ts>
 struct finder<T, L<Ts...>, std::index_sequence<Ns...>>
-    : find_base<neo_is_same(T, Ts)>::template base<Ns>... {};
+    : find_base<neo::weak_same_as<T, Ts>>::template base<Ns>... {};
 
 }  // namespace find_type_detail
 
 template <typename Needle, typename... Ts>
-    requires requires { find_type_detail::finder<Needle, meta::list<Ts...>>::value; }
-constexpr std::size_t find_type_v = find_type_detail::finder<Needle, meta::list<Ts...>>::value;
+    requires((weak_same_as<Needle, Ts> or ...))
+constexpr std::size_t find_type_v
+    = find_type_detail::finder<Needle, meta::list<Ts...>, std::index_sequence_for<Ts...>>::value;
 
 template <typename Needle, typename L>
     requires requires { find_type_detail::finder<Needle, L>::value; }
