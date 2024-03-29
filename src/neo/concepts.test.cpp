@@ -179,4 +179,11 @@ std::false_type test_trivially_copyable_subsume(T);
 
 static_assert(decltype(test_trivially_copyable_subsume(5))::value);
 
+static_assert(non_narrowing_convertible_to<float, double>);
+static_assert(not non_narrowing_convertible_to<const char*, bool>);
+static_assert(non_narrowing_convertible_to<bool, int>);
+static_assert(not non_narrowing_convertible_to<int, bool>);
+static_assert(not non_narrowing_convertible_to<signed, unsigned>);
+static_assert(non_narrowing_convertible_to<unsigned short, signed int>);
+
 static_assert(destructible<int&>);

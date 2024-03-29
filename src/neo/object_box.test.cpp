@@ -94,4 +94,43 @@ TEST_CASE("Array box") {
     CHECK(box_copy_rval.get()[0] == 1);
     CHECK(box_copy_rval.get()[1] == 2);
     CHECK(box_copy_rval.get()[2] == 3);
+
+    neo::object_box<int[3]> box_in_place_construct{std::in_place, carr};
+    CHECK(box_in_place_construct.get()[0] == 1);
+    CHECK(box_in_place_construct.get()[1] == 2);
+    CHECK(box_in_place_construct.get()[2] == 3);
 }
+
+TEST_CASE("Emplacement construct") {
+    neo::object_box<int> i{std::in_place, 21};
+    CHECK(i.get() == 21);
+}
+
+TEST_CASE("Equality+Ordering") {
+    SECTION("regular") {
+        constexpr neo::object_box<int> a{31};
+        CHECK(a == a);
+        CHECK_FALSE(a < a);
+    }
+    SECTION("Arrays") {
+        constexpr neo::object_box<int[3]> a{std::in_place, 1, 3, 4};
+        STATIC_REQUIRE(a == a);
+        STATIC_REQUIRE_FALSE(a < a);
+        constexpr neo::object_box<int[3]> b{std::in_place, 3, 1, 9};
+        STATIC_REQUIRE_FALSE(a == b);
+        STATIC_REQUIRE(a < b);
+    }
+    SECTION("void") {
+        constexpr neo::object_box<void> a;
+        CHECK(a == a);
+        CHECK_FALSE(a < a);
+    }
+}
+
+static_assert(neo::regular<neo::object_box<int>>);
+static_assert(neo::regular<neo::object_box<int[12]>>);
+static_assert(neo::totally_ordered<neo::object_box<int>>);
+static_assert(neo::totally_ordered<neo::object_box<int[12]>>);
+static_assert(neo::totally_ordered<neo::object_box<int&>>);
+static_assert(neo::totally_ordered<neo::object_box<void>>);
+static_assert(neo::regular<neo::object_box<void>>);
