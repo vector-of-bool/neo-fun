@@ -51,6 +51,7 @@ public:
     constexpr variant() noexcept(noexcept(_first_type()))
         requires neo::default_initializable<_first_type>
     {
+        _storage.nil.~unit();
         _storage.template construct<0>();
         // Our _index is already default-assigned to zero
     }
@@ -65,6 +66,7 @@ public:
     constexpr explicit variant(std::in_place_index_t<N>,
                                Args&&... args)  //
         noexcept(noexcept(nonvoid_t<T>(NEO_FWD(args)...))) {
+        _storage.nil.~unit();
         _storage.template construct<N>(NEO_FWD(args)...);
         this->_index = index_type(N);
     }
@@ -99,6 +101,7 @@ public:
               typename T         = nth_type<N>>
     explicit(not implicit_convertible_to<Arg, nonvoid_t<T>>)  //
         constexpr variant(Arg&& arg) noexcept(noexcept(nonvoid_t<T>(NEO_FWD(arg)))) {
+        _storage.nil.~unit();
         _storage.template construct<N>(NEO_FWD(arg));
         this->_index = index_type(N);
     }
@@ -423,6 +426,7 @@ struct variant_operators {
         const std::size_t other_index = other.index();
         auto&             my_store    = self._storage;
         auto&&            their_store = NEO_FWD(other)._storage;
+        my_store.nil.~unit();
         static_cast<void>(((other_index == Ns
                             and (static_cast<void>(my_store.template construct<Ns>(
                                      NEO_FWD(their_store).template get<Ns>())),
