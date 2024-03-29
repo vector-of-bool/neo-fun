@@ -328,6 +328,7 @@ neo::testing::cx_test_case VariantOrdering = [](auto check) consteval {
     variant<int, double, char> v1, v2, v3;
     check(v1 == v2);
     v1 = 900;
+    check(v1 < 3.14);  // int is less than a double literal
     check(v1 > v2);
     check(v1 > v3);
     v2 = 3.14;       // Becomes `double`

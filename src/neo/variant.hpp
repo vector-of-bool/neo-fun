@@ -2,6 +2,7 @@
 
 #include "./variant.detail.hpp"
 
+#include <neo/compare.hpp>
 #include <neo/constexpr_union.hpp>
 #include <neo/optional.hpp>  // optional<void>
 #include <neo/unit.hpp>      // unit/nonvoid_t
@@ -503,6 +504,14 @@ struct variant_operators {
               typename T    = meta::pack_at<N, Ts...>>
         requires equality_comparable_with<Other const&, object_t<T>>
     constexpr friend bool operator==(const variant<Ts...>& var, const Other& other) noexcept {
+        // Call out to a static member function. Older compilers do not consider friend functions
+        // to be within the scope of the enclosing class, thus the `friend variant_operators`
+        // declaration in variant<...> won't be respected here.
+        return _compare_eq<N, T>(var, other);
+    }
+
+    template <std::size_t N, typename T, typename Other, typename... Ts>
+    static constexpr bool _compare_eq(const variant<Ts...>& var, const Other& other) noexcept {
         if (var.index() != N) {
             // We do not hold the alternative under question.
             return false;
@@ -529,8 +538,15 @@ struct variant_operators {
               std::size_t N = _variant_detail::best_conversion_index_t<Other const&, Ts...>::value,
               typename T    = meta::pack_at<N, Ts...>>
         requires totally_ordered_with<object_t<T>, Other const&>
-    constexpr friend std::compare_three_way_result_t<object_t<T>, Other const&>
+    constexpr friend synth_three_way_result_t<object_t<T>, Other const&>
     operator<=>(const variant<Ts...>& var, const Other& other) noexcept {
+        // See above operator== for why this is a separate function
+        return _compare_3way<N, T>(var, other);
+    }
+
+    template <std::size_t N, typename T, typename Other, typename... Ts>
+    constexpr static synth_three_way_result_t<object_t<T>, Other>
+    _compare_3way(const variant<Ts...>& var, const Other& other) noexcept {
         if (var.index() != N) {
             // Not the same alternative, so order based on the expected alternative index:
             return var.index() <=> N;
@@ -538,7 +554,7 @@ struct variant_operators {
         // We are good to compare. DO NOT compare using try_get(): We want to
         // compare unit as unit and reference_object as reference_object!
         const object_t<T>& held = var._storage.template get<N>();
-        return std::compare_three_way{}(var._storage.template get<N>(), other);
+        return synth_three_way(held, other);
     }
 };
 
