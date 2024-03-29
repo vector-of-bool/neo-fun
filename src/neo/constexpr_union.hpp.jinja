@@ -65,6 +65,20 @@ NEO_ALWAYS_INLINE constexpr Ret get_member(Onion&& on) noexcept {
     {%- endfor %}
 }
 
+template <std::size_t N, typename Onion, typename... Args>
+NEO_ALWAYS_INLINE constexpr auto construct_member(Onion& on, Args&&... args) {
+    {%- for n in range(100) %}
+    if constexpr (N == {{n}}) return std::construct_at(NEO_ADDRESSOF(on._{{n}}), static_cast<Args&&>(args)...);
+    {%- endfor %}
+}
+
+template <std::size_t N, typename Onion, typename... Args>
+NEO_ALWAYS_INLINE constexpr void destroy_member(Onion& on) {
+    {%- for n in range(100) %}
+    if constexpr (N == {{n}}) return std::destroy_at(NEO_ADDRESSOF(on._{{n}}));
+    {%- endfor %}
+}
+
 }
 
 template <>
@@ -95,12 +109,12 @@ union constexpr_union<{{range(n) | format_each('T{}') | join(', ')}}> {
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     {%- macro foreach_member() -%}

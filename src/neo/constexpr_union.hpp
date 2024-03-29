@@ -11,8 +11,6 @@
 
 // This file was GENERATED from src/neo/constexpr_union.hpp.jinja
 
-// This file is GENERATED! Edit constexpr_union.hpp.jinja instead.
-
 #include <neo/unit.hpp>
 #include <neo/attrib.hpp>
 #include <neo/addressof.hpp>
@@ -167,6 +165,214 @@ NEO_ALWAYS_INLINE constexpr Ret get_member(Onion&& on) noexcept {
     if constexpr (N == 99) return static_cast<Ret>(on._99);
 }
 
+template <std::size_t N, typename Onion, typename... Args>
+NEO_ALWAYS_INLINE constexpr auto construct_member(Onion& on, Args&&... args) {
+    if constexpr (N == 0) return std::construct_at(NEO_ADDRESSOF(on._0), static_cast<Args&&>(args)...);
+    if constexpr (N == 1) return std::construct_at(NEO_ADDRESSOF(on._1), static_cast<Args&&>(args)...);
+    if constexpr (N == 2) return std::construct_at(NEO_ADDRESSOF(on._2), static_cast<Args&&>(args)...);
+    if constexpr (N == 3) return std::construct_at(NEO_ADDRESSOF(on._3), static_cast<Args&&>(args)...);
+    if constexpr (N == 4) return std::construct_at(NEO_ADDRESSOF(on._4), static_cast<Args&&>(args)...);
+    if constexpr (N == 5) return std::construct_at(NEO_ADDRESSOF(on._5), static_cast<Args&&>(args)...);
+    if constexpr (N == 6) return std::construct_at(NEO_ADDRESSOF(on._6), static_cast<Args&&>(args)...);
+    if constexpr (N == 7) return std::construct_at(NEO_ADDRESSOF(on._7), static_cast<Args&&>(args)...);
+    if constexpr (N == 8) return std::construct_at(NEO_ADDRESSOF(on._8), static_cast<Args&&>(args)...);
+    if constexpr (N == 9) return std::construct_at(NEO_ADDRESSOF(on._9), static_cast<Args&&>(args)...);
+    if constexpr (N == 10) return std::construct_at(NEO_ADDRESSOF(on._10), static_cast<Args&&>(args)...);
+    if constexpr (N == 11) return std::construct_at(NEO_ADDRESSOF(on._11), static_cast<Args&&>(args)...);
+    if constexpr (N == 12) return std::construct_at(NEO_ADDRESSOF(on._12), static_cast<Args&&>(args)...);
+    if constexpr (N == 13) return std::construct_at(NEO_ADDRESSOF(on._13), static_cast<Args&&>(args)...);
+    if constexpr (N == 14) return std::construct_at(NEO_ADDRESSOF(on._14), static_cast<Args&&>(args)...);
+    if constexpr (N == 15) return std::construct_at(NEO_ADDRESSOF(on._15), static_cast<Args&&>(args)...);
+    if constexpr (N == 16) return std::construct_at(NEO_ADDRESSOF(on._16), static_cast<Args&&>(args)...);
+    if constexpr (N == 17) return std::construct_at(NEO_ADDRESSOF(on._17), static_cast<Args&&>(args)...);
+    if constexpr (N == 18) return std::construct_at(NEO_ADDRESSOF(on._18), static_cast<Args&&>(args)...);
+    if constexpr (N == 19) return std::construct_at(NEO_ADDRESSOF(on._19), static_cast<Args&&>(args)...);
+    if constexpr (N == 20) return std::construct_at(NEO_ADDRESSOF(on._20), static_cast<Args&&>(args)...);
+    if constexpr (N == 21) return std::construct_at(NEO_ADDRESSOF(on._21), static_cast<Args&&>(args)...);
+    if constexpr (N == 22) return std::construct_at(NEO_ADDRESSOF(on._22), static_cast<Args&&>(args)...);
+    if constexpr (N == 23) return std::construct_at(NEO_ADDRESSOF(on._23), static_cast<Args&&>(args)...);
+    if constexpr (N == 24) return std::construct_at(NEO_ADDRESSOF(on._24), static_cast<Args&&>(args)...);
+    if constexpr (N == 25) return std::construct_at(NEO_ADDRESSOF(on._25), static_cast<Args&&>(args)...);
+    if constexpr (N == 26) return std::construct_at(NEO_ADDRESSOF(on._26), static_cast<Args&&>(args)...);
+    if constexpr (N == 27) return std::construct_at(NEO_ADDRESSOF(on._27), static_cast<Args&&>(args)...);
+    if constexpr (N == 28) return std::construct_at(NEO_ADDRESSOF(on._28), static_cast<Args&&>(args)...);
+    if constexpr (N == 29) return std::construct_at(NEO_ADDRESSOF(on._29), static_cast<Args&&>(args)...);
+    if constexpr (N == 30) return std::construct_at(NEO_ADDRESSOF(on._30), static_cast<Args&&>(args)...);
+    if constexpr (N == 31) return std::construct_at(NEO_ADDRESSOF(on._31), static_cast<Args&&>(args)...);
+    if constexpr (N == 32) return std::construct_at(NEO_ADDRESSOF(on._32), static_cast<Args&&>(args)...);
+    if constexpr (N == 33) return std::construct_at(NEO_ADDRESSOF(on._33), static_cast<Args&&>(args)...);
+    if constexpr (N == 34) return std::construct_at(NEO_ADDRESSOF(on._34), static_cast<Args&&>(args)...);
+    if constexpr (N == 35) return std::construct_at(NEO_ADDRESSOF(on._35), static_cast<Args&&>(args)...);
+    if constexpr (N == 36) return std::construct_at(NEO_ADDRESSOF(on._36), static_cast<Args&&>(args)...);
+    if constexpr (N == 37) return std::construct_at(NEO_ADDRESSOF(on._37), static_cast<Args&&>(args)...);
+    if constexpr (N == 38) return std::construct_at(NEO_ADDRESSOF(on._38), static_cast<Args&&>(args)...);
+    if constexpr (N == 39) return std::construct_at(NEO_ADDRESSOF(on._39), static_cast<Args&&>(args)...);
+    if constexpr (N == 40) return std::construct_at(NEO_ADDRESSOF(on._40), static_cast<Args&&>(args)...);
+    if constexpr (N == 41) return std::construct_at(NEO_ADDRESSOF(on._41), static_cast<Args&&>(args)...);
+    if constexpr (N == 42) return std::construct_at(NEO_ADDRESSOF(on._42), static_cast<Args&&>(args)...);
+    if constexpr (N == 43) return std::construct_at(NEO_ADDRESSOF(on._43), static_cast<Args&&>(args)...);
+    if constexpr (N == 44) return std::construct_at(NEO_ADDRESSOF(on._44), static_cast<Args&&>(args)...);
+    if constexpr (N == 45) return std::construct_at(NEO_ADDRESSOF(on._45), static_cast<Args&&>(args)...);
+    if constexpr (N == 46) return std::construct_at(NEO_ADDRESSOF(on._46), static_cast<Args&&>(args)...);
+    if constexpr (N == 47) return std::construct_at(NEO_ADDRESSOF(on._47), static_cast<Args&&>(args)...);
+    if constexpr (N == 48) return std::construct_at(NEO_ADDRESSOF(on._48), static_cast<Args&&>(args)...);
+    if constexpr (N == 49) return std::construct_at(NEO_ADDRESSOF(on._49), static_cast<Args&&>(args)...);
+    if constexpr (N == 50) return std::construct_at(NEO_ADDRESSOF(on._50), static_cast<Args&&>(args)...);
+    if constexpr (N == 51) return std::construct_at(NEO_ADDRESSOF(on._51), static_cast<Args&&>(args)...);
+    if constexpr (N == 52) return std::construct_at(NEO_ADDRESSOF(on._52), static_cast<Args&&>(args)...);
+    if constexpr (N == 53) return std::construct_at(NEO_ADDRESSOF(on._53), static_cast<Args&&>(args)...);
+    if constexpr (N == 54) return std::construct_at(NEO_ADDRESSOF(on._54), static_cast<Args&&>(args)...);
+    if constexpr (N == 55) return std::construct_at(NEO_ADDRESSOF(on._55), static_cast<Args&&>(args)...);
+    if constexpr (N == 56) return std::construct_at(NEO_ADDRESSOF(on._56), static_cast<Args&&>(args)...);
+    if constexpr (N == 57) return std::construct_at(NEO_ADDRESSOF(on._57), static_cast<Args&&>(args)...);
+    if constexpr (N == 58) return std::construct_at(NEO_ADDRESSOF(on._58), static_cast<Args&&>(args)...);
+    if constexpr (N == 59) return std::construct_at(NEO_ADDRESSOF(on._59), static_cast<Args&&>(args)...);
+    if constexpr (N == 60) return std::construct_at(NEO_ADDRESSOF(on._60), static_cast<Args&&>(args)...);
+    if constexpr (N == 61) return std::construct_at(NEO_ADDRESSOF(on._61), static_cast<Args&&>(args)...);
+    if constexpr (N == 62) return std::construct_at(NEO_ADDRESSOF(on._62), static_cast<Args&&>(args)...);
+    if constexpr (N == 63) return std::construct_at(NEO_ADDRESSOF(on._63), static_cast<Args&&>(args)...);
+    if constexpr (N == 64) return std::construct_at(NEO_ADDRESSOF(on._64), static_cast<Args&&>(args)...);
+    if constexpr (N == 65) return std::construct_at(NEO_ADDRESSOF(on._65), static_cast<Args&&>(args)...);
+    if constexpr (N == 66) return std::construct_at(NEO_ADDRESSOF(on._66), static_cast<Args&&>(args)...);
+    if constexpr (N == 67) return std::construct_at(NEO_ADDRESSOF(on._67), static_cast<Args&&>(args)...);
+    if constexpr (N == 68) return std::construct_at(NEO_ADDRESSOF(on._68), static_cast<Args&&>(args)...);
+    if constexpr (N == 69) return std::construct_at(NEO_ADDRESSOF(on._69), static_cast<Args&&>(args)...);
+    if constexpr (N == 70) return std::construct_at(NEO_ADDRESSOF(on._70), static_cast<Args&&>(args)...);
+    if constexpr (N == 71) return std::construct_at(NEO_ADDRESSOF(on._71), static_cast<Args&&>(args)...);
+    if constexpr (N == 72) return std::construct_at(NEO_ADDRESSOF(on._72), static_cast<Args&&>(args)...);
+    if constexpr (N == 73) return std::construct_at(NEO_ADDRESSOF(on._73), static_cast<Args&&>(args)...);
+    if constexpr (N == 74) return std::construct_at(NEO_ADDRESSOF(on._74), static_cast<Args&&>(args)...);
+    if constexpr (N == 75) return std::construct_at(NEO_ADDRESSOF(on._75), static_cast<Args&&>(args)...);
+    if constexpr (N == 76) return std::construct_at(NEO_ADDRESSOF(on._76), static_cast<Args&&>(args)...);
+    if constexpr (N == 77) return std::construct_at(NEO_ADDRESSOF(on._77), static_cast<Args&&>(args)...);
+    if constexpr (N == 78) return std::construct_at(NEO_ADDRESSOF(on._78), static_cast<Args&&>(args)...);
+    if constexpr (N == 79) return std::construct_at(NEO_ADDRESSOF(on._79), static_cast<Args&&>(args)...);
+    if constexpr (N == 80) return std::construct_at(NEO_ADDRESSOF(on._80), static_cast<Args&&>(args)...);
+    if constexpr (N == 81) return std::construct_at(NEO_ADDRESSOF(on._81), static_cast<Args&&>(args)...);
+    if constexpr (N == 82) return std::construct_at(NEO_ADDRESSOF(on._82), static_cast<Args&&>(args)...);
+    if constexpr (N == 83) return std::construct_at(NEO_ADDRESSOF(on._83), static_cast<Args&&>(args)...);
+    if constexpr (N == 84) return std::construct_at(NEO_ADDRESSOF(on._84), static_cast<Args&&>(args)...);
+    if constexpr (N == 85) return std::construct_at(NEO_ADDRESSOF(on._85), static_cast<Args&&>(args)...);
+    if constexpr (N == 86) return std::construct_at(NEO_ADDRESSOF(on._86), static_cast<Args&&>(args)...);
+    if constexpr (N == 87) return std::construct_at(NEO_ADDRESSOF(on._87), static_cast<Args&&>(args)...);
+    if constexpr (N == 88) return std::construct_at(NEO_ADDRESSOF(on._88), static_cast<Args&&>(args)...);
+    if constexpr (N == 89) return std::construct_at(NEO_ADDRESSOF(on._89), static_cast<Args&&>(args)...);
+    if constexpr (N == 90) return std::construct_at(NEO_ADDRESSOF(on._90), static_cast<Args&&>(args)...);
+    if constexpr (N == 91) return std::construct_at(NEO_ADDRESSOF(on._91), static_cast<Args&&>(args)...);
+    if constexpr (N == 92) return std::construct_at(NEO_ADDRESSOF(on._92), static_cast<Args&&>(args)...);
+    if constexpr (N == 93) return std::construct_at(NEO_ADDRESSOF(on._93), static_cast<Args&&>(args)...);
+    if constexpr (N == 94) return std::construct_at(NEO_ADDRESSOF(on._94), static_cast<Args&&>(args)...);
+    if constexpr (N == 95) return std::construct_at(NEO_ADDRESSOF(on._95), static_cast<Args&&>(args)...);
+    if constexpr (N == 96) return std::construct_at(NEO_ADDRESSOF(on._96), static_cast<Args&&>(args)...);
+    if constexpr (N == 97) return std::construct_at(NEO_ADDRESSOF(on._97), static_cast<Args&&>(args)...);
+    if constexpr (N == 98) return std::construct_at(NEO_ADDRESSOF(on._98), static_cast<Args&&>(args)...);
+    if constexpr (N == 99) return std::construct_at(NEO_ADDRESSOF(on._99), static_cast<Args&&>(args)...);
+}
+
+template <std::size_t N, typename Onion, typename... Args>
+NEO_ALWAYS_INLINE constexpr void destroy_member(Onion& on) {
+    if constexpr (N == 0) return std::destroy_at(NEO_ADDRESSOF(on._0));
+    if constexpr (N == 1) return std::destroy_at(NEO_ADDRESSOF(on._1));
+    if constexpr (N == 2) return std::destroy_at(NEO_ADDRESSOF(on._2));
+    if constexpr (N == 3) return std::destroy_at(NEO_ADDRESSOF(on._3));
+    if constexpr (N == 4) return std::destroy_at(NEO_ADDRESSOF(on._4));
+    if constexpr (N == 5) return std::destroy_at(NEO_ADDRESSOF(on._5));
+    if constexpr (N == 6) return std::destroy_at(NEO_ADDRESSOF(on._6));
+    if constexpr (N == 7) return std::destroy_at(NEO_ADDRESSOF(on._7));
+    if constexpr (N == 8) return std::destroy_at(NEO_ADDRESSOF(on._8));
+    if constexpr (N == 9) return std::destroy_at(NEO_ADDRESSOF(on._9));
+    if constexpr (N == 10) return std::destroy_at(NEO_ADDRESSOF(on._10));
+    if constexpr (N == 11) return std::destroy_at(NEO_ADDRESSOF(on._11));
+    if constexpr (N == 12) return std::destroy_at(NEO_ADDRESSOF(on._12));
+    if constexpr (N == 13) return std::destroy_at(NEO_ADDRESSOF(on._13));
+    if constexpr (N == 14) return std::destroy_at(NEO_ADDRESSOF(on._14));
+    if constexpr (N == 15) return std::destroy_at(NEO_ADDRESSOF(on._15));
+    if constexpr (N == 16) return std::destroy_at(NEO_ADDRESSOF(on._16));
+    if constexpr (N == 17) return std::destroy_at(NEO_ADDRESSOF(on._17));
+    if constexpr (N == 18) return std::destroy_at(NEO_ADDRESSOF(on._18));
+    if constexpr (N == 19) return std::destroy_at(NEO_ADDRESSOF(on._19));
+    if constexpr (N == 20) return std::destroy_at(NEO_ADDRESSOF(on._20));
+    if constexpr (N == 21) return std::destroy_at(NEO_ADDRESSOF(on._21));
+    if constexpr (N == 22) return std::destroy_at(NEO_ADDRESSOF(on._22));
+    if constexpr (N == 23) return std::destroy_at(NEO_ADDRESSOF(on._23));
+    if constexpr (N == 24) return std::destroy_at(NEO_ADDRESSOF(on._24));
+    if constexpr (N == 25) return std::destroy_at(NEO_ADDRESSOF(on._25));
+    if constexpr (N == 26) return std::destroy_at(NEO_ADDRESSOF(on._26));
+    if constexpr (N == 27) return std::destroy_at(NEO_ADDRESSOF(on._27));
+    if constexpr (N == 28) return std::destroy_at(NEO_ADDRESSOF(on._28));
+    if constexpr (N == 29) return std::destroy_at(NEO_ADDRESSOF(on._29));
+    if constexpr (N == 30) return std::destroy_at(NEO_ADDRESSOF(on._30));
+    if constexpr (N == 31) return std::destroy_at(NEO_ADDRESSOF(on._31));
+    if constexpr (N == 32) return std::destroy_at(NEO_ADDRESSOF(on._32));
+    if constexpr (N == 33) return std::destroy_at(NEO_ADDRESSOF(on._33));
+    if constexpr (N == 34) return std::destroy_at(NEO_ADDRESSOF(on._34));
+    if constexpr (N == 35) return std::destroy_at(NEO_ADDRESSOF(on._35));
+    if constexpr (N == 36) return std::destroy_at(NEO_ADDRESSOF(on._36));
+    if constexpr (N == 37) return std::destroy_at(NEO_ADDRESSOF(on._37));
+    if constexpr (N == 38) return std::destroy_at(NEO_ADDRESSOF(on._38));
+    if constexpr (N == 39) return std::destroy_at(NEO_ADDRESSOF(on._39));
+    if constexpr (N == 40) return std::destroy_at(NEO_ADDRESSOF(on._40));
+    if constexpr (N == 41) return std::destroy_at(NEO_ADDRESSOF(on._41));
+    if constexpr (N == 42) return std::destroy_at(NEO_ADDRESSOF(on._42));
+    if constexpr (N == 43) return std::destroy_at(NEO_ADDRESSOF(on._43));
+    if constexpr (N == 44) return std::destroy_at(NEO_ADDRESSOF(on._44));
+    if constexpr (N == 45) return std::destroy_at(NEO_ADDRESSOF(on._45));
+    if constexpr (N == 46) return std::destroy_at(NEO_ADDRESSOF(on._46));
+    if constexpr (N == 47) return std::destroy_at(NEO_ADDRESSOF(on._47));
+    if constexpr (N == 48) return std::destroy_at(NEO_ADDRESSOF(on._48));
+    if constexpr (N == 49) return std::destroy_at(NEO_ADDRESSOF(on._49));
+    if constexpr (N == 50) return std::destroy_at(NEO_ADDRESSOF(on._50));
+    if constexpr (N == 51) return std::destroy_at(NEO_ADDRESSOF(on._51));
+    if constexpr (N == 52) return std::destroy_at(NEO_ADDRESSOF(on._52));
+    if constexpr (N == 53) return std::destroy_at(NEO_ADDRESSOF(on._53));
+    if constexpr (N == 54) return std::destroy_at(NEO_ADDRESSOF(on._54));
+    if constexpr (N == 55) return std::destroy_at(NEO_ADDRESSOF(on._55));
+    if constexpr (N == 56) return std::destroy_at(NEO_ADDRESSOF(on._56));
+    if constexpr (N == 57) return std::destroy_at(NEO_ADDRESSOF(on._57));
+    if constexpr (N == 58) return std::destroy_at(NEO_ADDRESSOF(on._58));
+    if constexpr (N == 59) return std::destroy_at(NEO_ADDRESSOF(on._59));
+    if constexpr (N == 60) return std::destroy_at(NEO_ADDRESSOF(on._60));
+    if constexpr (N == 61) return std::destroy_at(NEO_ADDRESSOF(on._61));
+    if constexpr (N == 62) return std::destroy_at(NEO_ADDRESSOF(on._62));
+    if constexpr (N == 63) return std::destroy_at(NEO_ADDRESSOF(on._63));
+    if constexpr (N == 64) return std::destroy_at(NEO_ADDRESSOF(on._64));
+    if constexpr (N == 65) return std::destroy_at(NEO_ADDRESSOF(on._65));
+    if constexpr (N == 66) return std::destroy_at(NEO_ADDRESSOF(on._66));
+    if constexpr (N == 67) return std::destroy_at(NEO_ADDRESSOF(on._67));
+    if constexpr (N == 68) return std::destroy_at(NEO_ADDRESSOF(on._68));
+    if constexpr (N == 69) return std::destroy_at(NEO_ADDRESSOF(on._69));
+    if constexpr (N == 70) return std::destroy_at(NEO_ADDRESSOF(on._70));
+    if constexpr (N == 71) return std::destroy_at(NEO_ADDRESSOF(on._71));
+    if constexpr (N == 72) return std::destroy_at(NEO_ADDRESSOF(on._72));
+    if constexpr (N == 73) return std::destroy_at(NEO_ADDRESSOF(on._73));
+    if constexpr (N == 74) return std::destroy_at(NEO_ADDRESSOF(on._74));
+    if constexpr (N == 75) return std::destroy_at(NEO_ADDRESSOF(on._75));
+    if constexpr (N == 76) return std::destroy_at(NEO_ADDRESSOF(on._76));
+    if constexpr (N == 77) return std::destroy_at(NEO_ADDRESSOF(on._77));
+    if constexpr (N == 78) return std::destroy_at(NEO_ADDRESSOF(on._78));
+    if constexpr (N == 79) return std::destroy_at(NEO_ADDRESSOF(on._79));
+    if constexpr (N == 80) return std::destroy_at(NEO_ADDRESSOF(on._80));
+    if constexpr (N == 81) return std::destroy_at(NEO_ADDRESSOF(on._81));
+    if constexpr (N == 82) return std::destroy_at(NEO_ADDRESSOF(on._82));
+    if constexpr (N == 83) return std::destroy_at(NEO_ADDRESSOF(on._83));
+    if constexpr (N == 84) return std::destroy_at(NEO_ADDRESSOF(on._84));
+    if constexpr (N == 85) return std::destroy_at(NEO_ADDRESSOF(on._85));
+    if constexpr (N == 86) return std::destroy_at(NEO_ADDRESSOF(on._86));
+    if constexpr (N == 87) return std::destroy_at(NEO_ADDRESSOF(on._87));
+    if constexpr (N == 88) return std::destroy_at(NEO_ADDRESSOF(on._88));
+    if constexpr (N == 89) return std::destroy_at(NEO_ADDRESSOF(on._89));
+    if constexpr (N == 90) return std::destroy_at(NEO_ADDRESSOF(on._90));
+    if constexpr (N == 91) return std::destroy_at(NEO_ADDRESSOF(on._91));
+    if constexpr (N == 92) return std::destroy_at(NEO_ADDRESSOF(on._92));
+    if constexpr (N == 93) return std::destroy_at(NEO_ADDRESSOF(on._93));
+    if constexpr (N == 94) return std::destroy_at(NEO_ADDRESSOF(on._94));
+    if constexpr (N == 95) return std::destroy_at(NEO_ADDRESSOF(on._95));
+    if constexpr (N == 96) return std::destroy_at(NEO_ADDRESSOF(on._96));
+    if constexpr (N == 97) return std::destroy_at(NEO_ADDRESSOF(on._97));
+    if constexpr (N == 98) return std::destroy_at(NEO_ADDRESSOF(on._98));
+    if constexpr (N == 99) return std::destroy_at(NEO_ADDRESSOF(on._99));
+}
+
 }
 
 template <>
@@ -196,12 +402,12 @@ union constexpr_union<T0> {
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -256,12 +462,12 @@ union constexpr_union<T0, T1> {
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -321,12 +527,12 @@ union constexpr_union<T0, T1, T2> {
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -391,12 +597,12 @@ union constexpr_union<T0, T1, T2, T3> {
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -466,12 +672,12 @@ union constexpr_union<T0, T1, T2, T3, T4> {
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -546,12 +752,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5> {
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -631,12 +837,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6> {
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -721,12 +927,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7> {
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -816,12 +1022,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8> {
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -916,12 +1122,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9> {
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -1021,12 +1227,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10> {
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -1131,12 +1337,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11> {
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -1246,12 +1452,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12> {
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -1366,12 +1572,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -1491,12 +1697,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -1621,12 +1827,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -1756,12 +1962,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -1896,12 +2102,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -2041,12 +2247,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -2191,12 +2397,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -2346,12 +2552,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -2506,12 +2712,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -2671,12 +2877,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -2841,12 +3047,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -3016,12 +3222,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -3196,12 +3402,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -3381,12 +3587,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -3571,12 +3777,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -3766,12 +3972,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -3966,12 +4172,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -4171,12 +4377,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -4381,12 +4587,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -4596,12 +4802,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -4816,12 +5022,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -5041,12 +5247,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -5271,12 +5477,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -5506,12 +5712,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -5746,12 +5952,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -5991,12 +6197,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -6241,12 +6447,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -6496,12 +6702,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -6756,12 +6962,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -7021,12 +7227,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -7291,12 +7497,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -7566,12 +7772,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -7846,12 +8052,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -8131,12 +8337,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -8421,12 +8627,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -8716,12 +8922,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -9016,12 +9222,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -9321,12 +9527,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -9427,12 +9633,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -9534,12 +9740,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -9642,12 +9848,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -9751,12 +9957,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -9861,12 +10067,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -9972,12 +10178,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -10084,12 +10290,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -10197,12 +10403,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -10311,12 +10517,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -10426,12 +10632,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -10542,12 +10748,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -10659,12 +10865,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -10777,12 +10983,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -10896,12 +11102,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -11016,12 +11222,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -11137,12 +11343,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -11259,12 +11465,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -11382,12 +11588,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -11506,12 +11712,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -11631,12 +11837,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -11757,12 +11963,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -11884,12 +12090,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -12012,12 +12218,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -12141,12 +12347,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -12271,12 +12477,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -12402,12 +12608,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -12534,12 +12740,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -12667,12 +12873,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -12801,12 +13007,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -12936,12 +13142,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -13072,12 +13278,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -13209,12 +13415,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -13347,12 +13553,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -13486,12 +13692,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -13626,12 +13832,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -13767,12 +13973,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -13909,12 +14115,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -14052,12 +14258,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -14196,12 +14402,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -14341,12 +14547,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -14487,12 +14693,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -14634,12 +14840,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -14782,12 +14988,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -14931,12 +15137,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -15081,12 +15287,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -15232,12 +15438,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -15384,12 +15590,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -15537,12 +15743,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
@@ -15691,12 +15897,12 @@ union constexpr_union<T0, T1, T2, T3, T4, T5, T6, T7, T8, T9, T10, T11, T12, T13
     NEO_ALWAYS_INLINE constexpr nth_type<N>& construct(Args&&... args)
         noexcept(noexcept(nth_type<N>(static_cast<Args&&>(args)...)))
     {
-        return *std::construct_at(NEO_ADDRESSOF(get<N>()), static_cast<Args&&>(args)...);
+        return *detail::construct_member<N>(*this, static_cast<Args&&>(args)...);
     }
 
     template <std::size_t N, typename T = nth_type<N>>
     NEO_ALWAYS_INLINE constexpr void destroy() noexcept {
-        std::destroy_at(NEO_ADDRESSOF(get<N>()));
+        detail::destroy_member<N>(*this);
     }
 
     template <std::size_t N>
