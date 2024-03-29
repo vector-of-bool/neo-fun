@@ -484,7 +484,10 @@ struct variant_operators {
             if constexpr (void_type<T>) {
                 return OptionalRef{std::in_place};
             } else {
-                return NEO_ADDRESSOF(static_cast<Ref>(self._storage.template get<N>()));
+                auto& stor = self._storage;
+                auto& item = stor.template get<N>();
+                auto& ref  = static_cast<Ref>(item);
+                return NEO_ADDRESSOF(ref);
             }
         } else {
             return OptionalRef{};
