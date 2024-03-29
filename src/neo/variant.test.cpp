@@ -393,7 +393,7 @@ TEST_CASE("Get T from neo::variant<>") {
 }
 
 struct not_default_constructible {
-    not_default_constructible(int);
+    not_default_constructible(int) {}
 };
 
 TEST_CASE("Not-default-constructible") {
