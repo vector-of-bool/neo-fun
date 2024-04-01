@@ -45,7 +45,12 @@ concept destructible = requires {
 template <typename T, typename... Args>
 concept constructible_from =
         destructible<T>
-    and requires(Args&&... args) { T(NEO_FWD(args)...); }
+    and requires(Args&&... args) { T((Args&&)(args)...); }
+    #if NEO_HAS_BUILTIN(__is_constructible)
+    and __is_constructible(T, Args...)
+    #else
+    and std::is_constructible_v<T, Args...>
+    #endif
     ;
 
 /// Check whether one can static_cast<To>(From)
