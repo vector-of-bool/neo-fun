@@ -89,6 +89,9 @@ build-gcc:
 build-gcc-10.3:
     DO +ALPINE_BUILD --version=3.15 --prep=ALPINE_PREP_GCC --cxx_flags="-fcoroutines" --runtime_debug=false
 
+build-clang-17:
+    DO +ALPINE_BUILD --version=3.19 --prep=ALPINE_PREP_CLANG
+
 build-clang-16:
     DO +ALPINE_BUILD --version=3.18 --prep=ALPINE_PREP_CLANG
 

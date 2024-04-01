@@ -16,9 +16,9 @@ namespace neo {
  */
 template <typename Fn, typename... Args>
 concept simple_invocable = requires(Fn&& fn, Args&&... args) {
-                               NEO_FWD(fn)
-                               (NEO_FWD(args)...);
-                           };
+    NEO_FWD(fn)
+    (NEO_FWD(args)...);
+};
 
 namespace invoke_detail {
 
@@ -45,7 +45,7 @@ struct memfun_invoker {
     DECL_MEMFUN_INV(const&);
     DECL_MEMFUN_INV(volatile&);
     DECL_MEMFUN_INV(const volatile&);
-    DECL_MEMFUN_INV(&noexcept);
+    DECL_MEMFUN_INV(& noexcept);
     DECL_MEMFUN_INV(const& noexcept);
     DECL_MEMFUN_INV(volatile& noexcept);
     DECL_MEMFUN_INV(const volatile& noexcept);
@@ -54,7 +54,7 @@ struct memfun_invoker {
     DECL_MEMFUN_INV(const&&);
     DECL_MEMFUN_INV(volatile&&);
     DECL_MEMFUN_INV(const volatile&&);
-    DECL_MEMFUN_INV(&&noexcept);
+    DECL_MEMFUN_INV(&& noexcept);
     DECL_MEMFUN_INV(const&& noexcept);
     DECL_MEMFUN_INV(volatile&& noexcept);
     DECL_MEMFUN_INV(const volatile&& noexcept);
@@ -74,11 +74,29 @@ struct call_invoker {
         NEO_RETURNS(NEO_FWD(fn)(NEO_FWD(args)...));
 };
 
+template <bool IsMemberPointer>
+struct pick_invoker_1;
+
+template <>
+struct pick_invoker_1<false> {
+    // Invocable is not a member pointer, so defer to the regular calling semantics
+    template <typename>
+    using f = call_invoker;
+};
+
+template <>
+struct pick_invoker_1<true> {
+    // Invocable is a pointer-to-member.
+    template <typename Ptr>
+    using f = conditional_t<member_function_pointer<Ptr>,
+                            // Invoke as a member function
+                            memfun_invoker,
+                            // "Invoke" as member object
+                            memobj_invoker>;
+};
+
 template <typename Fn, typename D = remove_cvref_t<Fn>>
-using pick_invoker_t = conditional_t<
-    not neo_is_member_pointer(D),
-    call_invoker,
-    conditional_t<neo_is_member_function_pointer(D), memfun_invoker, memobj_invoker>>;
+using pick_invoker_t = pick_invoker_1<member_pointer<D>>::template f<D>;
 
 }  // namespace invoke_detail
 
@@ -96,10 +114,9 @@ struct invoke_fn {
 /**
  * @brief "Invoke" an invocable object. Like std::invoke, but cleaner and less debug overhead
  *
- * @tparam Func The invocable. Must be a function, or object that has an operator() overload
+ * @tparam Func The invocable. Must be a function, or object that has an operator() overload, or a
+ * pointer-to-member.
  * @tparam Args The arguments to pass to the invocable.
- *
- * This is the base overload that will catch things that are callable, including with operator()
  */
 inline constexpr invoke_fn invoke{};
 

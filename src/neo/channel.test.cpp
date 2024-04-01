@@ -18,13 +18,48 @@ channel<int, int> int_chan() {
 }
 
 TEST_CASE("Simple channel") {
-    auto ch = int_chan();
-    auto io = ch.open();
-    CHECK(io.current() == 21);
+    auto ch  = int_chan();
+    auto ch1 = NEO_MOVE(ch);
+    auto io  = ch1.open();
+    auto cur = io.current();
+    CHECK(cur == 21);
     int i = 42;
     io.send(i);
     CHECK(io.done());
     io.return_value();
+}
+
+channel<int> only_yields_chan() {
+    co_yield 42;
+    co_yield 1729;
+}
+
+TEST_CASE("Channel that only yields") {
+    auto ch = only_yields_chan();
+    auto io = ch.open();
+    CHECK(io.current() == 42);
+    io.send();
+    CHECK(io.current() == 1729);
+    io.send();
+    CHECK(io.done());
+    io.return_value();
+}
+
+channel<void, int> only_sends_chan(bool& flag) {
+    auto n = co_yield 0;
+    CHECK(n == 42);
+    flag = true;
+}
+
+TEST_CASE("Channel that only receives values") {
+    bool did_run = false;
+    auto ch      = only_sends_chan(did_run);
+    CHECK_FALSE(did_run);
+    auto io = ch.open();
+    CHECK_FALSE(did_run);
+    io.send(42);
+    CHECK(io.done());
+    CHECK(did_run);
 }
 
 channel<void, void, int> ret_int_chan() {
@@ -43,9 +78,26 @@ TEST_CASE("Non-void return") {
     CHECK(io.return_value() == 42);
 }
 
+channel<int> yields_lvalue_expr() {
+    int foo = 1729;
+    // Yield an lvalue-reference. This will copy the lvalue
+    co_yield foo;
+    const int bar = 42;
+    // Yielding a const& is also good.
+    co_yield bar;
+}
+
+TEST_CASE("Yielding lvalue copies lvalues") {
+    auto ch = yields_lvalue_expr();
+    auto io = ch.open();
+    CHECK(io.current() == 1729);
+    io.send();
+    CHECK(io.current() == 42);
+}
+
 static int                global_int = 0;
 channel<void, void, int&> ret_int2_chan() {
-    co_yield 0;
+    co_yield {};
     // Should not compile:
     // co_return 51;
     global_int = 42;
@@ -65,7 +117,7 @@ channel<int&, void, int&> ret_int3_chan() {
     global_int = 71;
     co_yield global_int;
     // Should not compile:
-    // co_yield 0;
+    // co_yield 71;
     global_int = 42;
     co_return global_int;
 }
@@ -80,7 +132,10 @@ TEST_CASE("Reference yield") {
     CHECK(io.return_value() == 42);
 }
 
-channel<int> inner() { co_yield 31; }
+channel<int> inner() {
+    co_yield 31;
+    co_yield 8;
+}
 channel<int> outer() {
     co_yield global_int;
     co_yield from_channel(inner());
@@ -96,7 +151,34 @@ TEST_CASE("Nested yield") {
     REQUIRE_FALSE(io.done());
     CHECK(io.current() == 31);
     io.send();
+    CHECK(io.current() == 8);
+    io.send();
     CHECK(io.done());
+}
+
+channel<int> more_outerer() {
+    co_yield 4;
+    co_yield *outer();
+    co_yield -4;
+}
+
+TEST_CASE("Deeper nested yield") {
+    global_int = 94;
+    auto ch    = more_outerer();
+    auto io    = ch.open();
+    REQUIRE_FALSE(io.done());
+    CHECK(io.current() == 4);
+    io.send();
+    REQUIRE_FALSE(io.done());
+    CHECK(io.current() == 94);
+    io.send();
+    REQUIRE_FALSE(io.done());
+    CHECK(io.current() == 31);
+    io.send();
+    CHECK(io.current() == 8);
+    io.send();
+    REQUIRE_FALSE(io.done());
+    CHECK(io.current() == -4);
 }
 
 channel<int, void, std::string> inner_with_str() {
@@ -177,9 +259,9 @@ channel<> maybe_throw(bool do_throw) {
 }
 channel<> inner_loop() {
     std::vector<int> vec(1024);
-    co_yield ~maybe_throw(false);
-    co_yield ~maybe_throw(true);
-    co_yield ~maybe_throw(false);
+    co_yield *maybe_throw(false);
+    co_yield *maybe_throw(true);
+    co_yield *maybe_throw(false);
 }
 
 channel<> outer_loop() {
@@ -203,7 +285,7 @@ channel<int, int> deep_channel(int layers) {
         CHECK(got == 1729);
     } else {
         co_yield layers;
-        co_yield ~deep_channel(layers - 1);
+        co_yield *deep_channel(layers - 1);
         co_yield layers;
     }
 }
@@ -231,7 +313,7 @@ channel<void, void, int> deep_return(int n, int top) {
     if (n == 0) {
         co_return top;
     }
-    co_return co_yield ~deep_return(n - 1, top);
+    co_return co_yield *deep_return(n - 1, top);
 }
 
 TEST_CASE("Deep return") {
@@ -295,16 +377,62 @@ neo::channel<int> inner_throws() {
 
 neo::channel<int> outer_catches() {
     try {
-        co_yield ~inner_throws();
+        co_yield *inner_throws();
         FAIL("Child did not throw, but we expected it");
     } catch (std::runtime_error const&) {
         co_return;
     }
 }
 
-neo::channel<int> outer_unaware() { co_yield ~outer_catches(); }
+neo::channel<int> outer_unaware() { co_yield *outer_catches(); }
 
 TEST_CASE("Nested throw") {
     auto ch = outer_unaware();
     CHECK_NOTHROW(ch.open());
+}
+
+struct ref_conversion {
+    static channel<std::string&> get_strings() {
+        std::string s = "Joe";
+        co_yield s;
+    }
+    static channel<std::string> get_string_values() {
+        co_yield "value-string";  //
+    }
+    static channel<const char*> get_cstrings() {
+        co_yield "c-string";  //
+    }
+    static channel<const char* const&> get_cstrings_cref() {
+        co_yield "c-string-cref";  //
+    }
+    static channel<int&> get_integers() {
+        int i = 21;
+        co_yield i;
+    }
+    static channel<const std::string&> get_strings_const() {
+        std::string s = "Hello";
+        co_yield s;
+        auto co = get_strings();  // Adds const
+        //* Should not compile: All will create a temporary-bound reference:
+        // co_yield *get_cstrings();
+        // co_yield *get_cstrings_cref();
+        // co_yield *get_string_values();
+        //* Should not compile: Cannot convert an int& to a const std::string&
+        // co_yield *get_integers();
+        //* Should not compile: Would create a temporary-bound reference from the string literal
+        // co_yield "bad";
+        co_yield *co;
+        s = "fin";
+        co_yield s;
+    }
+};
+
+TEST_CASE("Reference conversion") {
+    auto ch = ref_conversion::get_strings_const();
+    auto io = ch.open();
+    CHECK(io.current() == "Hello");
+    io.send();
+    CHECK(io.current() == "Joe");
+    io.send();
+    CHECK(io.current() == "fin");
 }

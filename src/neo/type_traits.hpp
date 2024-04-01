@@ -131,6 +131,18 @@ DECL_TRAIT_CONCEPT(null_pointer, neo_is_null_pointer);
 #define neo_is_array NEO_TTRAIT_BUILTIN_OR_VARTMPL(__is_array, ::neo::detail::is_array_v)
 DECL_TRAIT_CONCEPT(array_type, neo_is_array);
 
+/**
+ * @brief Match a type which is an array of known bounds
+ */
+template <typename T>
+concept bounded_array_type = array_type<T> and detail::is_bounded_array_v<T>;
+
+/**
+ * @brief Match a type which is an array of unknown boundss
+ */
+template <typename T>
+concept unbounded_array_type = array_type<T> and detail::is_unbounded_array_v<T>;
+
 #define neo_is_const NEO_TTRAIT_BUILTIN_OR_VARTMPL(__is_const, ::neo::detail::is_const_v)
 DECL_TRAIT_CONCEPT(const_type, neo_is_const);
 
@@ -163,6 +175,9 @@ DECL_TRAIT_CONCEPT(union_type, neo_is_union);
 #define neo_is_class NEO_TTRAIT_BUILTIN_OR_VARTMPL(__is_class, ::std::is_class_v)
 DECL_TRAIT_CONCEPT(class_type, neo_is_class);
 
+template <typename T>
+concept class_or_enum_type = class_type<T> or enum_type<T>;
+
 #define neo_is_empty NEO_TTRAIT_BUILTIN_OR_VARTMPL(__is_empty, ::std::is_empty_v)
 DECL_TRAIT_CONCEPT(empty_type, neo_is_empty);
 
@@ -175,7 +190,7 @@ DECL_TRAIT_CONCEPT(lvalue_reference_type, neo_is_lvalue_reference);
 DECL_TRAIT_CONCEPT(rvalue_reference_type, neo_is_rvalue_reference);
 
 #define neo_is_reference(...)                                                                      \
-    neo_is_lvalue_reference(__VA_ARGS__) or neo_is_rvalue_reference(__VA_ARGS__)
+    (neo_is_lvalue_reference(__VA_ARGS__) or neo_is_rvalue_reference(__VA_ARGS__))
 
 template <typename T>
 concept reference_type = lvalue_reference_type<T> or rvalue_reference_type<T>;
@@ -339,6 +354,15 @@ DECL_TRAIT_CONCEPT(object_type, neo_is_object);
     NEO_TTRAIT_BUILTIN_OR_VARTMPL(__is_trivially_destructible, ::std::is_trivially_destructible_v)
 #define neo_is_trivially_assignable                                                                \
     NEO_TTRAIT_BUILTIN_OR_VARTMPL(__is_trivially_assignable, ::std::is_trivially_assignable_v)
+
+template <typename T>
+concept member_function_pointer = neo_is_member_function_pointer(T);
+
+template <typename T>
+concept member_object_pointer = neo_is_member_object_pointer(T);
+
+template <typename T>
+concept member_pointer = member_function_pointer<T> or member_object_pointer<T>;
 
 namespace detail {
 
@@ -671,6 +695,30 @@ struct detail::common_reference {
     struct impl : common_reference<1>::template impl<
                       common_reference_t<common_reference_t<T, U>, common_reference_t<Vs...>>> {};
 };
+
+namespace detail {
+
+/// Add a level of indirection to prevent type_identity_t from being deduced,
+/// while also permforming better than a naive std::type_identity.
+template <bool>
+struct type_identity {
+    template <typename T>
+    using f = T;
+};
+
+}  // namespace detail
+
+/**
+ * @brief Yields the exact type given as the template argument. Inhibits argument deduction.
+ */
+template <typename T>
+using type_identity_t = detail::type_identity<void_type<T>>::template f<T>;
+
+/**
+ * @brief Wrap a template parameter in a context to guard it from template argument deduction
+ */
+template <typename T>
+using nondeduced = type_identity_t<T>;
 
 }  // namespace neo
 

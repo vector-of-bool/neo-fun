@@ -2,6 +2,9 @@
 
 #include "./pp.hpp"
 
+#pragma push_macro("linux")
+#undef linux
+
 namespace neo {
 
 /*
@@ -302,3 +305,5 @@ constexpr void do_repr(auto out, operating_system_t const* value) noexcept {
 // clang-format on
 
 }  // namespace neo
+
+#pragma pop_macro("linux")

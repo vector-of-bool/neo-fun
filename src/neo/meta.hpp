@@ -1,5 +1,8 @@
 #pragma once
 
+#include <neo/attrib.hpp>
+#include <neo/type_traits.hpp>
+
 #include <utility>
 
 #define u64 unsigned long long
@@ -380,9 +383,71 @@ struct remove_prefix_ {
     struct from;
 
     template <neo_ttparam L, tn... Ts>
+        requires((sizeof...(Ts) >= N))
     struct from<L<Ts...>> {
-        static_assert(sizeof...(Ts) >= N, "remove_prefix N is too large");
         using type = decltype(remove_prefix_fn<L, voids>::r(static_cast<tag<Ts>*>(nullptr)...));
+    };
+};
+
+template <>
+struct remove_prefix_<0> {
+    template <tn L>
+    struct from {
+        using type = L;
+    };
+};
+
+template <>
+struct remove_prefix_<1> {
+    template <tn L>
+    struct from;
+
+    template <neo_ttparam L>
+    struct fn {
+        template <typename... Tail>
+        static L<Tail...> r(void*, tag<Tail>*...);
+    };
+
+    template <neo_ttparam L, tn... Ts>
+        requires((sizeof...(Ts) >= 1))
+    struct from<L<Ts...>> {
+        using type = decltype(fn<L>::r(static_cast<tag<Ts>*>(nullptr)...));
+    };
+};
+
+template <>
+struct remove_prefix_<2> {
+    template <tn L>
+    struct from;
+
+    template <neo_ttparam L>
+    struct fn {
+        template <typename... Tail>
+        static L<Tail...> r(void*, void*, tag<Tail>*...);
+    };
+
+    template <neo_ttparam L, tn... Ts>
+        requires((sizeof...(Ts) >= 1))
+    struct from<L<Ts...>> {
+        using type = decltype(fn<L>::r(static_cast<tag<Ts>*>(nullptr)...));
+    };
+};
+
+template <>
+struct remove_prefix_<3> {
+    template <tn L>
+    struct from;
+
+    template <neo_ttparam L>
+    struct fn {
+        template <typename... Tail>
+        static L<Tail...> r(void*, void*, void*, tag<Tail>*...);
+    };
+
+    template <neo_ttparam L, tn... Ts>
+        requires((sizeof...(Ts) >= 1))
+    struct from<L<Ts...>> {
+        using type = decltype(fn<L>::r(static_cast<tag<Ts>*>(nullptr)...));
     };
 };
 
@@ -404,11 +469,44 @@ struct remove_prefix {
 template <tn L, u64 N>
 using remove_prefix = tn detail::remove_prefix_<N>::tl from<L>::type;
 
+namespace detail {
+
+#if NEO_HAS_BUILTIN(__type_pack_element)
+template <typename Seq>
+struct intrin_at_impl;
+
+template <neo_ttparam L, typename... Ts>
+struct intrin_at_impl<L<Ts...>> {
+    template <u64 N>
+    using f = __type_pack_element<N, Ts...>;
+};
+#endif
+
+}  // namespace detail
+
+#if NEO_HAS_BUILTIN(__type_pack_element)
 /**
- * @brief Obtain the Nth element of the given typelist
+ * @brief Select the `Nth` element of the given type-list.
+ *
+ * @tparam L A list of types to choose from
+ * @tparam N The zero-based index of the type to be selected.
  */
 template <tn L, u64 N>
+using at = detail::intrin_at_impl<L>::template f<N>;
+/**
+ * @brief Obtain the `Nth` type from the given list of types (zero-based indexing)
+ *
+ * @tparam N The zero-based index of the type to select
+ * @tparam Ts A list of types to choose from
+ */
+template <u64 N, typename... Ts>
+using pack_at = __type_pack_element<N, Ts...>;
+#else
+template <tn L, u64 N>
 using at = head<remove_prefix<L, N>>;
+template <u64 N, typename... Ts>
+using pack_at = at<list<Ts...>, N>;
+#endif
 
 namespace tacit {
 
@@ -560,6 +658,51 @@ struct rebind {
  */
 template <typename L, neo_ttparam NewL>
 using rebind = typename tacit::rebind<NewL>::tl f<L>;
+
+namespace find_type_detail {
+
+template <u64 N, bool Same>
+struct find_type_one {};
+
+template <u64 N>
+struct find_type_one<N, true> {
+    enum { value = N };
+};
+
+template <bool B>
+struct find_base {
+    template <u64 N>
+    struct base {};
+};
+
+template <>
+struct find_base<true> {
+    template <u64 N>
+    struct base {
+        enum { value = N };
+    };
+};
+
+template <typename T, typename List, typename Seq = std::make_index_sequence<meta::len_v<List>>>
+struct finder;
+
+template <std::size_t... Ns, typename T, neo_ttparam L, typename... Ts>
+struct finder<T, L<Ts...>, std::index_sequence<Ns...>>
+    : find_base<neo::weak_same_as<T, Ts>>::template base<Ns>... {};
+
+}  // namespace find_type_detail
+
+template <typename Needle, typename... Ts>
+    requires((weak_same_as<Needle, Ts> or ...))
+constexpr std::size_t find_type_v
+    = find_type_detail::finder<Needle, meta::list<Ts...>, std::index_sequence_for<Ts...>>::value;
+
+template <typename Needle, typename L>
+    requires requires { find_type_detail::finder<Needle, L>::value; }
+constexpr std::size_t find_type_in = find_type_detail::finder<Needle, L>::value;
+
+template <typename Needle, typename... Ts>
+struct find_type : meta::val<find_type_v<Needle, Ts...>> {};
 
 }  // namespace neo::meta
 

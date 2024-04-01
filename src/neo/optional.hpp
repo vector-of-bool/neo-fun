@@ -1,15 +1,18 @@
 #pragma once
 
+#include "./optional.detail.hpp"
+
 #include "./addressof.hpp"
 #include "./attrib.hpp"
-#include "./concepts.hpp"
+#include "./constexpr_union.hpp"
 #include "./declval.hpp"
-#include "./detail/optional.hpp"
 #include "./emplacement.hpp"
 #include "./invoke.hpp"
+#include "./object_t.hpp"
 #include "./returns.hpp"
 #include "./storage.hpp"
-#include "neo/type_traits.hpp"
+#include "./swap.hpp"
+#include "./type_traits.hpp"
 
 #include <compare>
 #include <cstddef>
@@ -40,14 +43,14 @@ class optional : public opt_detail::adl_operators {
     NEO_NO_UNIQUE_ADDRESS state_type _state = state_type();
 
     /// If we do not currently hold any value, throws bad_optional_access
-    void _check_has_value() const {
+    constexpr void _check_has_value() const {
         if (not has_value()) {
             opt_detail::throw_bad_optional();
         }
     }
 
     /// If we do not currently hold any value, terminate the program.
-    void _assert_has_value() const noexcept {
+    constexpr void _assert_has_value() const noexcept {
         if (not has_value()) {
             opt_detail::terminate_bad_optional();
         }
@@ -55,7 +58,7 @@ class optional : public opt_detail::adl_operators {
 
     /// Perform a copy-construct/copy-assignment, which may include moving, depending
     /// on the cvref of "other_storage" and the behavior of our optional_traits
-    void _assign(auto&& other_storage) {
+    constexpr void _assign(auto&& other_storage) {
         if (not has_value()) {
             // We have no value. We will take on the value of the other
             if (traits::has_value(other_storage)) {
@@ -175,6 +178,12 @@ public:
         traits::construct(_state, NEO_FWD(args)...);
     }
 
+    constexpr explicit optional(std::in_place_t) noexcept
+        requires void_type<T>
+    {
+        traits::construct(_state);
+    }
+
     template <typename U>
     constexpr explicit(not convertible_to<U&&, T>)
         optional(U&& arg) noexcept(nothrow_constructible_from<U&&, T>)
@@ -231,7 +240,7 @@ public:
     constexpr pointer       operator->() noexcept { return NEO_ADDRESSOF(**this); }
 
     constexpr explicit operator bool() const noexcept { return has_value(); }
-    constexpr bool has_value() const noexcept { return traits::has_value(_state); }
+    constexpr bool     has_value() const noexcept { return traits::has_value(_state); }
 
     constexpr auto value() & -> reference {
         _check_has_value();
@@ -398,8 +407,8 @@ public:
     }
 
     template <typename F>
-        constexpr optional or_else(F&& fn) &&
-            requires movable<T>
+    constexpr optional or_else(F&& fn) &&
+        requires movable<T>
     {
         if (has_value()) {
             return *NEO_FWD(*this);
@@ -420,8 +429,8 @@ explicit optional(const T&) -> optional<T>;
 template <typename T>
 struct default_optional_state {
 public:
-    NEO_NO_UNIQUE_ADDRESS storage_for<T> storage;
-    bool                                 has_value = false;
+    NEO_NO_UNIQUE_ADDRESS constexpr_union<object_t<T>> onion;
+    bool                                               has_value = false;
 
     default_optional_state() = default;
 };
@@ -466,44 +475,43 @@ struct optional_traits {
 
     static constexpr bool trivial_copy        = copy_constructible<state_type>;
     static constexpr bool trivial_move        = move_constructible<state_type>;
-    static constexpr bool trivial_copy_assign = copyable<state_type>;
-    static constexpr bool trivial_move_assign = movable<state_type>;
+    static constexpr bool trivial_copy_assign = trivially_copyable<state_type>;
+    static constexpr bool trivial_move_assign = trivially_movable<state_type>;
 
     constexpr static bool has_value(const state_type& st) noexcept { return st.has_value; }
     constexpr static add_lvalue_reference_t<T> get(state_type& st) noexcept {
-        return st.storage.get();
+        return static_cast<add_lvalue_reference_t<T>>(st.onion._0);
     }
     constexpr static add_const_reference_t<T> get(const state_type& st) noexcept {
-        return st.storage.get();
+        return static_cast<add_const_reference_t<T>>(st.onion._0);
     }
     constexpr static void destroy(state_type& st) noexcept {
-        st.storage.destroy();
+        st.onion.template destroy<0>();
         st.has_value = false;
     }
     template <typename... Args>
     constexpr static void
     construct(state_type& st, Args&&... args) noexcept(nothrow_constructible_from<T, Args...>) {
-        st.storage.construct(NEO_FWD(args)...);
+        st.onion.template construct<0>(NEO_FWD(args)...);
         st.has_value = true;
     }
 
     template <typename O>
     constexpr static void copy(state_type& into, O&& from)  //
         noexcept(nothrow_constructible_from<T,
-                                            decltype(NEO_FWD(from).storage.get())>)  //
+                                            decltype(NEO_FWD(from).onion._0)>)  //
     {
-        into.storage.copy_from(NEO_FWD(from).storage);
-        into.has_value = true;
+        construct(into, NEO_FWD(from).onion._0);
     }
 
     template <typename O>
-    constexpr static void assign(state_type& into, O&& from)                              //
-        noexcept(std::is_nothrow_assignable_v<T, decltype(NEO_FWD(from).storage.get())>)  //
+    constexpr static void assign(state_type& into, O&& from)                         //
+        noexcept(std::is_nothrow_assignable_v<T, decltype(NEO_FWD(from).onion._0)>)  //
     {
-        into.storage.assign_from(NEO_FWD(from).storage);
+        into.onion._0 = NEO_FWD(from).onion._0;
     }
 
-    constexpr static void swap(state_type& a, state_type& b) { a.storage.swap(b.storage); }
+    constexpr static void swap(state_type& a, state_type& b) { neo::swap(a.onion._0, b.onion._0); }
 };
 
 /**

@@ -60,3 +60,17 @@ static_assert(neo::same_as<neo::common_reference_t<int&, int>, std::common_refer
 static_assert(
     neo::same_as<neo::common_reference_t<int&, double&>, std::common_reference_t<int&, double&>>);
 static_assert(neo::same_as<neo::common_reference_t<int&, double&, float&>, double>);
+
+// A function that refuses to deduce its argument:
+template <typename T>
+void nondeduced_param(neo::nondeduced<T>) {}
+
+// Test that argument deducation fails:
+template <typename T>
+concept test_nondeduced = requires(T x) { nondeduced_param(x); };
+static_assert(not test_nondeduced<int>);
+
+// Check with that an explicit argument succeeds:
+template <typename T>
+concept test_nondeduced_2 = requires(T x) { nondeduced_param<T>(x); };
+static_assert(test_nondeduced_2<int>);

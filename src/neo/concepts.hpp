@@ -2,6 +2,7 @@
 
 #include "./fwd.hpp"
 #include "./invoke.hpp"
+#include "./swap.hpp"
 #include "./type_traits.hpp"
 #include "./version.hpp"
 
@@ -44,7 +45,12 @@ concept destructible = requires {
 template <typename T, typename... Args>
 concept constructible_from =
         destructible<T>
-    and requires(Args&&... args) { T(NEO_FWD(args)...); }
+    and requires(Args&&... args) { T((Args&&)(args)...); }
+    #if NEO_HAS_BUILTIN(__is_constructible)
+    and __is_constructible(T, Args...)
+    #else
+    and std::is_constructible_v<T, Args...>
+    #endif
     ;
 
 /// Check whether one can static_cast<To>(From)
@@ -249,7 +255,9 @@ concept swappable_with = detail::swappable_impl<T, U>;
  * @brief Test whether a type is swappable with itself via std::ranges::swap
  */
 template <typename T>
-concept swappable = detail::can_std_ranges_swap<T&, T&>;
+concept swappable = requires(T& t) {
+    neo::swap(t, t);
+} or detail::can_std_ranges_swap<T&, T&>;
 
 namespace detail {
 
@@ -408,9 +416,20 @@ concept nothrow_constructible_from =
 #endif
     ;
 
+template <typename T>
+concept move_assignable =
+        move_constructible<T>
+    and assignable_from<T&, T&&>;
+
+template <typename T>
+concept copy_assignable =
+        move_assignable<T>
+    and copy_constructible<T>
+    and assignable_from<T&, const T&>;
+
 template <typename T, typename... Args>
 concept trivially_constructible =
-        constructible_from<T, Args...>
+        nothrow_constructible_from<T, Args...>
     and neo_is_trivially_constructible(T, Args...);
 
 template <typename T>
@@ -429,14 +448,35 @@ concept trivially_assignable =
     and neo_is_trivially_assignable(To, From);
 
 template <typename T>
+concept trivially_move_constructible =
+        move_constructible<T>
+    and trivially_constructible<T, T&&>;
+
+template <typename T>
+concept trivially_copy_constructible =
+        copy_constructible<T>
+    and trivially_constructible<T, const T&>;
+
+template <typename T>
+concept trivially_copy_assignable =
+        copy_assignable<T>
+    and trivially_assignable<T&, T const&>;
+
+template <typename T>
+concept trivially_move_assignable =
+        move_assignable<T>
+    and trivially_assignable<T&, T&&>;
+
+template <typename T>
 concept trivially_movable =
         movable<T>
-    and trivially_constructible<T, T&&>
+    and trivially_move_constructible<T>
     and trivially_assignable<T&, T&&>;
 
 template <typename T>
 concept trivially_copyable =
         copyable<T>
+    and trivially_copy_constructible<T>
     and trivially_movable<T>
     and neo_is_trivially_copyayable(T)
     ;
@@ -451,17 +491,55 @@ concept nothrow_invocable =
         { neo::invoke(NEO_FWD(fn), NEO_FWD(args)...) } noexcept;
     };
 
-template <typename T>
-concept move_assignable =
-        move_constructible<T>
-    and assignable_from<T&, T&&>;
+namespace detail {
 
 template <typename T>
-concept copy_assignable =
-        move_assignable<T>
-    and copy_constructible<T>
-    and assignable_from<T&, const T&>;
+struct narrowing_conversion_helper {
+    T one[1];
+};
+
+} // namespace detail
+
+/**
+ * @brief Check that `From` is convertible to `To` without causing built-in
+ * narrowing.
+ */
+template <typename From, typename To>
+concept non_narrowing_convertible_to =
+        convertible_to<From, To>
+    and requires(From&& from) {
+        // This expression will be invalid if the conversion of `From` to `To`
+        // causes narrowing, because such conversion appears within a braced initializer
+        detail::narrowing_conversion_helper<remove_cvref_t<To>>{{NEO_FWD(from)}};
+    };
 
 // clang-format on
+
+namespace detail {
+
+template <typename Reference, typename From>
+concept best_guest_ref_from_tmp =
+    // If we can convert From* to Reference*, then there's a safe derived->base conversion
+    // that will not create a temporary
+    not convertible_to<add_pointer_t<From>, add_pointer_t<Reference>>
+    // If we can convert to the reference' value type, then a conversion might occur
+    and constructible_from<remove_cvref_t<Reference>, From>
+    // And if a reference can bind to an rvalue of the value type, then that's going to
+    // be the temporary binding we want to avoid
+    and constructible_from<Reference, add_rvalue_reference_t<remove_cvref_t<Reference>>>;
+
+}  // namespace detail
+
+#if NEO_HAS_BUILTIN(__reference_constructs_from_temporary)
+template <typename Reference, typename From>
+concept reference_constructible_from_temporary
+    = __reference_constructs_from_temporary(Reference, From);
+#else
+template <typename Reference, typename From>
+concept reference_constructible_from_temporary  //
+    = reference_type<Reference>                 //
+    and constructible_from<Reference, From>     //
+    and detail::best_guest_ref_from_tmp<Reference, From>;
+#endif
 
 }  // namespace neo
