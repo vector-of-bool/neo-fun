@@ -4,12 +4,14 @@
 
 #include "./addressof.hpp"
 #include "./attrib.hpp"
-#include "./concepts.hpp"
+#include "./constexpr_union.hpp"
 #include "./declval.hpp"
 #include "./emplacement.hpp"
 #include "./invoke.hpp"
+#include "./object_t.hpp"
 #include "./returns.hpp"
 #include "./storage.hpp"
+#include "./swap.hpp"
 #include "./type_traits.hpp"
 
 #include <compare>
@@ -427,8 +429,8 @@ explicit optional(const T&) -> optional<T>;
 template <typename T>
 struct default_optional_state {
 public:
-    NEO_NO_UNIQUE_ADDRESS storage_for<T> storage;
-    bool                                 has_value = false;
+    NEO_NO_UNIQUE_ADDRESS constexpr_union<object_t<T>> onion;
+    bool                                               has_value = false;
 
     default_optional_state() = default;
 };
@@ -478,39 +480,38 @@ struct optional_traits {
 
     constexpr static bool has_value(const state_type& st) noexcept { return st.has_value; }
     constexpr static add_lvalue_reference_t<T> get(state_type& st) noexcept {
-        return st.storage.get();
+        return static_cast<add_lvalue_reference_t<T>>(st.onion._0);
     }
     constexpr static add_const_reference_t<T> get(const state_type& st) noexcept {
-        return st.storage.get();
+        return static_cast<add_const_reference_t<T>>(st.onion._0);
     }
     constexpr static void destroy(state_type& st) noexcept {
-        st.storage.destroy();
+        st.onion.template destroy<0>();
         st.has_value = false;
     }
     template <typename... Args>
     constexpr static void
     construct(state_type& st, Args&&... args) noexcept(nothrow_constructible_from<T, Args...>) {
-        st.storage.construct(NEO_FWD(args)...);
+        st.onion.template construct<0>(NEO_FWD(args)...);
         st.has_value = true;
     }
 
     template <typename O>
     constexpr static void copy(state_type& into, O&& from)  //
         noexcept(nothrow_constructible_from<T,
-                                            decltype(NEO_FWD(from).storage.get())>)  //
+                                            decltype(NEO_FWD(from).onion._0)>)  //
     {
-        into.storage.copy_from(NEO_FWD(from).storage);
-        into.has_value = true;
+        construct(into, NEO_FWD(from).onion._0);
     }
 
     template <typename O>
-    constexpr static void assign(state_type& into, O&& from)                              //
-        noexcept(std::is_nothrow_assignable_v<T, decltype(NEO_FWD(from).storage.get())>)  //
+    constexpr static void assign(state_type& into, O&& from)                         //
+        noexcept(std::is_nothrow_assignable_v<T, decltype(NEO_FWD(from).onion._0)>)  //
     {
-        into.storage.assign_from(NEO_FWD(from).storage);
+        into.onion._0 = NEO_FWD(from).onion._0;
     }
 
-    constexpr static void swap(state_type& a, state_type& b) { a.storage.swap(b.storage); }
+    constexpr static void swap(state_type& a, state_type& b) { neo::swap(a.onion._0, b.onion._0); }
 };
 
 /**
