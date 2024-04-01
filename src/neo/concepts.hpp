@@ -515,4 +515,31 @@ concept non_narrowing_convertible_to =
 
 // clang-format on
 
+namespace detail {
+
+template <typename Reference, typename From>
+concept best_guest_ref_from_tmp =
+    // If we can convert From* to Reference*, then there's a safe derived->base conversion
+    // that will not create a temporary
+    not convertible_to<add_pointer_t<From>, add_pointer_t<Reference>>
+    // If we can convert to the reference' value type, then a conversion might occur
+    and constructible_from<remove_cvref_t<Reference>, From>
+    // And if a reference can bind to an rvalue of the value type, then that's going to
+    // be the temporary binding we want to avoid
+    and constructible_from<Reference, add_rvalue_reference_t<remove_cvref_t<Reference>>>;
+
+}  // namespace detail
+
+#if NEO_HAS_BUILTIN(__reference_constructs_from_temporary)
+template <typename Reference, typename From>
+concept reference_constructible_from_temporary
+    = __reference_constructs_from_temporary(Reference, From);
+#else
+template <typename Reference, typename From>
+concept reference_constructible_from_temporary  //
+    = reference_type<Reference>                 //
+    and constructible_from<Reference, From>     //
+    and detail::best_guest_ref_from_tmp<Reference, From>;
+#endif
+
 }  // namespace neo

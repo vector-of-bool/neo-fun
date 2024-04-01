@@ -187,3 +187,16 @@ static_assert(not non_narrowing_convertible_to<signed, unsigned>);
 static_assert(non_narrowing_convertible_to<unsigned short, signed int>);
 
 static_assert(destructible<int&>);
+
+TEST_CASE("reference_constructible_from_temporary") {
+    STATIC_REQUIRE(not reference_constructible_from_temporary<int, int>);
+    STATIC_REQUIRE(not reference_constructible_from_temporary<int&, int>);
+    STATIC_REQUIRE(not reference_constructible_from_temporary<int&, int&>);
+    STATIC_REQUIRE(not reference_constructible_from_temporary<int&, const int&>);
+    STATIC_REQUIRE(not reference_constructible_from_temporary<const int&, const int&>);
+    STATIC_REQUIRE(reference_constructible_from_temporary<const int&, const long&>);
+    STATIC_REQUIRE(reference_constructible_from_temporary<const std::string&, const char*>);
+    STATIC_REQUIRE(reference_constructible_from_temporary<std::string&&, const char*>);
+    STATIC_REQUIRE(not reference_constructible_from_temporary<std::string&, const char*>);
+    STATIC_REQUIRE(not reference_constructible_from_temporary<std::string, const char*>);
+}
