@@ -61,7 +61,7 @@ private:
 
     template <std::size_t N>
     constexpr auto& _nth_range() const noexcept {
-        return _view->_tuple.template get<N>().get();
+        return _view->_tuple.template get<N>();
     }
 
     template <std::size_t N>
@@ -450,7 +450,7 @@ public:
 
 template <SR::view... Rs>
 class concat_view : public SR::view_interface<concat_view<Rs...>> {
-    using tuple_type = neo::nano_tuple<object_box<Rs>...>;
+    using tuple_type = neo::core::tuple<Rs...>;
     NEO_NO_UNIQUE_ADDRESS tuple_type _tuple;
 
     using _iterator = _concat_detail::iterator<Rs...>;
@@ -459,7 +459,7 @@ class concat_view : public SR::view_interface<concat_view<Rs...>> {
     template <auto... Ns>
     constexpr std::size_t _size(std::index_sequence<Ns...>) const noexcept {
         return (static_cast<std::common_type_t<SR::range_size_t<Rs>...>>(
-                    SR::size(_tuple.template get<Ns>().get()))
+                    SR::size(_tuple.template get<Ns>()))
                 + ...);
     }
 
@@ -477,7 +477,7 @@ public:
     }
 
     constexpr auto begin() const noexcept {
-        return _iterator{*this, std::in_place_index<0>, SR::begin(_tuple.template get<0>().get())};
+        return _iterator{*this, std::in_place_index<0>, SR::begin(_tuple.template get<0>())};
     }
 
     constexpr auto end() const noexcept {
