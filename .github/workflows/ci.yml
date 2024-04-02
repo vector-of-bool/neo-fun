@@ -2,39 +2,70 @@ name: Build and Test
 on: [push, pull_request]
 
 jobs:
-  build-gcc12:
-    name: Build for GCC 12.2
+  build-gcc13:
+    name: Build for GCC 13.2
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Build and Test
-        run: bash tools/earthly.sh +build-gcc-12.2
+        run: bash tools/earthly.sh +build-gcc --gcc_version=13.2
+
+  build-gcc12:
+    name: Build for GCC 12.3
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build and Test
+        run: bash tools/earthly.sh +build-gcc --gcc_version=12.3
 
   build-gcc11:
-    name: Build for GCC 11.2
+    name: Build for GCC 11.4
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Build and Test
-        run: bash tools/earthly.sh +build-gcc-11.2
+        run: bash tools/earthly.sh +build-gcc --gcc_version=11.4
 
   build-gcc10:
     name: Build for GCC 10.3
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Build and Test
         run: bash tools/earthly.sh +build-gcc-10.3
 
-  build-vs2019:
-    name: Build for VS 2019
-    runs-on: windows-2019
+  # XXX: BROKEN due to compiler bugs. Investigate at a later date.
+  build-clang16:
+    name: Build for Clang 16 [Compiler bugs]
+    runs-on: ubuntu-latest
+    if: ${{false}} # Skipped
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
+      - name: Build and Test
+        run: bash tools/earthly.sh +build-clang-16
+
+  build-clang17:
+    name: Build for Clang 17 [Compiler bugs]
+    runs-on: ubuntu-latest
+    if: ${{false}} # Skipped
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build and Test
+        run: bash tools/earthly.sh +build-clang-17
+
+  build-vs2019:
+    name: Build for VS 2019 [Compiler bugs]
+    runs-on: windows-2019
+    if: ${{false}} # Skipped
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Build and Test
         run: tools/build-vs2019e.bat -Toolchain tools/msvc.jsonc
 
@@ -43,6 +74,6 @@ jobs:
     runs-on: windows-2022
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Build and Test
         run: tools/build-vs2022e.bat -Toolchain tools/msvc.jsonc

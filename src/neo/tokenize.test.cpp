@@ -11,7 +11,6 @@ TEST_CASE("Tokenize a simple string") {
     std::string    s = "a b c";
     neo::tokenizer toks{s, neo::whitespace_splitter{}};
 
-    static_assert(std::forward_iterator<decltype(toks)::iterator>);
     static_assert(std::ranges::forward_range<decltype(toks)>);
     static_assert(std::ranges::borrowed_range<decltype(toks)>);
     auto n_toks = std::ranges::distance(toks);

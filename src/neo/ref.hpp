@@ -1,5 +1,6 @@
 #pragma once
 
+#include "./addressof.hpp"
 #include "./attrib.hpp"
 #include "./concepts.hpp"
 #include "./map_ref.hpp"
@@ -58,5 +59,37 @@ using wrap_if_reference_t [[deprecated("Use wrap_ref_member_t and ref_member")]]
         return MemName.get();                                                                      \
     }                                                                                              \
     static_assert(true)
+
+/**
+ * @brief Defines an object-type that represents a non-nullable reference to another type. Acts
+ * as a non-nullable pointer in that assignment and comparison acts on the reference rather than
+ * the referred-to object.
+ *
+ * To get the underlying referred-to object, use a `static_cast` to get back to a C++ language
+ * reference type.
+ *
+ * @tparam T A reference type that we represent
+ */
+template <reference_type T>
+class reference_object {
+public:
+    using reference_type = T;
+    using pointer_type   = add_pointer_t<T>;
+
+public:
+    // "Bind" the new reference
+    constexpr reference_object(T ref) noexcept
+        : _pointer(NEO_ADDRESSOF(ref)) {}
+
+    // Return to the language-level reference type that we represent
+    NEO_ALWAYS_INLINE constexpr explicit operator T() const noexcept { return *_pointer; }
+
+    // Compare two references by comparing the wrapped object addresses
+    bool operator==(const reference_object&) const  = default;
+    auto operator<=>(const reference_object&) const = default;
+
+private:
+    pointer_type _pointer;
+};
 
 }  // namespace neo

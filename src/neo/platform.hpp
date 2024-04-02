@@ -2,6 +2,9 @@
 
 #include "./pp.hpp"
 
+#pragma push_macro("linux")
+#undef linux
+
 namespace neo {
 
 /*
@@ -14,33 +17,58 @@ namespace neo {
  ######   #######  ##     ## ##        #### ######## ######## ##     ##
 */
 
-#define NEO_COMPILER_IS_MSVC 0
-#define NEO_COMPILER_IS_CLANG 0
-#define NEO_COMPILER_IS_APPLE_CLANG 0
-#define NEO_COMPILER_IS_LLVM_CLANG 0
-#define NEO_COMPILER_IS_GNU 0
+#define pNeo_CompilerCheckByID_MSVC -
+#define pNeo_CompilerCheckByID_Clang -
+#define pNeo_CompilerCheckByID_GNU -
+#define pNeo_CompilerCheckByID_LLVMClang -
+#define pNeo_CompilerCheckByID_AppleClang -
 
 // clang-format off
 #if defined(_MSC_VER)
-    #undef NEO_COMPILER_IS_MSVC
-    #define NEO_COMPILER_IS_MSVC 1
+    #undef pNeo_CompilerCheckByID_MSVC
+    #define pNeo_CompilerCheckByID_MSVC +
 #elif defined(__clang__)
-    #undef NEO_COMPILER_IS_CLANG
-    #define NEO_COMPILER_IS_CLANG 1
+    #undef pNeo_CompilerCheckByID_Clang
+    #define pNeo_CompilerCheckByID_Clang +
     #if defined(__apple_build_version__)
-        #undef NEO_COMPILER_IS_APPLE_CLANG
-        #define NEO_COMPILER_IS_APPLE_CLANG 1
+        #undef pNeo_CompilerCheckByID_AppleClang
+        #define pNeo_CompilerCheckByID_AppleClang +
     #else
-        #undef NEO_COMPILER_IS_LLVM_CLANG
-        #define NEO_COMPILER_IS_LLVM_CLANG 1
+        #undef pNeo_CompilerCheckByID_LLVMClang
+        #define pNeo_CompilerCheckByID_LLVMClang +
     #endif
 #elif defined(__GNUC__)
-    #undef NEO_COMPILER_IS_GNU
-    #define NEO_COMPILER_IS_GNU 1
+    #undef pNeo_CompilerCheckByID_GNU
+    #define pNeo_CompilerCheckByID_GNU +
 #endif
 // clang-format on
 
-#define NEO_COMPILER_IS_GNU_LIKE (NEO_COMPILER_IS_GNU || NEO_COMPILER_IS_CLANG)
+// Convenience alias for GCC->GNU compiler ID
+#define pNeo_CompilerCheckByID_GCC pNeo_CompilerCheckByID_GNU
+
+#define pNeo_CompilerCheckIs(nil1, nil2, Ident)                                                    \
+    || ((NEO_CONCAT(pNeo_CompilerCheckByID_, Ident) 1) > 0)
+
+/**
+ * @brief Produce a compiler-time boolean constant `true` if-and-only-if the current
+ * compiler matches any one of the given compiler identifiers.
+ *
+ * Recognizes "MSVC", "Clang", "GNU", "AppleClang", and "LLVMClang"
+ */
+#define NEO_COMPILER(...) (false NEO_MAP(pNeo_CompilerCheckIs, ~, __VA_ARGS__))
+
+/// @deprecated Prefer the NEO_COMPILER() function-like macro
+#define NEO_COMPILER_IS_GNU_LIKE (NEO_COMPILER(GNU) || NEO_COMPILER(Clang))
+/// @deprecated Prefer the NEO_COMPILER() function-like macro
+#define NEO_COMPILER_IS_MSVC NEO_COMPILER(MSVC)
+/// @deprecated Prefer the NEO_COMPILER() function-like macro
+#define NEO_COMPILER_IS_CLANG NEO_COMPILER(Clang)
+/// @deprecated Prefer the NEO_COMPILER() function-like macro
+#define NEO_COMPILER_IS_APPLE_CLANG NEO_COMPILER(AppleClang)
+/// @deprecated Prefer the NEO_COMPILER() function-like macro
+#define NEO_COMPILER_IS_LLVM_CLANG NEO_COMPILER(LLVMClang)
+/// @deprecated Prefer the NEO_COMPILER() function-like macro
+#define NEO_COMPILER_IS_GNU NEO_COMPILER(GNU)
 
 enum class compiler_id_t {
     unknown,
@@ -51,11 +79,11 @@ enum class compiler_id_t {
 
 // clang-format off
 constexpr inline compiler_id_t compiler_id =
-    #if NEO_COMPILER_IS_MSVC
+    #if NEO_COMPILER(MSVC)
         compiler_id_t::msvc
-    #elif NEO_COMPILER_IS_CLANG
+    #elif NEO_COMPILER(Clang)
         compiler_id_t::clang
-    #elif NEO_COMPILER_IS_GNU
+    #elif NEO_COMPILER(GNU)
         compiler_id_t::gnu
     #else
         compiler_id_t::unknown
@@ -70,8 +98,8 @@ constexpr inline bool compiler_is_gnu_like =  //
 constexpr inline bool compiler_is_msvc        = compiler_id == compiler_id_t::msvc;
 constexpr inline bool compiler_is_gnu         = compiler_id == compiler_id_t::gnu;
 constexpr inline bool compiler_is_clang       = compiler_id == compiler_id_t::clang;
-constexpr inline bool compiler_is_apple_clang = NEO_COMPILER_IS_APPLE_CLANG;
-constexpr inline bool compiler_is_llvm_clang  = NEO_COMPILER_IS_LLVM_CLANG;
+constexpr inline bool compiler_is_apple_clang = NEO_COMPILER(AppleClang);
+constexpr inline bool compiler_is_llvm_clang  = NEO_COMPILER(LLVMClang);
 
 /// do_repr for compiler_id_t
 constexpr void do_repr(auto out, compiler_id_t const* value) noexcept {
@@ -236,17 +264,17 @@ constexpr void do_repr(auto out, operating_system_t const* value) noexcept {
 #define NEO_PRAGMA(...) NEO_PRAGMA_1(NEO_STR(__VA_ARGS__))
 
 // clang-format off
-#if NEO_COMPILER_IS_MSVC
+#if NEO_COMPILER(MSVC)
     #undef NEO_MSVC_PRAGMA
     #define NEO_MSVC_PRAGMA NEO_PRAGMA
     #define NEO_PRAGMA_WARNING_PUSH() NEO_PRAGMA(warning(push))
     #define NEO_PRAGMA_WARNING_POP() NEO_PRAGMA(warning(pop))
-#elif NEO_COMPILER_IS_GNU
+#elif NEO_COMPILER(GNU)
     #undef NEO_GNU_PRAGMA
     #define NEO_GNU_PRAGMA NEO_PRAGMA
     #define NEO_PRAGMA_WARNING_PUSH() NEO_PRAGMA(GCC diagnostic push)
     #define NEO_PRAGMA_WARNING_POP() NEO_PRAGMA(GCC diagnostic pop)
-#elif NEO_COMPILER_IS_CLANG
+#elif NEO_COMPILER(Clang)
     #undef NEO_CLANG_PRAGMA
     #define NEO_CLANG_PRAGMA NEO_PRAGMA
     #define NEO_PRAGMA_WARNING_PUSH() NEO_PRAGMA(clang diagnostic push)
@@ -256,24 +284,26 @@ constexpr void do_repr(auto out, operating_system_t const* value) noexcept {
     #define NEO_PRAGMA_WARNING_POP() static_assert(true)
 #endif
 
-#if NEO_COMPILER_IS_GNU_LIKE
+#if NEO_COMPILER(Clang, GNU)
     #define NEO_PRAGMA_MESSAGE(String) NEO_PRAGMA(message, String)
-#elif NEO_COMPILER_IS_MSVC
+#elif NEO_COMPILER(MSVC)
     #define NEO_PRAGMA_MESSAGE(String) NEO_PRAGMA(message(String))
 #else
     #define NEO_PRAGMA_MESSAGE(S) static_assert(true)
 #endif
 
-#if NEO_COMPILER_IS_GNU_LIKE
+#if NEO_COMPILER(Clang, GNU)
     #define NEO_PRAGMA_WARNING(String) NEO_PRAGMA(GCC warning String)
 #else
     #define NEO_PRAGMA_WARNING(String) NEO_PRAGMA_MESSAGE("warning: " String)
 #endif
 
-#if NEO_COMPILER_IS_GNU_LIKE
+#if NEO_COMPILER(Clang, GNU)
     #undef NEO_GNU_LIKE_PRAGMA
     #define NEO_GNU_LIKE_PRAGMA NEO_PRAGMA
 #endif
 // clang-format on
 
 }  // namespace neo
+
+#pragma pop_macro("linux")

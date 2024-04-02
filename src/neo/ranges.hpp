@@ -14,34 +14,41 @@
 #include <ranges>
 #include <vector>
 
+namespace neo {
+
+namespace _sr = std::ranges;
+
+
+}  // namespace neo
+
 namespace neo::views {}
 
 namespace neo::ranges {
 
 namespace views = neo::views;
 
-using std::ranges::begin;
-using std::ranges::end;
-using std::ranges::iterator_t;
-using std::ranges::range;
-using std::ranges::range_difference_t;
-using std::ranges::range_reference_t;
-using std::ranges::range_size_t;
-using std::ranges::range_value_t;
-using std::ranges::sentinel_t;
-using std::ranges::view;
+using _sr::begin;
+using _sr::end;
+using _sr::iterator_t;
+using _sr::range;
+using _sr::range_difference_t;
+using _sr::range_reference_t;
+using _sr::range_size_t;
+using _sr::range_value_t;
+using _sr::sentinel_t;
+using _sr::view;
 
 template <range T>
 struct range_index {
     using type = std::make_unsigned_t<range_difference_t<T>>;
 };
 
-template <std::ranges::sized_range T>
+template <_sr::sized_range T>
 struct range_index<T> {
     using type = range_size_t<T>;
 };
 
-template <std::ranges::range T>
+template <_sr::range T>
 using range_index_t = typename range_index<T>::type;
 
 // clang-format off
@@ -60,9 +67,9 @@ concept simple_view =
 template <typename Range>
 concept nothrow_range =
     range<Range> &&
-    requires (Range& r, std::ranges::iterator_t<Range> iter) {
-        { std::ranges::begin(r) } noexcept;
-        { std::ranges::end(r) } noexcept;
+    requires (Range& r, _sr::iterator_t<Range> iter) {
+        { _sr::begin(r) } noexcept;
+        { _sr::end(r) } noexcept;
         { ++iter } noexcept;
         { *iter } noexcept;
     };
@@ -77,15 +84,15 @@ struct pipable {
 };
 
 struct to_vector_fn : pipable {
-    template <std::ranges::range R>
+    template <_sr::range R>
     auto operator()(R&& range) const noexcept(nothrow_range<R>) {
         using vec_type = std::vector<range_value_t<R>>;
-        if constexpr (std::ranges::common_range<R>) {
-            return vec_type{std::ranges::begin(range), std::ranges::end(range)};
+        if constexpr (_sr::common_range<R>) {
+            return vec_type{_sr::begin(range), _sr::end(range)};
         } else {
             vec_type ret;
-            if constexpr (std::ranges::sized_range<R>) {
-                ret.reserve(std::ranges::size(range));
+            if constexpr (_sr::sized_range<R>) {
+                ret.reserve(_sr::size(range));
             }
             for (auto&& elem : range) {
                 ret.push_back(NEO_FWD(elem));
@@ -101,7 +108,7 @@ struct to_vector_fn : pipable {
 inline constexpr to_vector_fn to_vector;
 
 struct exhaust_fn : pipable {
-    template <std::ranges::input_range R>
+    template <_sr::input_range R>
     constexpr void operator()(R&& range) {
         for (auto&& el : range) {
             (void)el;
@@ -123,7 +130,7 @@ public:
     constexpr each_closure(Func fn)
         : _fn(NEO_FWD(fn)) {}
 
-    template <std::ranges::range Range>
+    template <_sr::range Range>
         requires neo::invocable2<Func&, range_reference_t<Range>>  //
     constexpr void
     operator()(Range&& range) noexcept(nothrow_invocable<Func&, range_reference_t<Range>>) {
@@ -149,20 +156,19 @@ template <typename R, typename T>
 concept range_of = range<R> && same_as<range_value_t<R>, T>;
 
 template <typename R, typename T>
-concept input_range_of = range_of<R, T> && std::ranges::input_range<R>;
+concept input_range_of = range_of<R, T> && _sr::input_range<R>;
 
 template <typename R, typename T>
-concept forward_range_of = input_range_of<R, T> && std::ranges::input_range<R>;
+concept forward_range_of = input_range_of<R, T> && _sr::input_range<R>;
 
 template <typename R, typename T>
-concept bidirectional_range_of = forward_range_of<R, T> && std::ranges::bidirectional_range<R>;
+concept bidirectional_range_of = forward_range_of<R, T> && _sr::bidirectional_range<R>;
 
 template <typename R, typename T>
-concept random_access_range_of
-    = bidirectional_range_of<R, T> && std::ranges::random_access_range<R>;
+concept random_access_range_of = bidirectional_range_of<R, T> && _sr::random_access_range<R>;
 
 template <typename R, typename T>
-concept contiguous_range_of = random_access_range_of<R, T> && std::ranges::contiguous_range<R>;
+concept contiguous_range_of = random_access_range_of<R, T> && _sr::contiguous_range<R>;
 
 template <typename Dest>
 struct write_into {
@@ -204,10 +210,10 @@ public:
         , _handlers(NEO_FWD(hs)...) {}
 
     // clang-format off
-    template <std::ranges::input_range R>
+    template <_sr::input_range R>
     requires
-            neo::invocable2<Selector, std::ranges::range_reference_t<R>>
-        && (neo::invocable2<Handlers, std::ranges::range_reference_t<R>> && ...)
+            neo::invocable2<Selector, _sr::range_reference_t<R>>
+        && (neo::invocable2<Handlers, _sr::range_reference_t<R>> && ...)
     constexpr void operator()(R&& r) noexcept(nothrow_range<R>) {
         // clang-format on
         for (auto&& elem : r) {
@@ -216,6 +222,15 @@ public:
         }
     }
 };
+
+inline constexpr struct udistance_fn {
+    template <_sr::input_range R>
+    [[nodiscard]] constexpr _sr::range_size_t<R> operator()(R&& rng) const
+        noexcept(nothrow_range<R>) {
+        const _sr::range_difference_t<R> dist = _sr::distance(rng);
+        return static_cast<_sr::range_size_t<R>>(dist);
+    }
+} udistance;
 
 }  // namespace neo::ranges
 

@@ -3,7 +3,8 @@
     "flags": [
         "/std:c++latest",
         "/Zc:preprocessor",
-        "/utf-8"
+        "/utf-8",
+        "/diagnostics:caret"
     ],
     "warning_flags": [
         "/WX",

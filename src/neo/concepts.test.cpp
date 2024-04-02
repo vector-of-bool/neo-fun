@@ -179,4 +179,24 @@ std::false_type test_trivially_copyable_subsume(T);
 
 static_assert(decltype(test_trivially_copyable_subsume(5))::value);
 
+static_assert(non_narrowing_convertible_to<float, double>);
+static_assert(not non_narrowing_convertible_to<const char*, bool>);
+static_assert(non_narrowing_convertible_to<bool, int>);
+static_assert(not non_narrowing_convertible_to<int, bool>);
+static_assert(not non_narrowing_convertible_to<signed, unsigned>);
+static_assert(non_narrowing_convertible_to<unsigned short, signed int>);
+
 static_assert(destructible<int&>);
+
+TEST_CASE("reference_constructible_from_temporary") {
+    STATIC_REQUIRE(not reference_constructible_from_temporary<int, int>);
+    STATIC_REQUIRE(not reference_constructible_from_temporary<int&, int>);
+    STATIC_REQUIRE(not reference_constructible_from_temporary<int&, int&>);
+    STATIC_REQUIRE(not reference_constructible_from_temporary<int&, const int&>);
+    STATIC_REQUIRE(not reference_constructible_from_temporary<const int&, const int&>);
+    STATIC_REQUIRE(reference_constructible_from_temporary<const int&, const long&>);
+    STATIC_REQUIRE(reference_constructible_from_temporary<const std::string&, const char*>);
+    STATIC_REQUIRE(reference_constructible_from_temporary<std::string&&, const char*>);
+    STATIC_REQUIRE(not reference_constructible_from_temporary<std::string&, const char*>);
+    STATIC_REQUIRE(not reference_constructible_from_temporary<std::string, const char*>);
+}

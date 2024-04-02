@@ -4,7 +4,6 @@
 #include "./function_traits.hpp"
 #include "./fwd.hpp"
 #include "./invoke.hpp"
-#include "./opt_ref.hpp"
 #include "./optional.hpp"
 #include "./scope.hpp"
 #include "./tag.hpp"
@@ -38,11 +37,11 @@ namespace event_detail {
 
 /// The top-most subscriber for events of type T, or null if no one is subscribed
 template <typename T>
-thread_local opt_ref<scoped_listener<T>> tl_tail_listener;
+thread_local optional<scoped_listener<T>&> tl_tail_listener;
 
 /// The currently executing event handler for the given type 'T'
 template <typename T>
-thread_local opt_ref<scoped_listener<T>> tl_currently_running_handler;
+thread_local optional<scoped_listener<T>&> tl_currently_running_handler;
 
 // helper for emit_as_t
 template <typename T>
@@ -117,9 +116,9 @@ emit_result_t<E> get_default_emit_result(const E& ev)
 template <typename E>
 emit_result_t<E> get_default_emit_result(const E& ev)
     requires requires {
-                 requires !requires { ev.default_emit_result(); };
-                 requires default_initializable<emit_result_t<E>>;
-             }
+        requires !requires { ev.default_emit_result(); };
+        requires default_initializable<emit_result_t<E>>;
+    }
 {
     return emit_result_t<E>();
 }
@@ -131,7 +130,7 @@ emit_result_t<E> get_default_emit_result(const E& ev)
  * @tparam T The type of the event that is being listened for
  */
 template <typename T>
-opt_ref<scoped_listener<T>> get_event_subscriber() noexcept {
+optional<scoped_listener<T>&> get_event_subscriber() noexcept {
     return event_detail::tl_tail_listener<T>;
 }
 
@@ -188,19 +187,20 @@ private:
     }
 
     // Keep a reference to the prior handler in the thread-local stack
-    opt_ref<scoped_listener<T>> _prev_ref = std::exchange(event_detail::tl_tail_listener<T>, *this);
+    scoped_listener<T>* _prev_ref
+        = std::exchange(event_detail::tl_tail_listener<T>, *this).as_pointer();
 
 public:
     scoped_listener() = default;
 
     virtual ~scoped_listener() {
         neo_assert(expects,
-                   event_detail::tl_tail_listener<T>.pointer() == this,
+                   event_detail::tl_tail_listener<T>.as_pointer() == this,
                    "neo::subscribe() objects are being destructed out-of-order, which is illegal.",
                    this,
-                   event_detail::tl_tail_listener<T>.pointer());
+                   event_detail::tl_tail_listener<T>.as_pointer());
         // Restore the prior event handler
-        event_detail::tl_tail_listener<T> = _prev_ref;
+        event_detail::tl_tail_listener<T> = *_prev_ref;
     }
 
     // We are immobile
@@ -213,8 +213,8 @@ public:
             out.type("neo::scoped_listener<...>");
         }
         if (self) {
-            bool is_active = self == event_detail::tl_currently_running_handler<T>.pointer();
-            bool is_tail   = self == event_detail::tl_tail_listener<T>.pointer();
+            bool is_active = self == event_detail::tl_currently_running_handler<T>.as_pointer();
+            bool is_tail   = self == event_detail::tl_tail_listener<T>.as_pointer();
             out.bracket_value("active={}, tail={}", is_active, is_tail);
         }
     }

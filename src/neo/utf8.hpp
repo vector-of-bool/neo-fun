@@ -33,6 +33,10 @@ enum class utf8_errc {
     invalid_start_byte = 2,
     /// A stream that ended before reading a character
     need_more = 3,
+    /// An over-long encoded codepoint was encountered
+    overlong_encoded = 4,
+    /// A character beyond the valid range
+    invalid_codepoint = 5,
 };
 
 constexpr bool operator!(utf8_errc e) { return e == utf8_errc::none; }
@@ -70,15 +74,17 @@ struct utf8_codepoint {
  * @param it The beginning of the UTF-8 stream
  * @param stop The end of the UTF-8 stream
  */
-template <typename Iter, typename Stop>
-constexpr utf8_codepoint next_utf8_codepoint(Iter it, const Stop stop) noexcept(noexcept(++it)) {
+template <std::input_iterator Iter, std::sentinel_for<Iter> Stop>
+constexpr utf8_codepoint
+next_utf8_codepoint(Iter it, const Stop stop) noexcept(nothrow_advancing_iterator<Iter>) {
     if (it == stop) {
         return utf8_codepoint::make_error(utf8_errc::need_more);
     }
-    using u8 = std::uint8_t;
+    using u8              = std::uint8_t;
+    const auto first_byte = static_cast<std::byte>(*it);
 
     // The number of leading one-bits is the length of the number of CUs in the stream
-    const auto n_bytes = utf8_detail::countl_one(std::byte(*it));
+    int n_bytes = utf8_detail::countl_one(first_byte);
     if (n_bytes == 0) {
         // A zero represents one code unit, which is just one codepoint:
         return {static_cast<char32_t>(*it), 1};
@@ -95,23 +101,31 @@ constexpr utf8_codepoint next_utf8_codepoint(Iter it, const Stop stop) noexcept(
         0b0000'1111,  // Three byte
         0b0000'0111,  // Four byte
     };
+    constexpr char32_t min_codepoint[] = {
+        0,
+        0,
+        0x80,
+        0x800,
+        0x10'000,
+    };
 
     // Init the character with the relevant bits in the mask for the lead byte
-    char32_t ret = static_cast<u8>(*it) & lead_mask[n_bytes];
+    const u8 mask = lead_mask[n_bytes];
+    char32_t ret  = static_cast<u8>(*it) & mask;
     ++it;
 
     // Decode remaining bytes
     auto remain = n_bytes - 1;
     for (; it != stop && remain; ++it, --remain) {
-        const auto c = *it;
-        if (utf8_detail::countl_one(std::byte(c)) != 1) {
+        const std::byte c = static_cast<std::byte>(*it);
+        if (utf8_detail::countl_one(c) != 1) {
             // Each continuation should have a single leading 1 bit
             return utf8_codepoint::make_error(utf8_errc::invalid_continuation_byte,
                                               static_cast<std::size_t>(n_bytes - remain));
         }
         // Insert the next six bits
         ret <<= 6;
-        ret |= static_cast<char32_t>(c & 0b00'11'11'11);
+        ret |= static_cast<char32_t>(c & std::byte{0b00'11'11'11});
     }
 
     // If we broke out before reading all expected bytes, the sequence is incomplete
@@ -120,8 +134,42 @@ constexpr utf8_codepoint next_utf8_codepoint(Iter it, const Stop stop) noexcept(
                                           static_cast<std::size_t>(n_bytes - remain));
     }
 
+    if (ret < min_codepoint[n_bytes]) {
+        // This codepoint could fit within the range of one fewer bytes, so this is an overlong
+        // character
+        return utf8_codepoint::make_error(utf8_errc::overlong_encoded,
+                                          static_cast<std::size_t>(n_bytes));
+    }
+
+    if (ret > 0x10'ffff) {
+        // Outside of the Unicode range
+        return utf8_codepoint::make_error(utf8_errc::invalid_codepoint,
+                                          static_cast<std::size_t>(n_bytes));
+    }
+
     // Got one!
     return {ret, static_cast<std::size_t>(n_bytes)};
+}
+
+extern template utf8_codepoint next_utf8_codepoint(const std::byte*, const std::byte*) noexcept;
+
+// Overload that normalizes all pointer-like iterators into std::byte pointers
+template <std::contiguous_iterator I, std::sized_sentinel_for<I> S>
+    requires(sizeof(std::iter_value_t<I>) == 1) and (not neo::weak_same_as<I, const std::byte*>)
+constexpr utf8_codepoint
+    next_utf8_codepoint(I iter, const S stop) noexcept(nothrow_advancing_iterator<I>) {
+    auto b = reinterpret_cast<const std::byte*>(std::to_address(iter));
+    return neo::next_utf8_codepoint(b, b + (stop - iter));
+}
+
+/**
+ * @brief Decode a single UTF-8 encoded Unicode codepoint from the beginning of the given range
+ *
+ * @param rng The range from which byte data will be extracted
+ * @return constexpr utf8_codepoint The decoding result, which may indicate an error
+ */
+constexpr utf8_codepoint next_utf8_codepoint(std::ranges::input_range auto&& rng) {
+    return neo::next_utf8_codepoint(std::ranges::begin(rng), std::ranges::end(rng));
 }
 
 /**
@@ -131,16 +179,16 @@ constexpr utf8_codepoint next_utf8_codepoint(Iter it, const Stop stop) noexcept(
  */
 template <typename Range>
 class utf8_range {
-    Range _range;
+    NEO_NO_UNIQUE_ADDRESS object_box<Range> _range;
 
-    using _iter_type = decltype(std::cbegin(_range));
-    using _stop_type = decltype(std::cend(_range));
+    using _iter_type = decltype(std::cbegin(_range.get()));
+    using _stop_type = decltype(std::cend(_range.get()));
 
 public:
     constexpr utf8_range() = default;
 
     constexpr explicit utf8_range(Range&& r)
-        : _range{r} {}
+        : _range{NEO_FWD(r)} {}
 
     class iterator : public iterator_facade<iterator> {
         _iter_type _begin{};
@@ -160,6 +208,8 @@ public:
         constexpr utf8_codepoint dereference() const noexcept {
             return next_utf8_codepoint(_iter, _stop);
         }
+
+        constexpr _iter_type base() const noexcept { return _iter; }
 
         constexpr void increment() {
             neo_assert(expects, _iter != _stop, "Advanced the past-the-end utf8_range iterator");
@@ -191,12 +241,17 @@ public:
     };
 
     constexpr iterator begin() const noexcept {
-        return iterator{std::cbegin(_range), std::cbegin(_range), std::cend(_range)};
+        return iterator{std::cbegin(_range.get()),
+                        std::cbegin(_range.get()),
+                        std::cend(_range.get())};
     }
     constexpr typename iterator::sentinel_type end() const noexcept { return {}; }
 };
 
 template <typename R>
-explicit utf8_range(R &&) -> utf8_range<R>;
+explicit utf8_range(R&&) -> utf8_range<R>;
 
 }  // namespace neo
+
+template <typename R>
+constexpr inline bool std::ranges::enable_view<neo::utf8_range<R>> = std::ranges::view<R>;

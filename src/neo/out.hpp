@@ -2,7 +2,7 @@
 
 #include "./declval.hpp"
 #include <neo/fwd.hpp>
-#include <neo/opt_ref.hpp>
+#include <neo/optional.hpp>
 
 #include <functional>
 
@@ -30,9 +30,8 @@ public:
 
     constexpr operator T&() const noexcept { return _dest; }
 
-    friend constexpr void do_repr(auto out, const output* self) noexcept requires requires {
-        out.repr(NEO_DECLVAL(const T&));
-    }
+    friend constexpr void do_repr(auto out, const output* self) noexcept
+        requires requires { out.repr(NEO_DECLVAL(const T&)); }
     {
         out.type("neo::output");
         if (self) {
@@ -52,7 +51,7 @@ public:
  */
 template <typename T>
 class optional_output {
-    opt_ref<T> _dest;
+    optional<T&> _dest;
 
 public:
     constexpr optional_output() = default;
@@ -72,17 +71,15 @@ public:
         }
     }
 
-    constexpr opt_ref<T> get() const noexcept { return _dest; }
+    constexpr optional<T&> get() const noexcept { return _dest; }
 
     constexpr T& operator*() const noexcept { return *_dest; }
     constexpr T* operator->() const noexcept { return _dest.operator->(); }
 
     constexpr explicit operator bool() const noexcept { return bool(_dest); }
 
-    friend constexpr void do_repr(auto                   out,
-                                  const optional_output* self) noexcept requires requires {
-        out.repr(NEO_DECLVAL(const T&));
-    }
+    friend constexpr void do_repr(auto out, const optional_output* self) noexcept
+        requires requires { out.repr(NEO_DECLVAL(const T&)); }
     {
         out.type("neo::optional_output<{}>", out.template repr_type<T>());
         if (self and *self) {

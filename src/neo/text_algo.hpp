@@ -1,8 +1,8 @@
 #pragma once
 
+#include "./object_box.hpp"
 #include "./ranges.hpp"
 #include "./reconstruct.hpp"
-#include "./scalar_box.hpp"
 #include "./string.hpp"
 #include "./substring.hpp"
 #include "./tag.hpp"
@@ -143,7 +143,7 @@ namespace text_algo_detail {
 
 template <text_range... Ts>
 class str_concat_tuple {
-    NEO_NO_UNIQUE_ADDRESS std::tuple<neo::scalar_box<Ts>...> _strs;
+    NEO_NO_UNIQUE_ADDRESS std::tuple<neo::object_box<Ts>...> _strs;
 
     template <std::size_t N, std::size_t Counter, typename Head, typename... Tail>
     constexpr auto const& _get_nth(neo::tag<Head, Tail...>) const noexcept {
@@ -425,7 +425,7 @@ inline constexpr struct starts_with_fn {
 
 template <text_range R>
 struct text_range_formatter {
-    neo::scalar_box<R> _r;
+    neo::object_box<R> _r;
 
     text_range_formatter(R&& r) noexcept
         : _r(NEO_FWD(r)) {}
@@ -500,7 +500,7 @@ struct text_range_compare_3way {
 
 template <forward_text_range R>
 struct text_range_ostream_inserter {
-    NEO_NO_UNIQUE_ADDRESS neo::scalar_box<R> _range;
+    NEO_NO_UNIQUE_ADDRESS neo::object_box<R> _range;
 
     constexpr explicit text_range_ostream_inserter(R&& r) noexcept
         : _range(NEO_FWD(r)) {}
@@ -510,9 +510,9 @@ struct text_range_ostream_inserter {
     operator<<(Os& out, text_range_ostream_inserter&& self) noexcept(ranges::nothrow_range<R>)
         requires requires(add_pointer_t<std::ranges::range_value_t<View>> sptr,
                           std::ranges::range_size_t<View>                 size) {
-                     out.put(*std::ranges::begin(self._range.get()));
-                     out.write(sptr, size);
-                 }
+            out.put(*std::ranges::begin(self._range.get()));
+            out.write(sptr, size);
+        }
     {
         auto view = neo::view_text(self._range.get());
         if constexpr (contiguous_text_range<View>) {

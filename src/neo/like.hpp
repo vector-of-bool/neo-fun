@@ -1,96 +1,107 @@
 #pragma once
 
-#include <type_traits>
+#include "./attrib.hpp"
+#include "./type_traits.hpp"
 
 namespace neo {
 
 namespace like_detail {
 
-template <bool B>
-struct conditional {
-    template <typename T, typename F>
-    using eval = F;
+template <bool IsConst, int Nref>
+struct forward_like_impl;
+
+template <>
+struct forward_like_impl<true, 1> {
+    template <typename T>
+    using merge = add_lvalue_reference_t<add_const_t<remove_reference_t<T>>>;
+
+    template <typename T>
+    using tuple = add_lvalue_reference_t<add_const_t<T>>;
+
+    template <typename T>
+    using language = add_lvalue_reference_t<add_const_t<T>>;
 };
 
 template <>
-struct conditional<true> {
-    template <typename T, typename F>
-    using eval = T;
-};
-
-template <typename T, typename U>
-concept similar = std::is_same_v<std::remove_cvref_t<T>, std::remove_cvref_t<U>>;
-
-template <typename From, typename Onto>
-struct copy_ref {
-    using type = Onto;
-};
-
-template <typename From, typename Onto>
-struct copy_ref<From&&, Onto> {
-    using type = Onto&&;
-};
-
-template <typename From, typename Onto>
-struct copy_ref<From&, Onto> {
-    using type = Onto&;
-};
-
-template <typename From, typename Onto>
-using copy_ref_t = typename copy_ref<From, Onto>::type;
-
-template <bool IsRValRef>
-struct override_ref {
+struct forward_like_impl<true, 0> {
     template <typename T>
-    using eval = T&;
+    using merge = add_rvalue_reference_t<add_const_t<remove_reference_t<T>>>;
+
+    template <typename T>
+    using tuple = add_rvalue_reference_t<add_const_t<T>>;
+
+    template <typename T>
+    using language = add_lvalue_reference_t<add_const_t<T>>;
 };
 
 template <>
-struct override_ref<true> {
+struct forward_like_impl<false, 1> {
     template <typename T>
-    using eval = std::remove_reference_t<T>&&;
-};
+    using merge = add_lvalue_reference_t<remove_reference_t<T>>;
 
-template <typename From, typename Onto>
-using override_ref_t = typename override_ref<std::is_rvalue_reference_v<From>>::template eval<Onto>;
-
-template <bool IsConst>
-struct copy_const;
-
-template <>
-struct copy_const<true> {
     template <typename T>
-    using eval = copy_ref_t<T, std::remove_reference_t<T> const>;
+    using tuple = add_lvalue_reference_t<T>;
+
+    template <typename T>
+    using language = add_lvalue_reference_t<T>;
 };
 
 template <>
-struct copy_const<false> {
+struct forward_like_impl<false, 0> {
     template <typename T>
-    using eval = T;
+    using merge = add_rvalue_reference_t<remove_reference_t<T>>;
+
+    template <typename T>
+    using tuple = add_rvalue_reference_t<T>;
+
+    template <typename T>
+    using language = add_lvalue_reference_t<T>;
 };
 
-template <typename From, typename To>
-using copy_const_t =
-    typename copy_const<std::is_const_v<std::remove_reference_t<From>>>::template eval<To>;
+template <>
+struct forward_like_impl<false, 2> : forward_like_impl<false, 0> {
+    template <typename T>
+    using language = add_lvalue_reference_t<T>;
+};
 
-template <typename From, typename To>
-using copy_cvref_t = copy_ref_t<From&&, copy_const_t<From, To>>;
+template <>
+struct forward_like_impl<true, 2> : forward_like_impl<true, 0> {
+    template <typename T>
+    using language = add_lvalue_reference_t<add_const_t<T>>;
+};
+
+template <typename T>
+using model = forward_like_impl<const_type<remove_reference_t<T>>,
+                                rvalue_reference_type<T>       ? 2
+                                    : lvalue_reference_type<T> ? 1
+                                                               : 0>;
 
 }  // namespace like_detail
 
 /**
  * @brief Merge the cvref-qualifiers of `T` onto `U`
- *
- * @tparam T
- * @tparam U
  */
 template <typename T, typename U>
-using forward_like_t
-    = like_detail::override_ref_t<T&&, like_detail::copy_const_t<T, std::remove_reference_t<U>>>;
+using forward_like_t = like_detail::model<T>::template merge<U>;
 
-template <typename T>
-constexpr decltype(auto) forward_like(auto&& arg) noexcept {
-    return static_cast<forward_like_t<T, decltype(arg)>>(arg);
+/**
+ * @brief Use a forward-like as if we were calling get<>() with a tuple.
+ *
+ * @tparam Owner The "owner" of the object.
+ * @tparam T the type to be transformed.
+ *
+ * - If `T` is a non-reference type, the cvref qualifiers from `Owner` will be applied
+ *   to `T`.
+ * - Otherwise, the cv-qualifiers from `Owner` are ignored, and the reference qualifiers
+ *   of `Owner` are concatenated with the reference qualifiers of `T` and the resulting
+ *   collapsed reference type is the final result.
+ */
+template <typename Owner, typename T>
+using forward_like_tuple_t = like_detail::model<Owner>::template tuple<T>;
+
+template <typename T, typename U>
+NEO_ALWAYS_INLINE constexpr forward_like_t<T, U> forward_like(U&& arg) noexcept {
+    return static_cast<forward_like_t<T, U>>(arg);
 }
 
 }  // namespace neo

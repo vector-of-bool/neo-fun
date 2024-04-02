@@ -5,7 +5,6 @@
 #include "./type_traits.hpp"
 
 #include <compare>
-#include <type_traits>
 
 namespace neo {
 
@@ -56,7 +55,7 @@ constexpr inline struct logical_and_t {
  */
 template <typename... Items>
 class any_of {
-    nano_tuple<const Items&...> _items;
+    core::tuple<const Items&...> _items;
 
     template <auto Oper, std::size_t... I, typename Other>
     constexpr bool _op_1(std::index_sequence<I...>, logical_or_t, Other&& o) const noexcept {
@@ -96,7 +95,7 @@ explicit any_of(const Items&...) -> any_of<Items...>;
  */
 template <typename... Items>
 class none_of {
-    nano_tuple<const Items&...> _items;
+    core::tuple<const Items&...> _items;
 
     template <auto Oper, std::size_t... I, typename Other>
     constexpr bool _op_1(std::index_sequence<I...>, Other&& o) const noexcept {
@@ -135,9 +134,9 @@ explicit none_of(const Items&...) -> none_of<Items...>;
 template <typename Arg, typename Low, typename High>
 constexpr bool between(Arg&& arg, Low&& low, High&& high) noexcept
     requires requires {
-                 arg <= high;
-                 arg >= low;
-             }
+        arg <= high;
+        arg >= low;
+    }
 {
     return (arg <= high) && (arg >= low);
 }
@@ -152,9 +151,9 @@ constexpr bool between(Arg&& arg, Low&& low, High&& high) noexcept
 template <typename Arg, typename Low, typename High>
 constexpr bool properly_between(Arg&& arg, Low&& low, High&& high) noexcept
     requires requires {
-                 arg < high;
-                 arg > low;
-             }
+        arg < high;
+        arg > low;
+    }
 {
     return (arg < high) && (arg > low);
 }
