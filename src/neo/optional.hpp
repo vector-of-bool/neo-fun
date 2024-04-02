@@ -4,6 +4,7 @@
 
 #include "./addressof.hpp"
 #include "./attrib.hpp"
+#include "./concepts.hpp"
 #include "./constexpr_union.hpp"
 #include "./declval.hpp"
 #include "./emplacement.hpp"
@@ -105,6 +106,7 @@ class optional : public opt_detail::adl_operators {
     }
 
 public:
+    using value_type = T;
     /// The lvalue-reference type that we return
     using reference = add_lvalue_reference_t<T>;
     /// The lvalue-reference-to-const type that we return
@@ -122,6 +124,13 @@ public:
     constexpr optional() noexcept = default;
     /// Simply constructs as a null optional
     constexpr optional(nullopt_t) noexcept {}
+
+    constexpr ~optional() = default;
+    constexpr ~optional()
+        requires(not trivially_destructible<T>)
+    {
+        reset();
+    }
 
     /// Copy-construct an optional from an optional of the same type
     constexpr optional(const optional&) noexcept
@@ -143,24 +152,29 @@ public:
         _assign(NEO_MOVE(o)._state);
     }
 
+    // clang-format off
     /**
      * @brief Copy-construct from an optional of a differing type
      */
     template <typename OtherOpt, typename U = remove_reference_t<OtherOpt>::value_type>
         requires is_optional_v<remove_cvref_t<OtherOpt>>
-    explicit(not convertible_to<const U&, T>) constexpr optional(OtherOpt&& other)  //
-        noexcept(nothrow_constructible_from<T, OtherOpt const&>)
-        requires constructible_from<T, OtherOpt const&>
-        and (alike<T, bool>
-             or not(constructible_from<T, add_lvalue_reference_t<U>>
-                    and constructible_from<T, add_const_reference_t<U>>
-                    and constructible_from<T, add_rvalue_reference_t<add_const_t<U>>>
-                    and constructible_from<T, add_rvalue_reference_t<U>>           //
-                    and convertible_to<add_lvalue_reference_t<U>, T>               //
-                    and convertible_to<add_const_reference_t<U>, T>                //
-                    and convertible_to<add_rvalue_reference_t<add_const_t<U>>, T>  //
-                    and convertible_to<add_rvalue_reference_t<U>, T>               //
-                    ))
+    explicit(not convertible_to<forward_like_tuple_t<OtherOpt, U>, T>)  //
+    constexpr optional(OtherOpt&& other)                            //
+        noexcept(nothrow_constructible_from<T, decltype(*NEO_FWD(other))>)
+    requires constructible_from<T, decltype(*NEO_FWD(other))>
+         and (alike<T, bool>
+              or not (
+                    constructible_from<T, OtherOpt&>
+                and constructible_from<T, OtherOpt const&>
+                and constructible_from<T, OtherOpt const &&>
+                and constructible_from<T, OtherOpt &&>
+                and convertible_to<OtherOpt&, T>
+                and convertible_to<OtherOpt const&, T>
+                and convertible_to<OtherOpt const &&, T>
+                and convertible_to<OtherOpt &&, T>
+                )
+            )
+    // clang-format on
     {
         if (not other.has_value()) {
             // Okay: Do nothing (we are empty)

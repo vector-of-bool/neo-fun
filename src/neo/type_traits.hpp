@@ -720,6 +720,20 @@ using type_identity_t = detail::type_identity<void_type<T>>::template f<T>;
 template <typename T>
 using nondeduced = type_identity_t<T>;
 
+/**
+ * @brief If the given type is an rvalue-reference, remove the reference qualifier, otherwise
+ * leave it unchanged.
+ */
+template <typename T>
+using remove_rvalue_reference = conditional_t<rvalue_reference_type<T>, remove_reference_t<T>, T>;
+
+/**
+ * @brief If the given type is an lvalue-reference, remove the reference qualifier, otherwise
+ * leave it unchanged.
+ */
+template <typename T>
+using remove_lvalue_reference = conditional_t<lvalue_reference_type<T>, remove_reference_t<T>, T>;
+
 }  // namespace neo
 
 #undef BOOL

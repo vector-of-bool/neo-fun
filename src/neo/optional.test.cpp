@@ -194,11 +194,52 @@ TEST_CASE("Optional of void") {
     full_use(x);
 }
 
+TEST_CASE("Optional references") {
+    neo::optional<int&> i;
+    CHECK_FALSE(i.has_value());
+    static_assert(neo::assignable_from<neo::optional<int>&, int&>);
+    static_assert(neo::assignable_from<neo::optional<int>&, int&>);
+    static_assert(neo::assignable_from<neo::optional<int const&>&, int&>);
+    static_assert(not neo::assignable_from<neo::optional<int&>&, int>);
+    static_assert(not neo::assignable_from<neo::optional<int&>&, int&&>);
+    static_assert(not std::assignable_from<neo::optional<int&>&, int&&>);
+    neo::optional<const int&> ci{i};
+    neo::optional<int>        opt_int;
+    neo::optional<int&>       opt_iref = opt_int;
+}
+
 TEST_CASE("Optional of nontrivial") {
     auto x = neo::optional<std::string>("Howdy neighbor");
     full_use(x);
     CHECK((x <=> x) == std::strong_ordering::equal);
     CHECK(std::hash<neo::optional<std::string>>()(x) != 0);
+    x = "This is a very long string. This is a very long string. This is a very long string. This "
+        "is a very long string. This is a very long string. This is a very long string. This is a "
+        "very long string. This is a very long string. This is a very long string. This is a very "
+        "long string. This is a very long string. This is a very long string. This is a very long "
+        "string. This is a very long string. This is a very long string. This is a very long "
+        "string. This is a very long string. This is a very long string. This is a very long "
+        "string. This is a very long string. This is a very long string. This is a very long "
+        "string. This is a very long string. This is a very long string. This is a very long "
+        "string. This is a very long string. This is a very long string. This is a very long "
+        "string. This is a very long string. This is a very long string. This is a very long "
+        "string. This is a very long string. This is a very long string. This is a very long "
+        "string. This is a very long string. This is a very long string. This is a very long "
+        "string. This is a very long string. This is a very long string. This is a very long "
+        "string. This is a very long string. This is a very long string. This is a very long "
+        "string. This is a very long string. This is a very long string. This is a very long "
+        "string. This is a very long string. This is a very long string. This is a very long "
+        "string. This is a very long string. This is a very long string. This is a very long "
+        "string. This is a very long string. This is a very long string. This is a very long "
+        "string. This is a very long string. This is a very long string. This is a very long "
+        "string. This is a very long string. This is a very long string. This is a very long "
+        "string. This is a very long string. This is a very long string. This is a very long "
+        "string. This is a very long string. This is a very long string. This is a very long "
+        "string. This is a very long string. This is a very long string. This is a very long "
+        "string. This is a very long string. This is a very long string. This is a very long "
+        "string. This is a very long string. This is a very long string. This is a very long "
+        "string. This is a very long string. This is a very long string. This is a very long "
+        "string. This is a very long string. This is a very long string.";
 }
 
 TEST_CASE("Optional and_then") {
