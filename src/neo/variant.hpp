@@ -36,12 +36,12 @@ class variant : _variant_detail::variant_operators<sizeof...(Ts) == 0 or true> {
 
     // Extracting the first type once and reusing it is actually measurably more compile-time
     // efficient than calling `pack_at<0, ...>` multiple times.
-    using _first_type = nonvoid_t<meta::pack_at<0, Ts...>>;
+    using _first_type = nonvoid_t<meta::pack_at<0, nonvoid_t<Ts>...>>;
 
 public:
     // Yield the Nth alternative type for the variant
     template <std::size_t N>
-    using nth_type = meta::pack_at<N, Ts...>;
+    using nth_type = meta::pack_at<N, nonvoid_t<Ts>...>;
 
     /**
      * @brief Default constructor for the variant type. Default-constructs to the first alternative.

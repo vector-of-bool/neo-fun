@@ -77,9 +77,8 @@ neo::testing::cx_test_case DefaultConstruction = [](auto check) consteval {
 neo::testing::cx_test_case VoidDefault = [](auto check) consteval {
     variant<void> v;
     check(v.index() == 0);
-    std::same_as<neo::optional<void>> auto o = v.try_get<0>();
-    check(o.has_value());
-    (void)o.value();
+    std::same_as<neo::unit*> auto o = v.try_get<0>();
+    check(!!o);
 };
 
 struct not_constexpr {
