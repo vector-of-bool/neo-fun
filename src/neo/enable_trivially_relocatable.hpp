@@ -24,7 +24,7 @@ template <typename T>
 constexpr bool enable_trivially_relocatable  //
     = neo_is_trivially_copyayable(T)         //
     or neo_is_reference(T)                   //
-    or requires { requires static_cast<bool>(T::enable_trivially_locatable); }
+    or requires { requires static_cast<bool>(T::enable_trivially_relocatable); }
     or std_is_trivially_relocatable_v<T>;
 
 }  // namespace neo
