@@ -85,11 +85,13 @@ struct not_constexpr {
     not_constexpr() {}
 };
 
+#if neo_compiler_implements(cwg2096)
 neo::testing::cx_test_case ConstexprWithNonLiteralAlternatives = [](auto check) consteval {
     // XXX: Clang is missing CWG 2096: See llvm-project#40183
     variant<int, not_constexpr> v;
     check(v.index() == 0);
 };
+#endif
 
 neo::testing::cx_test_case AmbiguousAlternativeConstruction = [](auto check) consteval {
     variant<int, int> v;
