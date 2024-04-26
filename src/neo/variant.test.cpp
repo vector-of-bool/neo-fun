@@ -405,7 +405,7 @@ TEST_CASE("Not-default-constructible") {
     STATIC_REQUIRE_FALSE(
         neo::default_initializable<neo::variant<not_default_constructible, std::string>>);
 
-    neo::variant<not_default_constructible> ord = not_default_constructible{42};
+    neo::variant<not_default_constructible> ord [[maybe_unused]] = not_default_constructible{42};
 }
 
 template <typename T>
