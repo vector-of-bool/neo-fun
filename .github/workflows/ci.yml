@@ -41,7 +41,6 @@ jobs:
   build-clang16:
     name: Build for Clang 16
     runs-on: ubuntu-latest
-    if: ${{false}} # Skipped
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -51,7 +50,6 @@ jobs:
   build-clang17:
     name: Build for Clang 17
     runs-on: ubuntu-latest
-    if: ${{false}} # Skipped
     steps:
       - name: Checkout
         uses: actions/checkout@v4
