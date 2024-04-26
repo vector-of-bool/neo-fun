@@ -48,11 +48,21 @@ using nth_arg_t = decltype(nth_arg<I>(NEO_DECLVAL(TlArgs)...));
     }
 // clang-format on
 
+#define NEO_TERSE_LAMBDA_IS_BROKEN() 0
+
 // Roughly based on https://github.com/Quincunx271/TerseLambda
-#if NEO_FeatureIsEnabled(Neo, TerseLambdaMSVCNoexceptWorkaround) && defined(_MSC_VER)
+#if __clang_major__ == 17
+#undef NEO_TERSE_LAMBDA_IS_BROKEN
+#define NEO_TERSE_LAMBDA_IS_BROKEN() 1
+struct clang17_terse_lambda_expression_is_broken {};
+#define NEO_CTL(...)                                                                               \
+    (auto&&...) -> ::neo::clang17_terse_lambda_expression_is_broken { return {}; }
+#elif NEO_FeatureIsEnabled(Neo, TerseLambdaMSVCNoexceptWorkaround) && defined(_MSC_VER)
 #define NEO_CTL(...)                                                                               \
     <typename... TlArgs>(TlArgs && ... _args)                                                      \
-        ->decltype(auto) requires(NEO_TL_REQUIRES(__VA_ARGS__)) {                                  \
+        ->decltype(auto)                                                                           \
+        requires(NEO_TL_REQUIRES(__VA_ARGS__))                                                     \
+    {                                                                                              \
         [[maybe_unused]] auto&& _1 = ::neo::tl_detail::nth_arg<0>(NEO_FWD(_args)...);              \
         [[maybe_unused]] auto&& _2 = ::neo::tl_detail::nth_arg<1>(NEO_FWD(_args)...);              \
         [[maybe_unused]] auto&& _3 = ::neo::tl_detail::nth_arg<2>(NEO_FWD(_args)...);              \
@@ -62,7 +72,9 @@ using nth_arg_t = decltype(nth_arg<I>(NEO_DECLVAL(TlArgs)...));
 #else
 #define NEO_CTL(...)                                                                               \
     <typename... TlArgs>(TlArgs && ... _args) noexcept(NEO_TL_REQUIRES({ __VA_ARGS__ } noexcept))  \
-        ->decltype(auto) requires(NEO_TL_REQUIRES(__VA_ARGS__)) {                                  \
+        ->decltype(auto)                                                                           \
+        requires(NEO_TL_REQUIRES(__VA_ARGS__))                                                     \
+    {                                                                                              \
         [[maybe_unused]] auto&& _1 = ::neo::tl_detail::nth_arg<0>(NEO_FWD(_args)...);              \
         [[maybe_unused]] auto&& _2 = ::neo::tl_detail::nth_arg<1>(NEO_FWD(_args)...);              \
         [[maybe_unused]] auto&& _3 = ::neo::tl_detail::nth_arg<2>(NEO_FWD(_args)...);              \

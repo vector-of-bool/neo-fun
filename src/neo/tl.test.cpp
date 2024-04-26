@@ -2,6 +2,8 @@
 
 #include <catch2/catch.hpp>
 
+#if ! NEO_TERSE_LAMBDA_IS_BROKEN()
+
 void not_noexcept() {}
 void is_noexcept() noexcept {}
 
@@ -35,3 +37,5 @@ TEST_CASE("Create a simple lambda expression") {
     static_assert(!std::invocable<decltype(variadic), int, int>);
     static_assert(!std::invocable<decltype(variadic)>);
 }
+
+#endif
