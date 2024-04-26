@@ -38,11 +38,9 @@ jobs:
       - name: Build and Test
         run: bash tools/earthly.sh +build-gcc-10.3
 
-  # XXX: BROKEN due to compiler bugs. Investigate at a later date.
   build-clang16:
-    name: Build for Clang 16 [Compiler bugs]
+    name: Build for Clang 16
     runs-on: ubuntu-latest
-    if: ${{false}} # Skipped
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -50,9 +48,8 @@ jobs:
         run: bash tools/earthly.sh +build-clang-16
 
   build-clang17:
-    name: Build for Clang 17 [Compiler bugs]
+    name: Build for Clang 17
     runs-on: ubuntu-latest
-    if: ${{false}} # Skipped
     steps:
       - name: Checkout
         uses: actions/checkout@v4
