@@ -80,9 +80,10 @@ class optional : public opt_detail::adl_operators {
         }
     }
 
-    template <typename Self,
-              typename Fn,
-              typename Ret = invoke_result_t<Fn, decltype(*NEO_DECLVAL(Self))>>
+    template <typename Self>
+    using reference_t = forward_like_tuple_t<Self&&, T>;
+
+    template <typename Self, typename Fn, typename Ret = invoke_result_t<Fn, reference_t<Self>>>
     static constexpr Ret do_and_then(Self&& self, Fn&& fn) {
         static_assert(is_optional_v<Ret>,
                       "and_then() requires that the operation returns an optional. Did you mean to "
@@ -96,12 +97,12 @@ class optional : public opt_detail::adl_operators {
 
     template <typename Self,
               typename Fn,
-              typename Ret = invoke_result_t<Fn, decltype(*NEO_DECLVAL(Self))>>
+              typename Ret = invoke_result_t<Fn, reference_t<Self>>>
     static constexpr optional<Ret> do_transform(Self&& self, Fn&& fn) {
         if (self.has_value()) {
             return optional<Ret>(NEO_INVOKE(NEO_FWD(fn), *NEO_FWD(self)));
         } else {
-            return optional<Ret>{};
+            return {};
         }
     }
 
