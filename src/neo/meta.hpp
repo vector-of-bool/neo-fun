@@ -471,7 +471,7 @@ using remove_prefix = tn detail::remove_prefix_<N>::tl from<L>::type;
 
 namespace detail {
 
-#if NEO_HAS_BUILTIN(__type_pack_element)
+#if NEO_HAS_BUILTIN(__type_pack_element) && !NEO_COMPILER(GCC)
 template <typename Seq>
 struct intrin_at_impl;
 
@@ -484,7 +484,7 @@ struct intrin_at_impl<L<Ts...>> {
 
 }  // namespace detail
 
-#if NEO_HAS_BUILTIN(__type_pack_element)
+#if NEO_HAS_BUILTIN(__type_pack_element) && !NEO_COMPILER(GCC)
 /**
  * @brief Select the `Nth` element of the given type-list.
  *
