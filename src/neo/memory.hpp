@@ -3,6 +3,7 @@
 #include "./concepts.hpp"
 #include "./declval.hpp"
 #include "./fwd.hpp"
+#include "./query.hpp"
 #include "./type_traits.hpp"
 
 #include <memory>
@@ -52,23 +53,34 @@ namespace _memory_detail {
 template <typename T>
 constexpr bool has_value_type = requires { typename T::value_type; };
 
-template <typename T>
-constexpr bool has_get_allocator = requires(T & t) { t.get_allocator(); };
-
 }  // namespace _memory_detail
+
+/**
+ * @brief Query object type that obtains the allocator from an object
+ */
+struct get_allocator_q : query_interface<get_allocator_q> {
+    static constexpr auto exec(const auto& obj) noexcept
+        requires requires { obj.get_allocator(); }
+    {
+        return obj.get_allocator();
+    }
+};
+
+/**
+ * @brief Query object that obtains the allocator associated with an object
+ */
+inline constexpr get_allocator_q get_allocator;
 
 template <typename T>
 constexpr auto allocator_of(T&& t, auto alloc = std::allocator<void>{}) noexcept {
-    if constexpr (_memory_detail::has_get_allocator<T>) {
-        return t.get_allocator();
-    } else if constexpr (_memory_detail::has_value_type<T>) {
-        return rebind_alloc<typename T::value_type>(alloc);
-    } else {
-        return alloc;
-    }
+    return query_or(get_allocator, t, alloc);
 }
 
-template <typename T>
-using get_allocator_t = decltype(allocator_of(NEO_DECLVAL(T)));
+/**
+ * @brief Match a type that is an allocator for the given object, according to
+ * std::uses_allocator_v
+ */
+template <typename Allocator, typename T>
+concept allocator_for = std::uses_allocator_v<T, Allocator>;
 
 }  // namespace neo
