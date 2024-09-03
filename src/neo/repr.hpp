@@ -394,7 +394,7 @@ struct repr_builtin<void> {
 /// repr()'d, includes the repr() of the pointed-to value
 template <typename T>
 struct repr_builtin<T*> {
-    constexpr static void write(auto out, auto* value) noexcept {
+    constexpr static void write(auto out, auto* value [[maybe_unused]]) noexcept {
         if constexpr (neo_is_void(T)) {
             // Special case for void*
             if constexpr (out.just_type) {
@@ -473,7 +473,7 @@ struct repr_builtin<float> {
 template <std::integral Integral>
     requires(not neo_is_pointer(Integral) && weak_same_as<Integral, remove_cvref_t<Integral>>)  //
 struct repr_builtin<Integral> {
-    constexpr static void write(auto out, auto* value) noexcept {
+    constexpr static void write(auto out, auto* value [[maybe_unused]]) noexcept {
         if constexpr (weak_same_as<Integral, bool>) {
             if constexpr (out.just_type) {
                 out.append("bool");

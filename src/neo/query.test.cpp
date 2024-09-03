@@ -1,4 +1,6 @@
 #include "./query.hpp"
+
+#include <array>
 #include <vector>
 
 struct get_allocator : neo::query_interface<get_allocator> {
