@@ -150,9 +150,9 @@ TEST_CASE("Equality and compare") {
     CHECK(t2 > t1);
 
     {
-        neo::tuple<std::string_view, int> t1{"hey", 2};
-        neo::tuple<const char*, long>     t2{"aaa", 5};
-        CHECK(t1 > t2);
+        neo::tuple<std::string_view, int> t3{"hey", 2};
+        neo::tuple<const char*, long>     t4{"aaa", 5};
+        CHECK(t3 > t4);
     }
 }
 

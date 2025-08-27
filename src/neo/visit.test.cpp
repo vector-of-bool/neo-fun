@@ -28,6 +28,8 @@ neo::testing::cx_test_case VisitVariantWithVoid = [](auto check) consteval {
     check(r == 1729);
 };
 
+#ifndef _MSC_VER  // MSVC constexpr is broken for unions
+
 struct base {};
 
 struct derived : base {};
@@ -49,3 +51,5 @@ neo::testing::cx_test_case VisitWithImmobileresult = [](auto) consteval {
     immobile               im = neo::visit(var, [](auto) -> immobile { return {}; });
     (void)im;
 };
+
+#endif

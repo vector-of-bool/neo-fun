@@ -394,7 +394,7 @@ struct repr_builtin<void> {
 /// repr()'d, includes the repr() of the pointed-to value
 template <typename T>
 struct repr_builtin<T*> {
-    constexpr static void write(auto out, auto* value) noexcept {
+    constexpr static void write(auto out, auto* [[maybe_unused]] value) noexcept {
         if constexpr (neo_is_void(T)) {
             // Special case for void*
             if constexpr (out.just_type) {
@@ -473,7 +473,7 @@ struct repr_builtin<float> {
 template <std::integral Integral>
     requires(not neo_is_pointer(Integral) && weak_same_as<Integral, remove_cvref_t<Integral>>)  //
 struct repr_builtin<Integral> {
-    constexpr static void write(auto out, auto* value) noexcept {
+    constexpr static void write(auto out, auto* [[maybe_unused]] value) noexcept {
         if constexpr (weak_same_as<Integral, bool>) {
             if constexpr (out.just_type) {
                 out.append("bool");
@@ -567,13 +567,13 @@ concept detect_std_array =  //
 
 template <typename Tuple>
 concept detect_tuple = requires {
-                           requires(
-                               requires(Tuple t) { std::get<0>(t); } ||  //
-                               requires(Tuple t) { t.template get<0>(); });
-                           typename std::tuple_element_t<0, Tuple>;
-                           std::tuple_size_v<Tuple>;
-                           requires !detect_std_array<Tuple>;
-                       };
+    requires(
+        requires(Tuple t) { std::get<0>(t); } ||  //
+        requires(Tuple t) { t.template get<0>(); });
+    typename std::tuple_element_t<0, Tuple>;
+    std::tuple_size_v<Tuple>;
+    requires !detect_std_array<Tuple>;
+};
 
 template <typename Pair>
 concept detect_pair = detect_tuple<Pair>
@@ -589,27 +589,27 @@ concept detect_pair = detect_tuple<Pair>
 
 template <typename Opt>
 concept detect_optional = requires(Opt opt) {
-                              typename Opt::value_type;
-                              { opt.has_value() };
-                              { opt.value() };
-                              { *opt };
-                              { opt.reset() };
-                          };
+    typename Opt::value_type;
+    { opt.has_value() };
+    { opt.value() };
+    { *opt };
+    { opt.reset() };
+};
 
 template <typename Path>
 concept detect_path = requires(Path path) {
-                          typename inherit_from<Path>::path;
-                          requires weak_same_as<typename inherit_from<Path>::path, Path>;
-                          path.native();
-                          path.generic_string();
-                          path.make_preferred();
-                          path.root_name();
-                          path.root_directory();
-                          path.root_path();
-                          path.filename();
-                          path.stem();
-                          path.extension();
-                      };
+    typename inherit_from<Path>::path;
+    requires weak_same_as<typename inherit_from<Path>::path, Path>;
+    path.native();
+    path.generic_string();
+    path.make_preferred();
+    path.root_name();
+    path.root_directory();
+    path.root_path();
+    path.filename();
+    path.stem();
+    path.extension();
+};
 
 template <detect_path Path>
 struct repr_builtin<Path> {
@@ -625,7 +625,7 @@ template <detect_pair Pair>
 struct repr_builtin<Pair> {
     using first  = typename Pair::first_type;
     using second = typename Pair::second_type;
-    constexpr static void write(auto out, auto* value) noexcept {
+    constexpr static void write(auto out, auto* [[maybe_unused]] value) noexcept {
         if constexpr (out.just_type) {
             out.append("pair<{}, {}>",
                        repr_type<typename Pair::first_type>("unknown-type"),
@@ -711,7 +711,7 @@ struct repr_builtin<std::basic_string_view<Char, Traits>> {
 
 template <typename Char, typename Traits, typename Alloc>
 struct repr_builtin<std::basic_string<Char, Traits, Alloc>> {
-    constexpr static void write(auto out, auto* value) noexcept
+    constexpr static void write(auto out, auto* [[maybe_unused]] value) noexcept
         requires reprable<Char>
     {
         using string = std::basic_string<Char, Traits, Alloc>;
@@ -770,11 +770,11 @@ struct repr_builtin<Map> {
 
 template <typename R>
     requires requires {
-                 requires std::ranges::forward_range<R>;
-                 requires !alike<std::string, R> && !alike<std::string_view, R>;
-                 requires !detect_map<R>;
-                 requires !detect_path<R>;
-             }
+        requires std::ranges::forward_range<R>;
+        requires !alike<std::string, R> && !alike<std::string_view, R>;
+        requires !detect_map<R>;
+        requires !detect_path<R>;
+    }
 struct repr_builtin<R> {
     constexpr static void write(auto out, auto* value) noexcept {
         auto value_type_str = repr_type<std::ranges::range_value_t<R>>("?");
@@ -819,9 +819,9 @@ tuple_out_next(auto out, std::index_sequence<First, Idx...>, const Tuple* tup [[
 
 template <typename Tuple>
     requires requires {
-                 requires detect_tuple<Tuple>;
-                 requires !detect_pair<Tuple>;
-             }
+        requires detect_tuple<Tuple>;
+        requires !detect_pair<Tuple>;
+    }
 struct repr_builtin<Tuple> {
     constexpr static void write(auto out, auto* value) noexcept {
         if constexpr (out.just_type) {

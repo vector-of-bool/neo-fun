@@ -66,6 +66,8 @@ static_assert(neo::equality_comparable<variant<int>>);
 static_assert(neo::totally_ordered<variant<int>>);
 static_assert(neo::totally_ordered<variant<int, double>>);
 
+#ifndef _MSC_VER  // MSVC constexpr is broken for unions
+
 neo::testing::cx_test_case DefaultConstruction = [](auto check) consteval {
     variant<int> i;
     check(i.index() == 0);
@@ -338,6 +340,8 @@ neo::testing::cx_test_case VariantOrdering = [](auto check) consteval {
     check(v3 > v2);
     check(v3 > v1);
 };
+
+#endif
 
 TEST_CASE("Get Nth from neo::variant<>") {
     STATIC_REQUIRE(neo::can_get_nth<neo::variant<int>, 0>);

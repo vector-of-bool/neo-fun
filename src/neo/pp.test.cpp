@@ -1,5 +1,8 @@
 #include <neo/pp.hpp>
 
+// Empty main for linking purposes
+int main() {}
+
 static_assert(NEO_IS_PROBE(nope) == 0);
 static_assert(NEO_IS_PROBE(NEO_PROBE()) == 1);
 static_assert(NEO_FIRST(1, 2) == 1);
@@ -21,7 +24,10 @@ static_assert(foo == 0);
 static_assert(bar == 1);
 static_assert(baz == 2);
 
-#define DECL_CONCAT(Const, Counter, X) namespace {constexpr int var_##Const##_##X [[maybe_unused]] = Counter;}
+#define DECL_CONCAT(Const, Counter, X)                                                             \
+    namespace {                                                                                    \
+    constexpr int var_##Const##_##X [[maybe_unused]] = Counter;                                    \
+    }
 #define USES_MAP_INNER5(Const, Counter, X) neo_map(DECL_CONCAT, Const##_##X, foo, bar, baz)
 #define USES_MAP_INNER4(Const, Counter, X) neo_map(USES_MAP_INNER5, Const##_##X, foo, bar, baz)
 #define USES_MAP_INNER3(Const, Counter, X) neo_map(USES_MAP_INNER4, Const##_##X, foo, bar, baz)
