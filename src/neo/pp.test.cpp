@@ -3,6 +3,8 @@
 // Empty main for linking purposes
 int main() {}
 
+// clang-format off
+
 static_assert(NEO_IS_PROBE(nope) == 0);
 static_assert(NEO_IS_PROBE(NEO_PROBE()) == 1);
 static_assert(NEO_FIRST(1, 2) == 1);
@@ -33,7 +35,7 @@ static_assert(baz == 2);
 #define USES_MAP_INNER3(Const, Counter, X) neo_map(USES_MAP_INNER4, Const##_##X, foo, bar, baz)
 #define USES_MAP_INNER2(Const, Counter, X) neo_map(USES_MAP_INNER3, Const##_##X, foo, bar, baz)
 #define USES_MAP_INNER(Const, Counter, X) neo_map(USES_MAP_INNER2, X, foo, bar, baz)
-neo_map(USES_MAP_INNER, ~, foo, bar, baz);
+neo_map(USES_MAP_INNER, ~, foo, bar, baz)
 
 // Expands to nothing, since no arguments are given:
 neo_map(not_defined, ~)
