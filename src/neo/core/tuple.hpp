@@ -160,8 +160,8 @@ public:
 
     template <std::size_t N>
         requires(N == 0)
-    constexpr add_rvalue_reference_t<const Type> get() const&& noexcept {
-        return static_cast<add_rvalue_reference_t<const Type>>(_value);
+    constexpr add_rvalue_reference_t<add_const_t<Type>> get() const&& noexcept {
+        return static_cast<add_rvalue_reference_t<add_const_t<Type>>>(_value);
     }
 
     bool operator==(tuple const&) const  = default;

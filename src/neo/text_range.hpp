@@ -304,9 +304,11 @@ inline constexpr struct to_std_string_fn : ranges::pipable {
      * @param str An input text range.
      * @param alloc The allocator. If omitted, uses std::allocator
      * @return constexpr auto
+     *
+     * TODO: This can be `constexpr` in C++23
      */
     template <input_text_range R, typename Alloc>
-    constexpr auto operator()(R&& str, Alloc alloc) const noexcept(ranges::nothrow_range<R>) {
+    auto operator()(R&& str, Alloc alloc) const noexcept(ranges::nothrow_range<R>) {
         using traits   = text_char_traits_t<R>;
         using str_type = std::basic_string<text_char_t<R>, traits, Alloc>;
 

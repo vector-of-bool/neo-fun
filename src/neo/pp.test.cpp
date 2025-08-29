@@ -1,6 +1,9 @@
 #include <neo/pp.hpp>
 
-#include <catch2/catch.hpp>
+// Empty main for linking purposes
+int main() {}
+
+// clang-format off
 
 static_assert(NEO_IS_PROBE(nope) == 0);
 static_assert(NEO_IS_PROBE(NEO_PROBE()) == 1);
@@ -23,7 +26,16 @@ static_assert(foo == 0);
 static_assert(bar == 1);
 static_assert(baz == 2);
 
-TEST_CASE("Check macro evaluations") {
-    std::string str = NEO_STR(Turn this into a string, please !);
-    CHECK(str == "Turn this into a string, please !");
-}
+#define DECL_CONCAT(Const, Counter, X)                                                             \
+    namespace {                                                                                    \
+    constexpr int var_##Const##_##X [[maybe_unused]] = Counter;                                    \
+    }
+#define USES_MAP_INNER5(Const, Counter, X) neo_map(DECL_CONCAT, Const##_##X, foo, bar, baz)
+#define USES_MAP_INNER4(Const, Counter, X) neo_map(USES_MAP_INNER5, Const##_##X, foo, bar, baz)
+#define USES_MAP_INNER3(Const, Counter, X) neo_map(USES_MAP_INNER4, Const##_##X, foo, bar, baz)
+#define USES_MAP_INNER2(Const, Counter, X) neo_map(USES_MAP_INNER3, Const##_##X, foo, bar, baz)
+#define USES_MAP_INNER(Const, Counter, X) neo_map(USES_MAP_INNER2, X, foo, bar, baz)
+neo_map(USES_MAP_INNER, ~, foo, bar, baz)
+
+// Expands to nothing, since no arguments are given:
+neo_map(not_defined, ~)

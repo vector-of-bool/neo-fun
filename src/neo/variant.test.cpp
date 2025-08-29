@@ -66,6 +66,8 @@ static_assert(neo::equality_comparable<variant<int>>);
 static_assert(neo::totally_ordered<variant<int>>);
 static_assert(neo::totally_ordered<variant<int, double>>);
 
+#ifndef _MSC_VER  // MSVC constexpr is broken for unions
+
 neo::testing::cx_test_case DefaultConstruction = [](auto check) consteval {
     variant<int> i;
     check(i.index() == 0);
@@ -85,11 +87,13 @@ struct not_constexpr {
     not_constexpr() {}
 };
 
+#if neo_compiler_implements(cwg2096)
 neo::testing::cx_test_case ConstexprWithNonLiteralAlternatives = [](auto check) consteval {
     // XXX: Clang is missing CWG 2096: See llvm-project#40183
     variant<int, not_constexpr> v;
     check(v.index() == 0);
 };
+#endif
 
 neo::testing::cx_test_case AmbiguousAlternativeConstruction = [](auto check) consteval {
     variant<int, int> v;
@@ -337,6 +341,8 @@ neo::testing::cx_test_case VariantOrdering = [](auto check) consteval {
     check(v3 > v1);
 };
 
+#endif
+
 TEST_CASE("Get Nth from neo::variant<>") {
     STATIC_REQUIRE(neo::can_get_nth<neo::variant<int>, 0>);
     STATIC_REQUIRE(neo::can_get_nth<neo::variant<int>&, 0>);
@@ -403,7 +409,7 @@ TEST_CASE("Not-default-constructible") {
     STATIC_REQUIRE_FALSE(
         neo::default_initializable<neo::variant<not_default_constructible, std::string>>);
 
-    neo::variant<not_default_constructible> ord = not_default_constructible{42};
+    neo::variant<not_default_constructible> ord [[maybe_unused]] = not_default_constructible{42};
 }
 
 template <typename T>

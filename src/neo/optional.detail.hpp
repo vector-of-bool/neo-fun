@@ -1,14 +1,12 @@
 #pragma once
 
 #include <neo/concepts.hpp>
+#include <neo/optional_traits.hpp>
 #include <neo/type_traits.hpp>
 
 #include <optional>
 
 namespace neo {
-
-template <typename T>
-struct optional_traits;
 
 template <typename T>
 class optional;

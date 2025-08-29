@@ -56,6 +56,7 @@ TEST_CASE("each() over a range") {
     CHECK(last_seen == 4);
 }
 
+#if !NEO_TERSE_LAMBDA_IS_BROKEN()
 TEST_CASE("Distribute integers") {
     std::vector<int> evens;
     std::vector<int> odds;
@@ -67,3 +68,5 @@ TEST_CASE("Distribute integers") {
     CHECK(evens == std::vector({0, 2, 4, 6, 8, 10, 12, 14, 16, 18}));
     CHECK(odds == std::vector({1, 3, 5, 7, 9, 11, 13, 15, 17, 19}));
 }
+#endif
+

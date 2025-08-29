@@ -62,7 +62,11 @@ TEST_CASE("Non-trivial") {
     }
 }
 
+#ifndef _MSC_VER  // MSVC constexpr is broken for unions
+
 neo::testing::cx_test_case ChangingActiveMember = [](auto) consteval {
     neo::constexpr_union<neo::unit, neo::unit, neo::unit> onion;
     onion.construct<1>();  // Should be constexpr-okay
 };
+
+#endif

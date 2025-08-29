@@ -38,8 +38,7 @@ struct object_impl<false, false, false, true> {
  * reference type, yields `reference_object<T>`.
  */
 template <typename T>
-using object_t
-    = detail::object_impl<neo_is_object(T), neo_is_array(T), neo_is_reference(T), neo_is_void(T)>::
-        template f<T>;
+using object_t = detail::
+    object_impl<object_type<T>, array_type<T>, reference_type<T>, void_type<T>>::template f<T>;
 
 }  // namespace neo

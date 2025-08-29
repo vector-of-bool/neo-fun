@@ -2,6 +2,8 @@
 
 #include <neo/attrib.hpp>
 
+#include <type_traits>
+
 namespace neo::move_detail {
 
 template <typename T>
@@ -20,7 +22,7 @@ struct strip_type<T&&> {
 };
 
 #if NEO_HAS_BUILTIN(__remove_reference)
-#define _neo_typeof_noref(...) __remove_reference(decltype(__VA_ARGS__))
+#define _neo_typeof_noref(...) ::std::remove_reference_t<decltype(__VA_ARGS__)>
 #else
 #define _neo_typeof_noref(...) typename ::neo::move_detail::strip_type<decltype(__VA_ARGS__)>::type
 #endif

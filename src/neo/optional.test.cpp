@@ -205,7 +205,7 @@ TEST_CASE("Optional references") {
     static_assert(not std::assignable_from<neo::optional<int&>&, int&&>);
     neo::optional<const int&> ci{i};
     neo::optional<int>        opt_int;
-    neo::optional<int&>       opt_iref = opt_int;
+    neo::optional<int&>       opt_irefs [[maybe_unused]] = opt_int;
 }
 
 TEST_CASE("Optional of nontrivial") {
@@ -244,8 +244,13 @@ TEST_CASE("Optional of nontrivial") {
 
 TEST_CASE("Optional and_then") {
     auto x = neo::optional(12);
-    CHECK(*x.and_then([](auto x) { return neo::optional(x + 2); }) == 14);
-    CHECK(*x.transform([](auto x) { return x + 2; }) == 14);
+    neo::weak_same_as<neo::optional<int>>
+        auto q =x.and_then([](auto x) { return neo::optional(x + 2); });
+    REQUIRE(q);
+    CHECK(*std::move(q) == 14);
+    neo::weak_same_as<neo::optional<int>>
+        auto q1 = x.transform([](auto x) { return x + 2; });
+    CHECK(*q1 == 14);
 }
 
 TEST_CASE("Optional of reference") {

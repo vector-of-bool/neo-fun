@@ -41,6 +41,7 @@ public:
     using _base::tuple;
 
     // clang-format off
+    tuple() = default;
     tuple(tuple&) = default;
     tuple(const tuple&) = default;
     tuple(tuple&&) = default;
