@@ -10,7 +10,7 @@ build_dir="$root/_build"
 
 mkdir -p "$build_dir"
 
-EARTHLY_URL="https://github.com/earthly/earthly/releases/download/v0.7.19/earthly-linux-amd64"
+EARTHLY_URL="https://github.com/earthly/earthly/releases/download/v0.8.3/earthly-linux-amd64"
 
 earthly_bin="$build_dir/earthly"
 
