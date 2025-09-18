@@ -1,5 +1,6 @@
 #include "./assert.hpp"
 
+#include <exception>
 #include <iostream>
 
 namespace {
